@@ -75,9 +75,7 @@ Mpp::Mpp()
 Mpp::Mpp(u8 id, u8 mfrID)
 {
 	ppu.id = id;	// so I know who I am
-
 	
-
 	/*
 	**  Optionally read in persistent CM and ECS contents.
 	*/
@@ -510,7 +508,6 @@ void Mpp::OpEXN(void)     // 26
 {
 	u32 exchangeAddress;
 	int cpnum = opD & 007;
-	int monitor = -1;
 	int monitorx = 2; // no change to monitor status
 	char sub[50];
 	sprintf(sub, "EXN or MXN/MAN with CEJ/MEJ disabled");

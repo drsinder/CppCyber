@@ -748,6 +748,11 @@ void MSystem::InitNpuConnections(void)
 			fprintf(stderr, "Section [%s], relative line %d, duplicate TCP port %d for connection type in %s\n",
 				npuConnections, lineNo, tcpPort, startupFile);
 			exit(1);
+		default: 
+			fprintf(stderr, "Section [%s], relative line %d, in %s unrecognized.\n",
+				npuConnections, lineNo, startupFile);
+			exit(1);
+			break;
 		}
 	}
 }

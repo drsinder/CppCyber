@@ -31,14 +31,14 @@ public:
 	MSystem();
 	~MSystem();
 
-	void Terminate(void);
+	void Terminate();
 
 	void InitStartup(char *config);
-	void FinishInitFile(void);
+	void FinishInitFile();
 	void CreateMainFrames();
 
-	void InitDeadstart(void);
-	void InitNpuConnections(void);
+	void InitDeadstart();
+	void InitNpuConnections();
 	void InitEquipment();
 	static u32 ConvertEndian(u32 value);
 
@@ -99,7 +99,7 @@ private:
 	void InitCyber(char *config);
 
 	bool initOpenSection(char *name);
-	char *initGetNextLine(void);
+	char *initGetNextLine();
 	bool initGetOctal(char *entry, int defValue, long *value);
 	bool initGetInteger(char *entry, int defValue, long *value);
 	bool initGetDouble(char *entry, int defValue, double *value);

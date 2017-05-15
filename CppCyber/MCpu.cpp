@@ -68,7 +68,7 @@ MCpu::MCpu(u8 id, u8 mfrID)
 		fprintf(stdout, "Too large a CPU ID.\n");
 		exit(1);
 	}
-	if (BigIron->chasis[mfrID]->cpuCnt > MaxCpus-1)
+	if (BigIron->chasis[mfrID]->cpuCnt > MaxCpus - 1)
 	{
 		fprintf(stdout, "Too many CPUs.\n");
 		exit(1);
@@ -684,6 +684,9 @@ bool MCpu::EcsFlagRegister(u32 ecsAddress)
 		**  Selective clear,
 		*/
 		BigIron->ecsFlagRegister = (BigIron->ecsFlagRegister & ~flagWord) & Mask18;
+		break;
+	default: 
+		OpIllegal("EcsFlagRegister");
 		break;
 	}
 #if MaxMainFrames == 2 || MaxCpus == 2
@@ -2713,6 +2716,9 @@ void MCpu::Op01(void)
 		*/
 		OpIllegal("7600 instruction (invalid in our context)");
 		break;
+	default: 
+		OpIllegal("Op01");
+		break;
 	}
 }
 
@@ -2798,6 +2804,9 @@ void MCpu::Op03(void)
 		*/
 		acc60 = cpu.regX[opJ] >> 48;
 		jump = acc60 == 01777 || acc60 == 06000;
+		break;
+	default: 
+		OpIllegal("Op03");
 		break;
 	}
 
@@ -3368,6 +3377,9 @@ void MCpu::Op46(void)
 		**  Compare uncollated.
 		*/
 		CmuCompareUncollated();
+		break;
+	default: 
+		OpIllegal("Op46");
 		break;
 	}
 }
