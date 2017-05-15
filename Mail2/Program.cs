@@ -25,7 +25,6 @@
 */
 
 using System;
-using System.Linq;
 using System.Text;
 using System.IO;
 using System.Threading.Tasks;
@@ -42,7 +41,7 @@ namespace Mail2
         {
             Thread.Sleep(1000); // wait a bit for Cybis to settle
 
-            if (args.Count() == 2)
+            if (args.Length == 2)
             {
                 Console.Out.WriteLine("\nMailing:  " + args[0]);
 
@@ -60,7 +59,6 @@ namespace Mail2
         {
             StreamReader sr = new StreamReader(fileName);
             string line;
-            string fullpath;
             char obj = '\\';
             int linenum = 0;
             bool gotmailto = false;
@@ -68,7 +66,7 @@ namespace Mail2
             string mailto = "";
 
             Console.WriteLine("Mailing:  " + fileName);
-            fullpath = appString.Substring(0, appString.LastIndexOf(obj) + 1) + fileName;
+            string fullpath = appString.Substring(0, appString.LastIndexOf(obj) + 1) + fileName;
 
             Console.WriteLine(fullpath);
 
@@ -100,7 +98,6 @@ namespace Mail2
 
             Console.WriteLine(mailto);
 
-            string message = "";
             StringBuilder sb = new StringBuilder();
             sr = new StreamReader(fileName);
             while (!sr.EndOfStream)
@@ -109,7 +106,7 @@ namespace Mail2
                 sb.AppendLine(line);
             }
 
-            message = sb.ToString();
+            string message = sb.ToString();
 
             var plainTextBytes = Encoding.UTF8.GetBytes(message);
             string encodedText = Convert.ToBase64String(plainTextBytes);
@@ -141,9 +138,7 @@ namespace Mail2
 
             msg.AddAttachment(fileName, content);
 
-            var response = await client.SendEmailAsync(msg);
-
-            return;
+            await client.SendEmailAsync(msg);
         }
 
     }
