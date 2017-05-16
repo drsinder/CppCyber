@@ -1,0 +1,24 @@
+ This Cybis lessons are about CPU COMPASS.
+ 
+ Do 13-20, then 1-12.
+ 
+  1   Introduction to Pseudo Operations          0ccomp1   
+  2   Data Generation Pseudo Operations I        0ccomp2   
+  3   Data Generation Pseudo Operations 2        0ccomp3   
+  4   Macros                                     0ccomp4   
+  5   Macro Related Pseudo Operations            0ccomp5   
+  6   Program Structure                          0ccomp6   
+  7   Block Counter Control Pseudo Op.           0ccomp6a  
+  8   Absolute Assembly                          0ccomp6b  
+  9   Conditional Assembly                       0ccomp7   
+ 10   Symbol Definition                          0ccomp20  
+ 11   Code Duplication                           0ccomp30  
+ 12   Micros                                     0ccomp31  
+ 13   Basic 6000/CYBER CPU Intro.                0cmpcpu   
+ 14   Introduction to COMPASS                    0cmpintro 
+ 15   The Increment Unit                         0cmpincr  
+ 16   Conditional Test and Branching Inst.       0cmpbranch
+ 17   Boolean and Shift Units                    0cmpbool  
+ 18   Integer Data Operations                    0cmpintegr
+ 19   The Return Jump Instruction                0cmprj    
+ 20   Floating Point Data Operations             0cmpfltpt 
