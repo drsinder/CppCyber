@@ -22,3 +22,5 @@
  18   Integer Data Operations                    0cmpintegr
  19   The Return Jump Instruction                0cmprj    
  20   Floating Point Data Operations             0cmpfltpt 
+
+For PPU COMPASS see PLM file 0ppucompas
