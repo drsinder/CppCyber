@@ -1,0 +1,40 @@
+
+ 
+                        O^P^E^R^A^T^I^N^G S^Y^S^T^E^M C^O^M^M^A^N^D^S
+ 
+  ACCESS     ALTER      APL        APPEND     APPSW      ASCII      ASSIGN 
+  ATTACH     AUTO       BASIC      BATCH      BEGIN      BKSP       BLANK
+  BLOCK      BRIEF      BYE        CATALOG    CATLIST    CFO        CHANGE 
+  CHARGE     CHVAL      CKP        CLASS      CLEAR      COBOL5     COMMENT
+  COMPASS    COMMON     COPY       COPYBF     COPYBR     COPYCF     COPYCR 
+  COPYEI     COPYL      COPYLM     COPYSBF    COPYX      CSET       CTIME
+  CYBIL      DAYFILE    DEBUG      DEFINE     DELETE     DETACH     DIAL 
+  DISPLAY    DMB        DMD        DMDECS     DMP        DMPECS     DOCMENT
+  DROP       DROPDS     DUP        EDIT       EFFECT     ELSE       ENDIF
+  ENDW       ENQUIRE    ENTER      ERRMSG     EVICT      EXECUTE    EXIT 
+  EXPLAIN    FCOPY      FORTRAN    FSE        FTN        FTNTS      FTN5 
+  F45        GET        GO         GOODBYE    GPSS       GTR        HELLO
+  HELLO7     HELP       HELPME     HTIME      IF         IFE        ITEMIZE
+  JOB        KEY        KRONREF    LABEL      LBC        LDI        LDSET
+  LENGTH     LIB        LIBEDIT    LIBGEN     LIBLOAD    LIBRARY    LIMITS 
+  LINE       LIST       LISTLB     LISTLID    LIST80     LOAD       LOC
+  LOCK       LOGIN      LOGOUT     LO72       MACHINE    MAP        MFL
+  MFLINK     MFQUEUE    MODE       MODIFY     MOVE       NEW        NOEXIT 
+  NOGO       NORERUN    NORMAL     NOSORT     NOTE       NULL       OFFSW
+  OLD        ONEXIT     ONSW       OPLEDIT    OUT        OVWRITE    PACK 
+  PACKNAM    PASCAL     PASSWOR    PAUSE      PBC        PDU        PERMIT 
+  PRIMARY    PROFILE    PROTECT    PURGALL    PURGE      QGET       QUEUE7 
+  RBR        READ       RECLAIM    RECOVER    REDO       REDUCE     RENAME 
+  REPLACE    REQUEST    RERUN      RESEQ      RESOURC    RESTART    RETURN 
+  REVERT     REWIND     RFL        ROLLOUT    ROUTE      RTIME      RUN
+  SATISFY    SAVE       SCOPY      SCREEN     SECHDR     SEGLOAD    SET
+  SETASL     SETCORE    SETFAL     SETFS      SETJAL     SETJOB     SETJSL 
+  SETPFAC    SETPFAL    SETPR      SETTL      SHELL      SHOW       SKIP 
+  SKIPEI     SKIPF      SKIPFB     SKIPR      SLOAD      SORT       STIME
+  SUBMIT     SWITCH     SYMPL      TCOPY      TDU        TDUMP      TEXT 
+  TIMEOUT    TRMDEF     ULIB       UNLOAD     UNLOCK     UPDATE     UPROC
+  USECPU     USER       VERIFY     VFYLIB     VSN        WBR        WHATJSN
+  WHILE      WRITE      WRITEF     WRITEN     WRITER     XEDIT      X
+  XMODEM 
+ 
+16.49.57.UCLP, OK, 030,      0.064KLNS.

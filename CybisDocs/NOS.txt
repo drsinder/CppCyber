@@ -1,0 +1,201 @@
+http://www.cray-cyber.org/documentation/nos_commands.php
+	
+Short Form Summary of NOS Commands
+
+lfn = local file name
+pfn = permanent file name
+[opt] indicates permanent file access options
+     /UN=username,PW=password
+lfn=pfn may be replaced by single pfn, in which case pfn is also used as lfn
+
+APPEND,pfn,lfn1,...,lfnn[opt]. Append lfni to permanent file pfn
+ATTACH,lfn1=pfn1,...,lfnn=pfnn,[opt][M=m] attach permanent file pfn
+    as local file lfn
+    m mode E EXECUTE R READ RU READUP RA READAP RM READMD
+    U UPDATE A APPEND M MODIFY W WRITE
+BKSP,lfn,n,m. backspace file lfn by n logical records
+    default n=1. m is mode, C coded, B binary(default)
+CATLIST,LO=p,FN=pfn,UN=username,L=lfn. list the permanent file catalog
+    p option F full FP permissions granted P user names
+CLEAR. release all files
+COMMENT.comment
+COMPASS,B=lgo,I=input,L=output,LO=ABCDEFGLMNRSTX. Assembler call statement
+COPY,[I=]from,[O=]to,[V=]x,[M=]c,[TC=]tc,[N=]cnt
+    copy file from to file to, x nonzero=verify
+    M=c C1 coded input only C2 coded output only
+    c any nonzero coded input and output
+    TC=tc F or EOF cnt is the number of files to copy
+    I or EOI ignore cnt, copy to EOI
+COPYBF,from,to,n,c. copy binary file
+    n number of files to copy, default 1
+    c any nonzero string: coded S or L format tape
+COPYBR,from,to,n,c. copy binary records, same parameters as COPYBF
+COPYCF,from,to,n,fchar,lchar,na. copy coded file
+    n number of files to copy, default 1
+    fchar first character position in line to copy, default 1
+    lchar last character position in line to copy, default 136
+    na any nonzero value=no abort if end-of-line missing
+COPYCR,from,to,n,fchar,lchar,na. copy coded record
+    same parameters as COPYCF
+COPYEI,from,to,x,c. copy to EOI (end-of-information)
+    x any nonzero value signifies no rewind, default is
+    rewind before and after copying
+    c any nonzero string: coded S or L format tape
+COPYSBF,from,to,n,na. copy shifted binary file, prepend blank to each line
+    same parameters as COPYCF
+COPYX,from,to,x,b,c. copy logical records
+    x=n copy n logical records, default n=1
+    x=00 copy all records up to and including first zero-length record
+    x=name copy all records up to and including the named record
+    x=type/name same as name, but also type must match
+CTIME. print CPU time to dayfile
+DAYFILE,lfn. dump job dayfile to lfn
+DEFINE,lfn1=pfn1,...,lfnn=pfnn/PW=password,CT=ct,M=m,S=space,AC=ac.
+    Create empty new permanet direct access files
+    ct PUBLIC SPRIV PRIVATE(default)
+    m allowed access modes for other users if SPRIV or PUBLIC
+    see ATTACH command
+    space requirement for file, in PRUs (=64 60-word blocks)
+    ac Y or N(default) to make visible for other user's CATLIST
+ENQUIRE,options.
+    A BDRUJLF
+    B identification and priority
+    D resources requested/assigned
+    F assigned files
+    J control regs and error flag
+    L loader information
+    R resources used
+    S accumulated SRUs
+    T accumulated CPU time
+    U resources available
+ENTER./command1/command2/.../commandn
+FCOPY,P=old,N=new,PC=ascii,NC=ascii8,PL=zb,NL=zb,R,A. copy between code sets
+    lowercase parameter names=default values
+    ascii and ascii8 parameters may be
+    ASCII 6/12 display ASCII8 12-bit ASCII
+    ASCII88 8-bit ASCII ASCII63 6/12 display 63-char set
+    ASCII64 6/12 display 64-char set DIS 6-bit display code
+    DIS63 6-bit display 63-char set DIS64 same, 64-char set
+    zb line terminator
+       ZB zero byte (default)
+       CR CRLF FF LF LFCR RS US n octal char value
+    R rewind before and after, default is no rewind
+    A aboer on error, default is no abort
+FTN,I=input,B=lgo,L=output. FORTRAN 4 extended compiler
+    LCM=I long address mode for UEM access, > 128 kword
+    OL list generated object code
+    OPT=n n=0,1,2 optimization level, default =1
+    PMD post mortem dump
+    R=n symbolic reference map, n=0,1,2,3 default=1
+    ROUND=+-*/ rounded arithmetic operations. default=no round
+    SL=0 source program not listed (default=list)
+    STATIC disable dynamic memory management, required of blank
+       common is dynamically extended at runtime
+    UO unsafe optimization enabled, requires OPT=2
+FTN5,I=input,B=lgo,L=output. FORTRAN 5 extended compiler
+    DO=val 0 min DO trip zero, less 131071 (default)
+       LONG permits trip count to exceed 131071
+       OT minimum trip count 1
+    LCM=I long address mode for UEM access, > 128 kword total field
+    LCM=G giant UEM mode, single commin block > 128 kword
+    LO=O/R/A/M/S O list generated object code
+       R cross-reference map
+       A program entity list
+       M storage map
+       S source code
+    OPT=n n=0,1,2,3(unsafe) optimization level, default =0
+    ROUND=A/S/M/D rounded arithmetic operations. default=A/S/M
+    STATIC disable dynamic memory management, required of blank
+       common is dynamically extended at runtime
+GET,lfn1=pfn1,...,lfnn=pfnn[opt] retrieve local copy of indirect access
+    permanent file
+LENGTH,lfn. status of local file
+lfn,lfn1=tfn1,...,lfnn=tfnn. local file call loads and executes compiled
+LGO,lfn1=tfn1,...,lfnn=tfnn. binary on that file, typically LGO. The tfni
+    filenames used on the PROGRAM statement are replaced by
+    the actual filenames lfni.
+LIMITS,L=lfn. resources available
+MFL,CM=nnnnnn,EC=mmmm. set max central memory and
+    extended memory/1000(8) field length
+NOTE,lfn,NR./line1/line2/..../linen
+    enter lines into lfn, NR=no rewind
+PASSWOR,old,new. change password
+PERMIT,pfn,username1=m1,...,usernamen=mn. grant access to permanent file
+    pfn to user usernamei with access mode mi, see ATTACH
+PROTECT,ON. preserve extended memory between job steps
+PURGE,pfn1,...,pfnn[opt] remove permanent files
+RENAME,newfn=oldfn. rename file
+REPLACE,lfn1=pfn1,...,lfnn=pfnn[opt] replace indirect access permanent files
+    by local files; create if no pfni exists
+RETURN,lfn1,...,lfnn. release specified files, *=all files
+REWIND,lfn1,...,lfnn. rewind specified files, *=all files
+RFL,CM=nnnnnn,EC=mmmm. set initial central memory and
+    extended memory/1000(8) field length
+RTIME. print real (wallclock) time to dayfile
+SAVE,lfn1=pfn1,...,lfnn=pfnn/PW=password,CT=ct,M=m,S=space,AC=ac.
+    save copy of local file lfn as indirect access permanent
+    file pfn, parameters see DEFINE
+SETASL,s. set SRU resource limit for job
+SETCORE,p. preset all cm within fieldlength with p
+SETJSL,s. set SRU resource limit for job step
+SETTL,t. set CPU time limit for job step
+SKIPEI,lfn. skip to EOI
+SKIPF,lfn,n,m. skip n (default=1) files forward on file lfn
+    m mode C coded B binary (default)
+SKIPFB,lfn,n,m. same as SKIPF, backspace = reverse direction
+SKIPR,lfn,n,level,m. skip n (default=1) records forward on file lfn
+    level record level. 0<=level<=16, EOR and EOF; 17, EOF only
+    m mode C coded B binary (default)
+STIME. print accumulated SRUs to dayfile
+TDUMP,I=lfn1,L=lfn2,O,A,R=rcount,F=fcount,N=lines,NR. octal or alpha file dump
+UNLOAD see RETURN
+VERIFY,lfn1,lfn2,N=nfiles,E=maxerrs,L=output,A,R,C,C1,C2. compare files
+    N without value = compare to EOI, N=0 up to empty file
+WRITEF,lfn,x. write x filemarks to lfn, default is 1
+WRITER,lfn,x. write x empty records to lfn, default is 1
+
+
+
+Interactive Commands
+
+ASCII set full ASCII 6/12 mode (see also NORMAL)
+BYE logout, also GOODBYE or LOGOUT
+EXPLAIN online manual access
+FSE,lfn. full screen editor.
+    line mode editor in LINE mode, SCREEN command required
+    for full screen mode, has internal help screens
+HELP online help system access
+HELPME,command interactively spec parameters for command
+LINE,model. set terminal to line mode (see also SCREEN)
+    VT100 DEC VT100 terminal or emulator
+    721 CDC 721 terminal
+    722 CDC 722 terminal
+    Z19 Zenith Z19, Z29, Heathkit H19 terminal
+    ADM3A Lear-Sigler ADM3A terminal
+    ADM5 Lear-Sigler ADM5 terminal
+    TVxyz TeleVideo xyz terminal
+    T4115 Tektronix 4115 terminal
+LIST,F=lfn list local file at terminal
+NORMAL use 63/64 character set (see also ASCII)
+RECOVER,jsn recover aborted interactive session
+SCREEN,model. set terminal to full screen mode (see also LINE)
+XMODEM,[FN=]fn,[TD=]td,[FT=]ft,[LF=]lf,[SP=]sp,[EC=]ec,[FM]=fm.
+    transfer a file with XMODEM protocol
+    fn Cyber filename
+    td transfer direction, S=from Cyber to Micro, R=Micro to Cyber
+    ft file type
+    A 6/12 ASCII
+    C 6-bit display code
+    T use current terminal mode
+    B Cyber binary file
+    M Micro binary file
+    lf YES=Cyber end-of-line transmitted as cr/lf (default)
+    NO cr only
+    sp YES special block, NO=default
+    ec error checking is determined by receiver
+    CRC or CHECKSM for transfers to Cyber
+    fm file markers, for text files only
+    NOS #EOR #EOF #EOI are transmitted/recognized
+    CPM EOR and EOI ignored on transmit, ctrlZ is EOI
+    MSDOS same as CPM
+XMODEM. systems prompts for parameters
