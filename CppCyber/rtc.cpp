@@ -77,7 +77,7 @@ static u64 rtcGetTick(void);
 */
 u32 rtcClock = 0;
 
-double clockx = 1.0;
+//double clockx = 1.0;
 
 /*
 **  -----------------
@@ -237,7 +237,7 @@ void rtcReadUsCounter(void)
 
 	u64 newt = rtcGetTick();
 
-	newt = static_cast<u64>(newt * clockx);
+	//newt = static_cast<u64>(newt * clockx);
 
 	if (static_cast<i64>(newt) < static_cast<i64>(old))
 	{

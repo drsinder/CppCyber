@@ -347,7 +347,7 @@ extern u16 npuNetTcpConns;
 
 extern u32 features;
 extern u32 rtcClock;
-extern double clockx;
+//extern double clockx;
 
 extern bool autoDate;		// enter date/time automatically - year 98
 extern bool autoDate1;		// enter date/time automatically - year 98

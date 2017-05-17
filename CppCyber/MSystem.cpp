@@ -492,9 +492,9 @@ void MSystem::InitCyber(char *config)
 		autoDate1 = true;
 	}
 
-	initGetDouble("clockx", 1.0, &clockx);
+	//initGetDouble("clockx", 1.0, &clockx);
 
-	printf("Running with %1.15f clock multiplier\n", static_cast<float>(clockx));
+	//printf("Running with %1.15f clock multiplier\n", static_cast<float>(clockx));
 
 	initGetInteger("cpuratio", 4, &cpuRatio);
 	if (cpuRatio < 1 || cpuRatio > 50)
