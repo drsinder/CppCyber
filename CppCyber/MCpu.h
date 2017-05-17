@@ -50,7 +50,7 @@ public:
 	// member function pointer
 	typedef void (MCpu::*MCpuMbrFn)(void);
 
-	void InitM(char *model, MMainFrame *mainfr);
+	void Init(char *model, MMainFrame *mainfr);
 	void Terminate(void);
 	u32  GetP(void);
 	void PpReadMem(u32 address, CpWord *data);

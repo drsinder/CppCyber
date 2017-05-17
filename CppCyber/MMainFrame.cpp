@@ -166,7 +166,7 @@ void MMainFrame::Init(u8 id, long memory)
 	for (int i = 0; i < BigIron->initCpus; i++)
 	{
 		Acpu[i] = new MCpu(i, mainFrameID);
-		Acpu[i]->InitM(BigIron->model, this);
+		Acpu[i]->Init(BigIron->model, this);
 	}
 
 	if (mainFrameID == BigIron->initMainFrames - 1)

@@ -94,7 +94,7 @@ MCpu::~MCpu()
 */
 
 
-void MCpu::InitM(char *model, MMainFrame *mainfr)
+void MCpu::Init(char *model, MMainFrame *mainfr)
 {
 	cpu.cpuStopped = TRUE;
 	cpu.regP = 0;
