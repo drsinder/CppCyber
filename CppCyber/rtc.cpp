@@ -77,7 +77,7 @@ static u64 rtcGetTick(void);
 */
 u32 rtcClock = 0;
 
-//double clockx = 1.0;
+double clockx = 1.0;
 
 /*
 **  -----------------
@@ -223,10 +223,6 @@ void rtcReadUsCounter(void)
 	static u64 old = 0;
 	static double fraction = 0.0L;
 	static double delayedMicroseconds = 0.0L;
-	u64 newt;
-	u64 difference;
-	double microseconds;
-	double result;
 
 	if (rtcIncrement != 0)
 	{
@@ -239,11 +235,11 @@ void rtcReadUsCounter(void)
 		old = rtcGetTick();
 	}
 
-	newt = rtcGetTick();
+	u64 newt = rtcGetTick();
 
-	//newt = (u64)(newt * clockx);
+	newt = static_cast<u64>(newt * clockx);
 
-	if ((i64)newt < (i64)old)
+	if (static_cast<i64>(newt) < static_cast<i64>(old))
 	{
 		/* Ignore ticks if they go backward */
 		printf("Ignored clock tick\n");
@@ -251,10 +247,10 @@ void rtcReadUsCounter(void)
 		return;
 	}
 
-	difference = newt - old;
+	u64 difference = newt - old;
 	old = newt;
 
-	microseconds = (double)(i64)difference / MHz;
+	double microseconds = static_cast<double>(static_cast<i64>(difference)) / MHz;
 	microseconds += fraction + delayedMicroseconds;
 	delayedMicroseconds = 0.0;
 
@@ -265,10 +261,10 @@ void rtcReadUsCounter(void)
 		microseconds = MaxMicroseconds;
 	}
 
-	result = floor(microseconds);
+	double result = floor(microseconds);
 	fraction = microseconds - result;
 
-	rtcClock += (u32)result;
+	rtcClock += static_cast<u32>(result);
 }
 
 /*
