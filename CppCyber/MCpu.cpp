@@ -53,6 +53,7 @@
 // Global vars
 
 
+// ReSharper disable once CppPossiblyUninitializedMember
 MCpu::MCpu()
 {
 	fprintf(stdout, "Must use two ARG MCpu Constructor.\n");
@@ -61,6 +62,7 @@ MCpu::MCpu()
 
 
 //
+// ReSharper disable once CppPossiblyUninitializedMember
 MCpu::MCpu(u8 id, u8 mfrID)
 {
 	if (id > 1)
@@ -390,6 +392,7 @@ bool MCpu::ExchangeJump(u32 addr, int monitorx, char *xjSource)
 	cpu.regX[4] = *mem++ & Mask60;
 	cpu.regX[5] = *mem++ & Mask60;
 	cpu.regX[6] = *mem++ & Mask60;
+	// ReSharper disable once CppAssignedValueIsNeverUsed
 	cpu.regX[7] = *mem++ & Mask60;
 
 	cpu.exitCondition = EcNone;
@@ -444,6 +447,7 @@ bool MCpu::ExchangeJump(u32 addr, int monitorx, char *xjSource)
 	*mem++ = tmp.regX[4] & Mask60;
 	*mem++ = tmp.regX[5] & Mask60;
 	*mem++ = tmp.regX[6] & Mask60;
+	// ReSharper disable once CppAssignedValueIsNeverUsed
 	*mem++ = tmp.regX[7] & Mask60;
 
 	if ((features & HasInstructionStack) != 0)
@@ -1295,6 +1299,7 @@ void MCpu::UemWord(bool writeToUem)
 	{
 		if (uemAddress < cpuMaxMemory && (uemAddress & (3 << 21)) == 0)
 		{
+			// ReSharper disable once CppAssignedValueIsNeverUsed
 			cpMem[uemAddress++] = cpu.regX[opJ] & Mask60;
 		}
 	}
@@ -1383,6 +1388,7 @@ void MCpu::EcsWord(bool writeToEcs)
 	{
 		if (ecsAddress < extMaxMemory)
 		{
+			// ReSharper disable once CppAssignedValueIsNeverUsed
 			extMem[ecsAddress++] = cpu.regX[opJ] & Mask60;
 		}
 	}
@@ -1397,6 +1403,7 @@ void MCpu::EcsWord(bool writeToEcs)
 		}
 		else
 		{
+			// ReSharper disable once CppAssignedValueIsNeverUsed
 			cpu.regX[opJ] = extMem[ecsAddress++] & Mask60;
 		}
 	}

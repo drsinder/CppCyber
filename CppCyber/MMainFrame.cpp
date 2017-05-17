@@ -27,6 +27,7 @@
 #include "stdafx.h"
 
 
+// ReSharper disable once CppPossiblyUninitializedMember
 MMainFrame::MMainFrame()
 {
 }

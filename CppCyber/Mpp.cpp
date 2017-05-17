@@ -66,12 +66,14 @@
 
 
 
+// ReSharper disable once CppPossiblyUninitializedMember
 Mpp::Mpp()
 {
 	fprintf(stdout, "Must use one ARG Mpp Constructor.\n");
 	exit(1);
 }
 
+// ReSharper disable once CppPossiblyUninitializedMember
 Mpp::Mpp(u8 id, u8 mfrID)
 {
 	ppu.id = id;	// so I know who I am

@@ -55,6 +55,7 @@ static u32 featuresCyber865 =
 	| HasRelocationRegShort | HasMicrosecondClock | HasInstructionStack | HasIStackPrefetch | Has175Float);
 
 
+// ReSharper disable once CppPossiblyUninitializedMember
 MSystem::MSystem()
 {
 	emulationActive = TRUE;
@@ -99,6 +100,7 @@ void MSystem::CreateMainFrames()
 	/*
 	**  Allocate configured ECS memory.
 	*/
+	// ReSharper disable once CppDeclaratorMightNotBeInitialized
 	extMem = (CpWord*)calloc((ecsBanks + esmBanks) * extBanksSize, sizeof(CpWord));
 	if (extMem == NULL)
 	{
@@ -106,6 +108,7 @@ void MSystem::CreateMainFrames()
 		exit(1);
 	}
 
+	// ReSharper disable once CppDeclaratorMightNotBeInitialized
 	extMaxMemory = (ecsBanks + esmBanks) * extBanksSize;
 
 	/*
@@ -752,7 +755,6 @@ void MSystem::InitNpuConnections(void)
 			fprintf(stderr, "Section [%s], relative line %d, in %s unrecognized.\n",
 				npuConnections, lineNo, startupFile);
 			exit(1);
-			break;
 		}
 	}
 }
