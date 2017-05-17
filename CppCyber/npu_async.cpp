@@ -306,6 +306,7 @@ void npuAsyncFlushUplineTransparent(Tcb *tp)
 **------------------------------------------------------------------------*/
 static void npuAsyncDoFeBefore(u8 fe)
 {
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (fe)
 	{
 	case ' ':
@@ -402,6 +403,7 @@ static void npuAsyncDoFeBefore(u8 fe)
 **------------------------------------------------------------------------*/
 static void npuAsyncDoFeAfter(u8 fe)
 {
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (fe)
 	{
 	case '.':
@@ -539,6 +541,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
 		*/
 		if (tp->inBufPtr - tp->inBufStart == 0)
 		{
+			// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 			switch (ch)
 			{
 			case ChrNUL:
@@ -614,6 +617,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
 			{
 				if (tp->params.fvCursorPos)
 				{
+					// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 					switch (tp->params.fvEOLCursorPos)
 					{
 					case 0:
@@ -692,6 +696,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
 		/*
 		**  Ignore the following characters.
 		*/
+		// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 		switch (ch)
 		{
 		case ChrNUL:
@@ -704,6 +709,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
 		*/
 		if (tp->inBufPtr - tp->inBufStart == 0)
 		{
+			// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 			switch (ch)
 			{
 			case ChrSTX:
@@ -845,6 +851,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
 			{
 				if (tp->params.fvCursorPos)
 				{
+					// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 					switch (tp->params.fvEOLCursorPos)
 					{
 					case 0:
@@ -917,6 +924,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
 		/*
 		**  Ignore the following characters.
 		*/
+		// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 		switch (ch)
 		{
 		case ChrNUL:
@@ -1060,6 +1068,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
 			{
 				if (tp->params.fvCursorPos)
 				{
+					// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 					switch (tp->params.fvEOLCursorPos)
 					{
 					case 0:

@@ -489,9 +489,9 @@ void lp3000RemovePaper(char *params)
 			if (fnameNew[i] == '/')
 				fnameNew[i] = '\\';
 		}
+		// ReSharper disable once CppEntityNeverUsed
 		intptr_t ret = _spawnl(_P_DETACH, printApp, printApp, fnameNew, printApp, NULL);
-		printf("\n");
-		printf("\nOperator> ");
+		printf("\n\nOperator> ");
 	}
 #endif
 
@@ -530,6 +530,7 @@ static FcStatus lp3000Func(PpWord funcCode)
 #endif
 
 	// Start with the common codes
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (funcCode)
 	{
 	case FcPrintAutoEject:
@@ -789,6 +790,7 @@ static FcStatus lp3000Func(PpWord funcCode)
 		}
 	}
 
+	// ReSharper disable once CppUnreachableCode
 	active3000Device->fcode = funcCode;
 	return(FcAccepted);
 }

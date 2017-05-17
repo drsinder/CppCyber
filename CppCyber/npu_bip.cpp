@@ -447,6 +447,8 @@ void npuBipNotifyDownlineReceived(void)
 	/*
 	**  Hand over the buffer to SVM or TIP.
 	*/
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
+	// ReSharper disable once CppIncompleteSwitchStatement
 	switch (bipState)
 	{
 	case BipDownSvm:

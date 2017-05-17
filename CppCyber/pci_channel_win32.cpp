@@ -35,6 +35,7 @@
 #include <windows.h>
 #include <setupapi.h>
 
+// ReSharper disable once CppUnusedIncludeDirective
 #include <winioctl.h>
 #include "cyber_channel_win32.h"
 
@@ -432,6 +433,7 @@ static BOOL GetDevicePath()
 
 	ULONG size;
 	int count, i, index;
+	// ReSharper disable once CppInitializedValueIsAlwaysRewritten
 	BOOL status = TRUE;
 	TCHAR *DeviceName = NULL;
 	TCHAR *DeviceLocation = NULL;
@@ -459,6 +461,7 @@ static BOOL GetDevicePath()
 		(LPGUID)&GUID_DEVINTERFACE_CYBER_CHANNEL,
 		count++,  //Cycle through the available devices.
 		&DeviceInterfaceData)
+		// ReSharper disable once CppPossiblyErroneousEmptyStatements
 		);
 
 	//

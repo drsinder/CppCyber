@@ -457,7 +457,7 @@ void traceCpu(MCpu *cpux, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
 {
 	u8 addrMode;
 	bool link = TRUE;
-	static bool oneIdle = TRUE;
+	//static bool oneIdle = TRUE;
 	DecCpControl *decode = cpDecode;
 	static char str[80];
 
@@ -998,6 +998,7 @@ void traceOpcode(u8 mfrID)
 
 	fprintf(pF, "O:%04o   %3.3s ", opCode, ppDecode[opF].mnemonic);
 
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (addrMode)
 	{
 	case AN:
@@ -1058,6 +1059,7 @@ u8 traceDisassembleOpcode(char *str, PpWord *pm)
 
 	str += sprintf(str, "%3.3s  ", ppDecode[opF].mnemonic);
 
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (addrMode)
 	{
 	case AN:

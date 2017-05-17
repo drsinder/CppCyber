@@ -228,6 +228,7 @@ void windowInit(u8 mfrID)
 
 	}
 #endif
+	// ReSharper disable once CppDeclaratorMightNotBeInitialized
 	if (hThread == NULL)
 	{
 		MessageBox(NULL, "thread creation failed", "Error", MB_OK);
@@ -420,6 +421,7 @@ void windowTerminate1(void)
 **------------------------------------------------------------------------*/
 static void windowThread(LPVOID param)
 {
+	// ReSharper disable once CppEntityNeverUsed
 	u8 mfrID = (u8)param;
 	MSG msg;
 
@@ -717,6 +719,8 @@ static void windowClipboard1(HWND hWnd)
 **------------------------------------------------------------------------*/
 static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	// ReSharper disable once CppEntityAssignedButNoRead
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	int wmId, wmEvent;
 	LOGFONT lfTmp;
 	RECT rt;
@@ -728,6 +732,8 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 		*/
 	case WM_COMMAND:
 		wmId = LOWORD(wParam);
+		// ReSharper disable once CppJoinDeclarationAndAssignment
+		// ReSharper disable once CppAssignedValueIsNeverUsed
 		wmEvent = HIWORD(wParam);
 
 		switch (wmId)
@@ -743,7 +749,6 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 
 	case WM_ERASEBKGND:
 		return(1);
-		break;
 
 	case WM_CREATE:
 		hPen = CreatePen(PS_SOLID, 1, RGB(0, 255, 0));
@@ -893,6 +898,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 #endif
 
 	case WM_SYSCHAR:
+		// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 		switch (wParam)
 		{
 		case '0':
@@ -1262,22 +1268,17 @@ static LRESULT CALLBACK windowProcedure1(HWND hWnd1, UINT message, WPARAM wParam
 **------------------------------------------------------------------------*/
 void windowDisplay(HWND hWnd)
 {
+	// ReSharper disable once CppEntityNeverUsed
 	static int refreshCount = 0;
 	char str[2] = " ";
-	DispList *curr;
-	DispList *end;
+	// ReSharper disable once CppInitializedValueIsAlwaysRewritten
 	u8 oldFont = 0;
 
 	RECT rect;
 	PAINTSTRUCT ps;
-	HDC hdc;
-	HBRUSH hBrush;
 
-	HDC hdcMem;
-	HGDIOBJ hbmMem, hbmOld;
-	HGDIOBJ hfntOld;
-
-	hdc = BeginPaint(hWnd, &ps);
+	// ReSharper disable once CppEntityNeverUsed
+	HDC hdc = BeginPaint(hWnd, &ps);
 
 	GetClientRect(hWnd, &rect);
 
@@ -1285,21 +1286,21 @@ void windowDisplay(HWND hWnd)
 	**  Create a compatible DC.
 	*/
 
-	hdcMem = CreateCompatibleDC(ps.hdc);
+	HDC hdcMem = CreateCompatibleDC(ps.hdc);
 
 	/*
 	**  Create a bitmap big enough for our client rect.
 	*/
-	hbmMem = CreateCompatibleBitmap(ps.hdc,
-		rect.right - rect.left,
-		rect.bottom - rect.top);
+	HGDIOBJ hbmMem = CreateCompatibleBitmap(ps.hdc,
+	                                        rect.right - rect.left,
+	                                        rect.bottom - rect.top);
 
 	/*
 	**  Select the bitmap into the off-screen dc.
 	*/
-	hbmOld = SelectObject(hdcMem, hbmMem);
+	HGDIOBJ hbmOld = SelectObject(hdcMem, hbmMem);
 
-	hBrush = CreateSolidBrush(RGB(0, 0, 0));
+	HBRUSH hBrush = CreateSolidBrush(RGB(0, 0, 0));
 	FillRect(hdcMem, &rect, hBrush);
 	if (displayModeNeedsErase)
 	{
@@ -1312,7 +1313,7 @@ void windowDisplay(HWND hWnd)
 	SetBkColor(hdcMem, RGB(0, 0, 0));
 	SetTextColor(hdcMem, RGB(0, 255, 0));
 
-	hfntOld = SelectObject(hdcMem, hSmallFont);
+	HGDIOBJ hfntOld = SelectObject(hdcMem, hSmallFont);
 	oldFont = FontSmall;
 
 #if CcCycleTime
@@ -1414,14 +1415,16 @@ void windowDisplay(HWND hWnd)
 
 	SelectObject(hdcMem, hPen);
 
-	curr = display;
-	end = display + listEnd;
+	// ReSharper disable once CppInitializedValueIsAlwaysRewritten
+	DispList *curr = display;
+	DispList *end = display + listEnd;
 	for (curr = display; curr < end; curr++)
 	{
 		if (oldFont != curr->fontSize)
 		{
 			oldFont = curr->fontSize;
 
+			// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 			switch (oldFont)
 			{
 			case FontSmall:

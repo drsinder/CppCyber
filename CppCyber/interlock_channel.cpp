@@ -213,6 +213,7 @@ static void ilrExecute(PpWord func)
 	code = (func >> 9) & 7;
 	designator = func & 0177;
 
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (code)
 	{
 	case 0:

@@ -903,9 +903,11 @@ static void mt679PackConversionTable(u8 *convTable)
 		*op++ = ((c2 << 8) | (c3 >> 0)) & Mask12;
 	}
 
+	// ReSharper disable once CppAssignedValueIsNeverUsed
 	c1 = *ip++;
 	c2 = *convTable;    // wrap
 
+	// ReSharper disable once CppAssignedValueIsNeverUsed
 	*op++ = ((c1 << 4) | (c2 >> 4)) & Mask12;
 }
 
@@ -958,6 +960,7 @@ static void mt679UnpackConversionTable(u8 *convTable)
 		ip += 2;
 	}
 
+	// ReSharper disable once CppAssignedValueIsNeverUsed
 	*op++ = ((ip[0] >> 4) & 0xFF);    // discard last 4 bits
 
 #if DEBUG
@@ -1036,7 +1039,6 @@ static FcStatus mt679Func(PpWord funcCode)
 	i8 unitNo;
 	TapeParam *tp;
 	CtrlParam *cp = (CtrlParam*)activeDevice->controllerContext;
-	i32 position;
 
 	unitNo = activeDevice->selectedUnit;
 	if (unitNo != -1)
@@ -1403,7 +1405,8 @@ static FcStatus mt679Func(PpWord funcCode)
 		{
 			mt679ResetStatus(tp);
 			tp->bp = tp->ioBuffer;
-			position = ftell(activeDevice->fcb[unitNo]);
+			// ReSharper disable once CppEntityNeverUsed
+			i32 position = ftell(activeDevice->fcb[unitNo]);
 			tp->blockNo += 1;
 
 			/*
@@ -1574,6 +1577,7 @@ static void mt679Io(void)
 					{
 						unitNo = param & Mask4;
 						activeDevice->selectedUnit = unitNo;
+						// ReSharper disable once CppAssignedValueIsNeverUsed
 						tp = (TapeParam *)activeDevice->context[unitNo];
 					}
 				}
@@ -1806,6 +1810,7 @@ static void mt679Disconnect(void)
 	/*
 	**  Flush conversion tables.
 	*/
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (activeDevice->fcode)
 	{
 	case Fc679LoadReadConv:
@@ -1890,6 +1895,7 @@ static void mt679FlushWrite(void)
 	ip = tp->ioBuffer;
 	rp = rawBuffer;
 
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (cp->selectedConversion)
 	{
 	case 0:

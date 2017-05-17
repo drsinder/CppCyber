@@ -249,6 +249,7 @@ static void scrExecute(PpWord func)
 	/*
 	**  Set a few dynamic bits.
 	*/
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (word)
 	{
 	case 05:
@@ -426,6 +427,7 @@ static void scrExecute(PpWord func)
 		break;
 	}
 
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (code)
 	{
 	case 0:

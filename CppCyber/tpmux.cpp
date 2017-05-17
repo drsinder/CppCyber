@@ -30,6 +30,7 @@
 **  -------------
 */
 #include "stdafx.h"
+// ReSharper disable once CppUnusedIncludeDirective
 #include <sys/types.h>
 #if defined(_WIN32)
 #include <winsock.h>
@@ -423,6 +424,7 @@ static void tpMuxIo(void)
 
 	mp = (PortParam *)activeDevice->context[0] + activeDevice->selectedUnit;
 
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (activeDevice->fcode & 00700)
 	{
 	case FcTpmStatusSumary:
@@ -615,6 +617,7 @@ static void *tpMuxThread(void *param)
 	*/
 	listenFd = socket(AF_INET, SOCK_STREAM, 0);
 	if (listenFd < 0)
+	// ReSharper disable once CppUnreachableCode
 	{
 		printf("tpMux: Can't create socket\n");
 #if defined(_WIN32)

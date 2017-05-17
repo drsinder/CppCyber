@@ -362,6 +362,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
 	/*
 	**  Extract the true connection number for those messages which carry it in P3.
 	*/
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (block[BlkOffPfc])
 	{
 	case PfcCNF:
@@ -395,6 +396,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
 	/*
 	**  Process message.
 	*/
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (block[BlkOffPfc])
 	{
 	case PfcSUP:
@@ -432,8 +434,10 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
 		break;
 
 	case PfcCNF:
+		// ReSharper disable once CppDeclaratorMightNotBeInitialized
 		if (tp->state != StTermRequestConfig)
 		{
+			// ReSharper disable once CppDeclaratorMightNotBeInitialized
 			npuLogMessage("Unexpected Terminal Configuration Reply in state %d", tp->state);
 			break;
 		}
@@ -444,13 +448,17 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
 			**  Process configuration reply and if all is well, issue
 			**  terminal connection request.
 			*/
+			// ReSharper disable once CppDeclaratorMightNotBeInitialized
 			if (npuSvmProcessTerminalConfig(tp, bp)
+				// ReSharper disable once CppDeclaratorMightNotBeInitialized
 				&& npuSvmRequestTerminalConnection(tp))
 			{
+				// ReSharper disable once CppDeclaratorMightNotBeInitialized
 				tp->state = StTermRequestConnection;
 			}
 			else
 			{
+				// ReSharper disable once CppDeclaratorMightNotBeInitialized
 				npuNetDisconnected(tp);
 			}
 		}
@@ -460,35 +468,42 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
 			**  This port appears to be unknown to the host.
 			*/
 			npuLogMessage("Terminal on port %d not configured", cn);
+			// ReSharper disable once CppDeclaratorMightNotBeInitialized
 			npuNetDisconnected(tp);
 		}
 		else
 		{
 			npuLogMessage("Unexpected SVM message %02X/%02X with CN %d", block[BlkOffPfc], block[BlkOffSfc], cn);
+			// ReSharper disable once CppDeclaratorMightNotBeInitialized
 			npuNetDisconnected(tp);
 		}
 
 		break;
 
 	case PfcICN:
+		// ReSharper disable once CppDeclaratorMightNotBeInitialized
 		if (tp->state != StTermRequestConnection)
 		{
+			// ReSharper disable once CppDeclaratorMightNotBeInitialized
 			npuLogMessage("Unexpected Terminal Connection Reply in state %d", tp->state);
 			break;
 		}
 
 		if (block[BlkOffSfc] == (SfcTE | SfcResp))
 		{
+			// ReSharper disable once CppDeclaratorMightNotBeInitialized
 			npuNetConnected(tp);
 		}
 		else if (block[BlkOffSfc] == (SfcTE | SfcErr))
 		{
 			npuLogMessage("Terminal Connection Rejected - reason 0x%02X", block[BlkOffP4]);
+			// ReSharper disable once CppDeclaratorMightNotBeInitialized
 			npuNetDisconnected(tp);
 		}
 		else
 		{
 			npuLogMessage("Unexpected SVM message %02X/%02X with CN %d", block[BlkOffPfc], block[BlkOffSfc], cn);
+			// ReSharper disable once CppDeclaratorMightNotBeInitialized
 			npuNetDisconnected(tp);
 		}
 
@@ -500,15 +515,18 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
 			/*
 			**  Terminate connection from host.
 			*/
+			// ReSharper disable once CppDeclaratorMightNotBeInitialized
 			npuTipTerminateConnection(tp);
 		}
 		else if (block[BlkOffSfc] == (SfcTA | SfcResp))
 		{
+			// ReSharper disable once CppDeclaratorMightNotBeInitialized
 			if (tp->state == StTermNpuDisconnect)
 			{
 				/*
 				**  Reset connection state.
 				*/
+				// ReSharper disable once CppDeclaratorMightNotBeInitialized
 				tp->state = StTermIdle;
 			}
 		}
@@ -657,26 +675,25 @@ static bool npuSvmProcessTerminalConfig(Tcb *tp, NpuBuffer *bp)
 {
 	u8 *mp = bp->data;
 	int len = bp->numBytes;
-	u8 port;
-	u8 subPort;
-	u8 address1;
-	u8 address2;
 	u8 deviceType;
 	u8 subTip;
 	u8 termName[7];
 	u8 termClass;
 	u8 status;
-	u8 lastResp;
 	u8 codeSet;
 
 	/*
 	**  Extract configuration.
 	*/
 	mp += BlkOffP3;
-	port = *mp++;
-	subPort = *mp++;
-	address1 = *mp++;
-	address2 = *mp++;
+	// ReSharper disable once CppEntityNeverUsed
+	u8 port = *mp++;
+	// ReSharper disable once CppEntityNeverUsed
+	u8 subPort = *mp++;
+	// ReSharper disable once CppEntityNeverUsed
+	u8 address1 = *mp++;
+	// ReSharper disable once CppEntityNeverUsed
+	u8 address2 = *mp++;
 	deviceType = *mp++;
 	subTip = *mp++;
 
@@ -685,7 +702,8 @@ static bool npuSvmProcessTerminalConfig(Tcb *tp, NpuBuffer *bp)
 
 	termClass = *mp++;
 	status = *mp++;
-	lastResp = *mp++;
+	// ReSharper disable once CppEntityNeverUsed
+	u8 lastResp = *mp++;
 	codeSet = *mp++;
 
 	/*

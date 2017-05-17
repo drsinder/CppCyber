@@ -264,7 +264,7 @@ void cp3446RemoveCards(char *params)
 	struct tm t;
 	char fname[80];
 	char fnameNew[80];
-	static char msgBuf[80];
+	//static char msgBuf[80];
 
 	/*
 	**  Operator wants to remove cards.

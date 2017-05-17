@@ -1316,7 +1316,6 @@ static void mt362xDisconnect(void)
 	TapeParam *tp;
 	i8 unitNo;
 	u32 i;
-	u64 recLen0;
 	u64 recLen1;
 	u64 recLen2;
 	PpWord *ip;
@@ -1356,7 +1355,8 @@ static void mt362xDisconnect(void)
 
 		fcb = active3000Device->fcb[unitNo];
 		tp->bp = tp->ioBuffer;
-		recLen0 = 0;
+		// ReSharper disable once CppInitializedValueIsAlwaysRewritten
+		u64 recLen0 = 0;
 		recLen2 = active3000Device->recordLength;
 		ip = tp->ioBuffer;
 		rp = rawBuffer;
@@ -1495,7 +1495,6 @@ static void mt362xFuncRead(void)
 	u32 recLen2;
 	i8 unitNo;
 	TapeParam *tp;
-	i32 position;
 
 	unitNo = active3000Device->selectedUnit;
 	tp = (TapeParam *)active3000Device->context[unitNo];
@@ -1506,7 +1505,9 @@ static void mt362xFuncRead(void)
 	/*
 	**  Determine if the tape is at the load point.
 	*/
-	position = ftell(active3000Device->fcb[unitNo]);
+	// ReSharper disable once CppUseAuto
+	// ReSharper disable once CppEntityNeverUsed
+	i32 position = ftell(active3000Device->fcb[unitNo]);
 
 	/*
 	**  Read and verify TAP record length header.
@@ -1837,7 +1838,6 @@ static void mt362xFuncForespace(void)
 	u32 recLen2;
 	i8 unitNo;
 	TapeParam *tp;
-	i32 position;
 
 	unitNo = active3000Device->selectedUnit;
 	tp = (TapeParam *)active3000Device->context[unitNo];
@@ -1845,7 +1845,8 @@ static void mt362xFuncForespace(void)
 	/*
 	**  Determine if the tape is at the load point.
 	*/
-	position = ftell(active3000Device->fcb[unitNo]);
+	// ReSharper disable once CppEntityNeverUsed
+	i32 position = ftell(active3000Device->fcb[unitNo]);
 
 	/*
 	**  Read and verify TAP record length header.

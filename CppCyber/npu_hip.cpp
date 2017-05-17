@@ -661,6 +661,7 @@ static void npuHipIo(void)
 			orderValue = (u8)(activeChannel->data & OrdMaskValue);
 			activeChannel->full = FALSE;
 
+			// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 			switch (orderType)
 			{
 			case OrdOutServiceMsg:

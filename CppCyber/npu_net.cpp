@@ -33,7 +33,9 @@
 */
 #include "stdafx.h"
 #include "npu.h"
+// ReSharper disable once CppUnusedIncludeDirective
 #include <sys/types.h>
+// ReSharper disable once CppUnusedIncludeDirective
 #include <memory.h>
 #if defined(_WIN32)
 #include <winsock.h>
@@ -339,6 +341,7 @@ void npuNetSend(Tcb *tp, u8 *data, int len)
 	u8 *p;
 	int count;
 
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (tp->connType)
 	{
 	case ConnTypePterm:
@@ -347,6 +350,7 @@ void npuNetSend(Tcb *tp, u8 *data, int len)
 		*/
 		for (p = data; len > 0; len -= 1)
 		{
+			// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 			switch (*p++)
 			{
 			case 0xFF:
@@ -437,6 +441,7 @@ void npuNetCheckStatus(void)
 	static fd_set readFds;
 	static fd_set writeFds;
 	struct timeval timeout;
+	// ReSharper disable once CppInitializedValueIsAlwaysRewritten
 	int readySockets = 0;
 	Tcb *tp;
 
@@ -625,6 +630,7 @@ static void *npuNetThread(void *param)
 		*/
 		listenFd[i] = socket(AF_INET, SOCK_STREAM, 0);
 		if (listenFd[i] < 0)
+		// ReSharper disable once CppUnreachableCode
 		{
 			fprintf(stderr, "npuNet: Can't create socket\n");
 #if defined(_WIN32)

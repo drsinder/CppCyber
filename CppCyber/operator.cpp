@@ -32,6 +32,7 @@
 **  -------------
 */
 #include "stdafx.h"
+// ReSharper disable once CppUnusedIncludeDirective
 #include <sys/types.h>
 #if defined(_WIN32)
 #include <windows.h>
@@ -106,7 +107,9 @@ static void opHelpShutdown(void);
 static void opCmdPause(bool help, char *cmdParams);
 static void opHelpPause(void);
 
+// ReSharper disable once CppFunctionIsNotImplemented
 static void opCmdDumpDisk(bool help, char *cmdParams);	// DRS
+// ReSharper disable once CppFunctionIsNotImplemented
 static void opHelpDumpDisk(void);
 
 /*

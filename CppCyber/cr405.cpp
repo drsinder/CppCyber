@@ -195,7 +195,6 @@ void cr405Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 void cr405LoadCards(char *params)
 {
-	Cr405Context *cc;
 	DevSlot *dp;
 	int numParam;
 	int channelNo;
@@ -244,7 +243,7 @@ void cr405LoadCards(char *params)
 		return;
 	}
 
-	cc = (Cr405Context *)(dp->context[0]);
+	//Cr405Context *cc = (Cr405Context *)(dp->context[0]);
 
 	/*
 	**  Ensure the tray is empty.

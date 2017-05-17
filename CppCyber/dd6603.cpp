@@ -329,7 +329,6 @@ static FcStatus dd6603Func(PpWord funcCode)
 	case Fc6603SelectTrack:
 		dp->track = funcCode & Fc6603TrackMask;
 		return(FcProcessed);
-		break;
 
 	case Fc6603SelectHead:
 		if (funcCode == Fc6603StatusReq)
@@ -367,7 +366,7 @@ static FcStatus dd6603Func(PpWord funcCode)
 static void dd6603Io(void)
 {
 	FILE *fcb = activeDevice->fcb[activeDevice->selectedUnit];
-	DiskParam *dp = (DiskParam *)activeDevice->context[activeDevice->selectedUnit];
+	//DiskParam *dp = (DiskParam *)activeDevice->context[activeDevice->selectedUnit];
 
 	switch (activeDevice->fcode & Fc6603CodeMask)
 	{

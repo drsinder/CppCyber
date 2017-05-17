@@ -1023,7 +1023,6 @@ static FcStatus mt669Func(PpWord funcCode)
 	i8 unitNo;
 	TapeParam *tp;
 	CtrlParam *cp = (CtrlParam*)activeDevice->controllerContext;
-	i32 position;
 
 	unitNo = activeDevice->selectedUnit;
 	if (unitNo != -1)
@@ -1224,7 +1223,8 @@ static FcStatus mt669Func(PpWord funcCode)
 		{
 			mt669ResetStatus(tp);
 			tp->bp = tp->ioBuffer;
-			position = ftell(activeDevice->fcb[unitNo]);
+			// ReSharper disable once CppEntityNeverUsed
+			i32 position = ftell(activeDevice->fcb[unitNo]);
 			tp->blockNo += 1;
 
 			/*
@@ -1882,6 +1882,7 @@ static void mt669Disconnect(void)
 	rp = rawBuffer;
 	oddFrameCount = activeDevice->fcode == Fc669WriteOdd;
 
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (tp->selectedConversion)
 	{
 	case 0:
@@ -1902,6 +1903,7 @@ static void mt669Disconnect(void)
 		*/
 		recLen0 = (recLen2 / 4) * 6;
 
+		// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 		switch (recLen2 % 4)
 		{
 		case 1:

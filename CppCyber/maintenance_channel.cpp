@@ -368,11 +368,10 @@ static FcStatus mchFunc(PpWord funcCode)
 {
 	PpWord connCode;
 	PpWord opCode;
-	PpWord typeCode;
 
 	connCode = funcCode & FcConnMask;
 	opCode = funcCode & FcOpMask;
-	typeCode = funcCode & FcTypeMask;
+	//PpWord typeCode = funcCode & FcTypeMask;
 
 #if DEBUG
 	fprintf(mchLog, "\n%06d PP:%02o CH:%02o f:0x%03X C:%-25s O:%-25s  >   ",
@@ -697,6 +696,7 @@ static void mchActivate(void)
 **------------------------------------------------------------------------*/
 static void mchDisconnect(void)
 {
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (activeDevice->fcode & FcOpMask)
 	{
 	case FcOpRead:

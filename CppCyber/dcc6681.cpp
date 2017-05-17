@@ -67,7 +67,7 @@ typedef struct dccControl
 */
 static FcStatus dcc6681Func(PpWord funcCode);
 static void dcc6681Io(void);
-static void dcc6681Load(DevSlot *, int, char *);
+//static void dcc6681Load(DevSlot *, int, char *);
 static void dcc6681Activate(void);
 static void dcc6681Disconnect(void);
 
@@ -299,6 +299,7 @@ static FcStatus dcc6681Func(PpWord funcCode)
 		return(FcDeclined);
 	}
 
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (funcCode)
 	{
 	case Fc6681Select:
@@ -334,6 +335,7 @@ static FcStatus dcc6681Func(PpWord funcCode)
 		return(FcProcessed);
 	}
 
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (funcCode & Fc6681IoModeMask)
 	{
 	case Fc6681DevStatusReq:
@@ -368,6 +370,7 @@ static FcStatus dcc6681Func(PpWord funcCode)
 		return((active3000Device->func)(funcCode));
 	}
 
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (funcCode & Fc6681ConnectEquipmentMask)
 	{
 	case Fc6681Connect4Mode1:

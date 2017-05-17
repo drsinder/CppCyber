@@ -217,8 +217,8 @@ static void dd8xxActivate(void);
 static void dd8xxDisconnect(void);
 static i32 dd8xxSeek(DiskParam *dp);
 static i32 dd8xxSeekNextSector(DiskParam *dp);
-static void dd8xxDump(PpWord data);
-static void dd8xxFlush(void);
+//static void dd8xxDump(PpWord data);
+//static void dd8xxFlush(void);
 static PpWord dd8xxReadClassic(DiskParam *dp, FILE *fcb);
 static PpWord dd8xxReadPacked(DiskParam *dp, FILE *fcb);
 static void dd8xxWriteClassic(DiskParam *dp, FILE *fcb, PpWord data);
@@ -460,6 +460,7 @@ static void dd8xxInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceNa
 		/*
 		**  No options specified - use default values.
 		*/
+		// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 		switch (diskType)
 		{
 		case DiskType885:
@@ -475,6 +476,8 @@ static void dd8xxInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceNa
 	/*
 	**  Setup environment for disk container type.
 	*/
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
+	// ReSharper disable once CppDeclaratorMightNotBeInitialized
 	switch (containerType)
 	{
 	case CtClassic:
@@ -493,6 +496,7 @@ static void dd8xxInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceNa
 	/*
 	**  Initialize detailed status.
 	*/
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (diskType)
 	{
 	case DiskType885:
@@ -555,6 +559,7 @@ static void dd8xxInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceNa
 		/*
 		**  Construct a name.
 		*/
+		// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 		switch (diskType)
 		{
 		case DiskType844:
@@ -601,6 +606,7 @@ static void dd8xxInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceNa
 		**  Position to cylinder with the disk's factory and utility
 		**  data areas.
 		*/
+		// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 		switch (diskType)
 		{
 		case DiskType885:
@@ -829,6 +835,7 @@ static FcStatus dd8xxFunc(PpWord funcCode)
 	case Fc8xxDetailedStatus2:
 		dp->detailedStatus[2] = (funcCode << 4) & 07760;
 
+		// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 		switch (dp->diskType)
 		{
 		case DiskType885:
@@ -875,6 +882,7 @@ static FcStatus dd8xxFunc(PpWord funcCode)
 		return(FcProcessed);
 
 	case Fc8xxDeadstart:
+		// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 		switch (dp->diskType)
 		{
 		case DiskType844:

@@ -30,7 +30,9 @@
 **  -------------
 */
 #include "stdafx.h"
+// ReSharper disable once CppUnusedIncludeDirective
 #include <sys/types.h>
+// ReSharper disable once CppUnusedIncludeDirective
 #include <memory.h>
 #if defined(_WIN32)
 #include <winsock.h>
@@ -196,6 +198,7 @@ void mux6676Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 static FcStatus mux6676Func(PpWord funcCode)
 {
 	u8 eqNo;
+	// ReSharper disable once CppEntityNeverUsed
 	PortParam *mp = (PortParam *)activeDevice->context[0];
 
 	eqNo = (funcCode & Fc6676EqMask) >> Fc6676EqShift;
@@ -444,6 +447,7 @@ static void *mux6676Thread(void *param)
 	*/
 	listenFd = socket(AF_INET, SOCK_STREAM, 0);
 	if (listenFd < 0)
+	// ReSharper disable once CppUnreachableCode
 	{
 		printf("mux6676: Can't create socket\n");
 #if defined(_WIN32)
@@ -620,6 +624,8 @@ static bool mux6676InputRequired(void)
 	timeout.tv_sec = 0;
 	timeout.tv_usec = 0;
 
+	// ReSharper disable once CppCStyleCast
+	// ReSharper disable once CppDeclaratorMightNotBeInitialized
 	numSocks = select((int)mp->connFd + 1, &readFds, NULL, &exceptFds, &timeout);
 
 	return(numSocks > 0);

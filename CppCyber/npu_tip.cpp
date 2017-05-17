@@ -346,6 +346,7 @@ void npuTipReset(void)
 **------------------------------------------------------------------------*/
 void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 {
+	// ReSharper disable once CppEntityNeverUsed
 	static int count = 0;
 	u8 *block = bp->data;
 	Tcb *tp;
@@ -366,6 +367,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 		tp = npuTcbs + cn - 1;
 	}
 
+	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (block[BlkOffBTBSN] & BlkMaskBT)
 	{
 	case BtHTRINIT:
