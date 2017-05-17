@@ -425,7 +425,7 @@ void consoleQueueKey1(char ch)
 	{
 		nextin = 0;
 	}
-	if (nextin != keyOut)
+	if (nextin != keyOut1)
 	{
 		keyRing1[keyIn1] = ch;
 		keyIn1 = nextin;
@@ -456,7 +456,7 @@ char consoleGetKey1(void)
 	{
 		nextout = 0;
 	}
-	key = keyRing[keyOut1];
+	key = keyRing1[keyOut1];
 	keyOut1 = nextout;
 	//printf("keyout %c\n", consoleToAscii[key]);
 	return key;
@@ -669,7 +669,7 @@ static void consoleIo1(void)
 			/*
 			**  Check for auto date entry.
 			*/
-			if (autoDate)
+			if (autoDate1)
 			{
 				/*
 				**  See if medium char size, and text matches
@@ -703,7 +703,7 @@ static void consoleIo1(void)
 							*ts1 = '9'; *(ts1 + 1) = '8';
 							for (p1 = (u8 *)ts1; *p1; p1++)
 							{
-								consoleQueueKey(asciiToConsole[*p1]);
+								consoleQueueKey1(asciiToConsole[*p1]);
 							}
 						}
 					}
