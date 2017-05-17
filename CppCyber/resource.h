@@ -2,6 +2,7 @@
 // Microsoft Developer Studio generated include file.
 // Used by window.rc
 //
+#pragma once
 #define IDC_MYICON                      2
 #define IDD_CONSOLE_DIALOG              102
 #define IDD_ABOUTBOX                    103
