@@ -157,7 +157,7 @@ int main(int argc, char **argv)
 {
 #if defined(_WIN32)
 	/*
-	**  Select WINSOCK 1.1 by default.
+	**  Select WINSOCK 2.2 by default.
 	*/
 	WORD versionRequested;
 	WSADATA wsaData;
