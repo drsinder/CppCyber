@@ -486,10 +486,24 @@ void MSystem::InitCyber(char *config)
 	}
 #endif
 
-	if (initGetString("autodate", 0, autoDateString, 39))
+	if (initGetString("autodate", "", autoDateString, 39))
 	{
 		autoDate = true;
 		autoDate1 = true;
+	}
+
+	if (initGetString("autodateyear", "98", autoDateYear, 39))
+	{
+		if (strlen(autoDateYear) != 2)
+		{
+			printf("autodateyear must be two digits\n");
+			exit(1);
+		}
+		if(!isdigit(autoDateYear[0]) || !isdigit(autoDateYear[1]))
+		{
+			printf("autodateyear must be two digits\n");
+			exit(1);
+		}
 	}
 
 	//initGetDouble("clockx", 1.0, &clockx);

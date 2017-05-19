@@ -345,7 +345,7 @@ static FcStatus consoleFunc1(PpWord funcCode)
 **------------------------------------------------------------------------*/
 
 char autoDateString[40];
-
+char autoDateYear[40] = "98";
 /*--------------------------------------------------------------------------
 **  Purpose:        Queue keyboard input.
 **
@@ -544,7 +544,7 @@ static void consoleIo(void)
 							strftime(ts, sizeof(ts) - 1,
 								"%y%m%d\n%H%M%S\n",
 								localtime(&t));
-							*ts = '9'; *(ts+1) = '8';
+							*ts = autoDateYear[0]; *(ts+1) = autoDateYear[1];
 							for (p = (u8 *)ts; *p; p++)
 							{
 								consoleQueueKey(asciiToConsole[*p]);
@@ -700,7 +700,7 @@ static void consoleIo1(void)
 							strftime(ts1, sizeof(ts1) - 1,
 								"%y%m%d\n%H%M%S\n",
 								localtime(&t1));
-							*ts1 = '9'; *(ts1 + 1) = '8';
+							*ts = autoDateYear[0]; *(ts + 1) = autoDateYear[1];
 							for (p1 = (u8 *)ts1; *p1; p1++)
 							{
 								consoleQueueKey1(asciiToConsole[*p1]);

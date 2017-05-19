@@ -352,6 +352,7 @@ extern u32 rtcClock;
 extern bool autoDate;		// enter date/time automatically - year 98
 extern bool autoDate1;		// enter date/time automatically - year 98
 extern char autoDateString[40];
+extern char autoDateYear[40];
 
 extern char persistDir[];
 extern char printDir[];
