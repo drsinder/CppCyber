@@ -922,10 +922,12 @@ void traceSequence(u8 mfrID)
 	*/
 	traceSequenceNo += 1;
 
+	MMainFrame *mfr = BigIron->chasis[mfrID];
+
 	/*
 	**  Bail out if no trace of this PPU is requested.
 	*/
-	if ((traceMask & (1 << activePpu->id)) == 0)
+	if ((traceMask & (1 << mfr->activePpu->id)) == 0)
 	{
 		return;
 	}
@@ -933,7 +935,7 @@ void traceSequence(u8 mfrID)
 	/*
 	**  Print sequence no and PPU number.
 	*/
-	fprintf(ppuF[activePpu->id + mfrID*024 ], "%06d [%2o]    ", traceSequenceNo & Mask31, activePpu->id);
+	fprintf(ppuF[mfr->activePpu->id + mfrID*024 ], "%06d [%2o]    ", traceSequenceNo & Mask31, mfr->activePpu->id);
 
 }
 
@@ -947,10 +949,12 @@ void traceSequence(u8 mfrID)
 **------------------------------------------------------------------------*/
 void traceRegisters(u8 mfrID)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrID];
+
 	/*
 	**  Bail out if no trace of this PPU is requested.
 	*/
-	if ((traceMask & (1 << activePpu->id)) == 0)
+	if ((traceMask & (1 << mfr->activePpu->id)) == 0)
 	{
 		return;
 	}
@@ -958,9 +962,9 @@ void traceRegisters(u8 mfrID)
 	/*
 	**  Print registers.
 	*/
-	fprintf(ppuF[activePpu->id + mfrID * 024], "P:%04o  ", activePpu->regP);
-	fprintf(ppuF[activePpu->id + mfrID * 024], "A:%06o", activePpu->regA);
-	fprintf(ppuF[activePpu->id + mfrID * 024], "    ");
+	fprintf(ppuF[mfr->activePpu->id + mfrID * 024], "P:%04o  ", mfr->activePpu->regP);
+	fprintf(ppuF[mfr->activePpu->id + mfrID * 024], "A:%06o", mfr->activePpu->regA);
+	fprintf(ppuF[mfr->activePpu->id + mfrID * 024], "    ");
 }
 
 /*--------------------------------------------------------------------------
@@ -978,20 +982,22 @@ void traceOpcode(u8 mfrID)
 	u8 opF;
 	u8 opD;
 
+	MMainFrame *mfr = BigIron->chasis[mfrID];
+
 	/*
 	**  Bail out if no trace of this PPU is requested.
 	*/
-	if ((traceMask & (1 << activePpu->id)) == 0)
+	if ((traceMask & (1 << mfr->activePpu->id)) == 0)
 	{
 		return;
 	}
 
-	FILE *pF = ppuF[activePpu->id + mfrID*024];
+	FILE *pF = ppuF[mfr->activePpu->id + mfrID*024];
 
 	/*
 	**  Print opcode.
 	*/
-	opCode = activePpu->mem[activePpu->regP];
+	opCode = mfr->activePpu->mem[mfr->activePpu->regP];
 	opF = opCode >> 6;
 	opD = opCode & 077;
 	addrMode = ppDecode[opF].mode;
@@ -1006,7 +1012,7 @@ void traceOpcode(u8 mfrID)
 		break;
 
 	case Amd:
-		fprintf(pF, "%04o,%02o ", activePpu->mem[activePpu->regP + 1], opD);
+		fprintf(pF, "%04o,%02o ", mfr->activePpu->mem[mfr->activePpu->regP + 1], opD);
 		break;
 
 	case Ar:
@@ -1025,7 +1031,7 @@ void traceOpcode(u8 mfrID)
 		break;
 
 	case Adm:
-		fprintf(pF, "%02o%04o  ", opD, activePpu->mem[activePpu->regP + 1]);
+		fprintf(pF, "%02o%04o  ", opD, mfr->activePpu->mem[mfr->activePpu->regP + 1]);
 		break;
 	}
 
@@ -1106,7 +1112,7 @@ u8 traceDisassembleOpcode(char *str, PpWord *pm)
 **------------------------------------------------------------------------*/
 void traceChannelFunction(PpWord funcCode)
 {
-	fprintf(devF2, "%06d [%02o]    ", traceSequenceNo & Mask31, activePpu->id);
+	fprintf(devF2, "%06d [%02o]    ", traceSequenceNo & Mask31, BigIron->chasis[0]->activePpu->id);
 	fprintf(devF2, "Unclaimed function code %04o on CH%02o\n", funcCode, activeChannel->id);
 }
 
@@ -1121,7 +1127,9 @@ void traceChannelFunction(PpWord funcCode)
 **------------------------------------------------------------------------*/
 void tracePrint(char *str, u8 mfrID)
 {
-	fputs(str, ppuF[activePpu->id + mfrID*024]);
+	MMainFrame *mfr = BigIron->chasis[mfrID];
+
+	fputs(str, ppuF[mfr->activePpu->id + mfrID*024]);
 
 }
 
@@ -1154,15 +1162,17 @@ void traceCpuPrint(MCpu *cpux, char *str)
 **------------------------------------------------------------------------*/
 void traceChannel(u8 ch, u8 mfrID)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrID];
+
 	/*
 	**  Bail out if no trace of this PPU is requested.
 	*/
-	if ((traceMask & (1 << activePpu->id)) == 0)
+	if ((traceMask & (1 << mfr->activePpu->id)) == 0)
 	{
 		return;
 	}
 
-	fprintf(ppuF[activePpu->id], "  CH:%c%c%c",
+	fprintf(ppuF[mfr->activePpu->id], "  CH:%c%c%c",
 		BigIron->chasis[mfrID]->channel[ch].active ? 'A' : 'D',
 		BigIron->chasis[mfrID]->channel[ch].full ? 'F' : 'E',
 		BigIron->chasis[mfrID]->channel[ch].ioDevice == NULL ? 'I' : 'S');
@@ -1178,10 +1188,12 @@ void traceChannel(u8 ch, u8 mfrID)
 **------------------------------------------------------------------------*/
 void traceEnd(u8 mfrID)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrID];
+
 	/*
 	**  Bail out if no trace of this PPU is requested.
 	*/
-	if ((traceMask & (1 << activePpu->id)) == 0)
+	if ((traceMask & (1 << mfr->activePpu->id)) == 0)
 	{
 		return;
 	}
@@ -1189,7 +1201,7 @@ void traceEnd(u8 mfrID)
 	/*
 	**  Print newline.
 	*/
-	fprintf(ppuF[activePpu->id + mfrID*024], "\n");
+	fprintf(ppuF[mfr->activePpu->id + mfrID*024], "\n");
 }
 
 /*---------------------------  End Of File  ------------------------------*/

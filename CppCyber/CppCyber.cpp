@@ -101,17 +101,16 @@ MSystem *BigIron;
 ** The rest of these were harder and left for now.
 */
 
-MCpu *Acpu[MaxCpus];
+//MCpu *Acpu[MaxCpus];
 
-PpSlot *activePpu;
+//PpSlot *activePpu;
+ChSlot *activeChannel;
+DevSlot *activeDevice;
+DevSlot *active3000Device;
 
 char persistDir[256];
 char printDir[256];	
 char printApp[256];	
-
-ChSlot *activeChannel;
-DevSlot *activeDevice;
-DevSlot *active3000Device;
 
 u32 traceMask = 0;
 u32 traceSequenceNo;
@@ -500,9 +499,6 @@ void CPUThread(LPVOID pCpu)
 		*/
 		ncpu->mfr->cycles++;
 		
-		//if ((ncpu->mfr->cycles % 10000) == 0)
-		//	printf("cycles: %d\n", ncpu->mfr->cycles++);
-
 		/*
 		**  Deal with operator interface requests.
 		*/
@@ -591,16 +587,12 @@ void CPUThread1(LPVOID pCpu)
 
 	while (BigIron->emulationActive)
 	{
-		//if (opActive)
-		//{
-		//	opRequest();
-		//}
 		// step CPU
 		// wait for cpu 0 thread to tell us to run
 #if MaxCpus == 2
-		//RESERVE1(&ncpu->mfr->DummyMutex);
+		RESERVE1(&ncpu->mfr->DummyMutex);
 		SleepConditionVariableCS(&ncpu->mfr->CpuRun, &ncpu->mfr->DummyMutex, 1);
-		//RELEASE1(&ncpu->mfr->DummyMutex);
+		RELEASE1(&ncpu->mfr->DummyMutex);
 		// make sure we don't step on ppu time.
 		RESERVE1(&ncpu->mfr->PpuMutex);
 #endif
@@ -750,9 +742,9 @@ void CPUThread1X(LPVOID pCpu)
 		// wait for cpu 0 thread to tell us to run
 		if (BigIron->initCpus > 1)
 		{
-			//RESERVE1(&ncpu->mfr->DummyMutex);
+			RESERVE1(&ncpu->mfr->DummyMutex);
 			SleepConditionVariableCS(&ncpu->mfr->CpuRun, &ncpu->mfr->DummyMutex, 1);
-			//RELEASE1(&ncpu->mfr->DummyMutex);
+			RELEASE1(&ncpu->mfr->DummyMutex);
 		}
 		// make sure we don't step on ppu time.
 		RESERVE1(&ncpu->mfr->PpuMutex);

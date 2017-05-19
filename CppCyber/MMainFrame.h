@@ -44,6 +44,9 @@ public:
 	char ppKeyIn;
 	u32 traceMask = 0;
 	u32 traceSequenceNo = 0;
+
+	PpSlot *activePpu;
+
 	//u16 mux6676TelnetPort;
 	//u16 mux6676TelnetConns;
 	//u16 npuNetTelnetPort;

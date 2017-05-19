@@ -178,7 +178,7 @@ void Mpp::Step(void)
 {
 	PpWord opCode;
 
-	activePpu = &(this->ppu);
+	mfr->activePpu = &(this->ppu);
 
 	/*
 	**  Exercise each PP in the barrel.
@@ -196,8 +196,8 @@ void Mpp::Step(void)
 			/*
 			**  Save opF and opD for post-instruction trace.
 			*/
-			activePpu->opF = opF;
-			activePpu->opD = opD;
+			mfr->activePpu->opF = opF;
+			mfr->activePpu->opD = opD;
 
 #if CcDebug == 1
 

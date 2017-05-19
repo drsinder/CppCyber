@@ -700,7 +700,7 @@ static void consoleIo1(void)
 							strftime(ts1, sizeof(ts1) - 1,
 								"%y%m%d\n%H%M%S\n",
 								localtime(&t1));
-							*ts = autoDateYear[0]; *(ts + 1) = autoDateYear[1];
+							*ts1 = autoDateYear[0]; *(ts1 + 1) = autoDateYear[1];
 							for (p1 = (u8 *)ts1; *p1; p1++)
 							{
 								consoleQueueKey1(asciiToConsole[*p1]);

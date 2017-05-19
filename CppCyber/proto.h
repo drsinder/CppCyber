@@ -329,7 +329,7 @@ extern MSystem *BigIron;
 ** The rest of these were harder and left for now.
 */
 
-extern PpSlot *activePpu;
+//extern PpSlot *activePpu;
 extern ChSlot *activeChannel;
 extern DevSlot *activeDevice;
 extern DevSlot *active3000Device;
