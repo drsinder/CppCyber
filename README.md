@@ -49,7 +49,7 @@ A number of other features were added - cyber.ini
 	priority=high
 6)  Set date and time automatically (year 1998)
 	autodate=enter date
-7)  Set year with autodate - override 1998. eg: 99
+7)  Set year with autodateyear - override 1998. eg: 99
 
 If the program has been compiled with 2 mainframe support an
 additional parameter is required for each line in the
