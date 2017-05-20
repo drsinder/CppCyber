@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: pci_channel.c
+**  Name: pci_channel.cpp
 **
 **  Description:
 **      Interface to PCI channel adapter.
@@ -85,15 +85,15 @@ typedef struct pciParam
 */
 static FcStatus pciFunc(PpWord funcCode, u8 mfrId);
 static void pciIo(u8 mfrId);
-static PpWord pciIn(void);
+static PpWord pciIn();
 static void pciOut(PpWord data);
-static void pciFull(void);
-static void pciEmpty(void);
+static void pciFull();
+static void pciEmpty();
 static void pciActivate(u8 mfrId);
 static void pciDisconnect(u8 mfrId);
-static u16 pciFlags(void);
+static u16 pciFlags();
 static void pciCmd(PpWord data);
-static u16 pciStatus(void);
+static u16 pciStatus();
 static u16 pciParity(PpWord val);
 static BOOL GetDevicePath();
 static BOOL GetDeviceHandle();
@@ -110,13 +110,13 @@ static BOOL GetDeviceHandle();
 **  -----------------
 */
 static PciParam *pci;
-static PSP_DEVICE_INTERFACE_DETAIL_DATA pDeviceInterfaceDetail = NULL;
+static PSP_DEVICE_INTERFACE_DETAIL_DATA pDeviceInterfaceDetail = nullptr;
 static HANDLE hDevice = INVALID_HANDLE_VALUE;
 static HDEVINFO hDevInfo;
 
 #if DEBUG
-static FILE *pciLog = NULL;
-static bool active = FALSE;
+static FILE *pciLog = nullptr;
+static bool active = false;
 #endif
 
 /*
@@ -140,9 +140,6 @@ static bool active = FALSE;
 **------------------------------------------------------------------------*/
 void pciInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 {
-	DevSlot *dp;
-	BOOL retValue;
-
 	(void)unitNo;
 	(void)deviceName;
 
@@ -156,7 +153,7 @@ void pciInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	/*
 	**  Attach device to channel and initialise device control block.
 	*/
-	dp = channelAttach(channelNo, eqNo, DtPciChannel, mfrID);
+	DevSlot *dp = channelAttach(channelNo, eqNo, DtPciChannel, mfrID);
 	dp->activate = pciActivate;
 	dp->disconnect = pciDisconnect;
 	dp->func = pciFunc;
@@ -170,14 +167,14 @@ void pciInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	/*
 	**  Allocate and initialise channel parameters.
 	*/
-	pci = (PciParam*)calloc(1, sizeof(PciParam));
-	if (pci == NULL)
+	pci = static_cast<PciParam*>(calloc(1, sizeof(PciParam)));
+	if (pci == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate PCI channel context block\n");
 		exit(1);
 	}
 
-	retValue = GetDeviceHandle();
+	BOOL retValue = GetDeviceHandle();
 	if (!retValue)
 	{
 		fprintf(stderr, "Can't open CYBER channel interface.\n");
@@ -219,7 +216,7 @@ static FcStatus pciFunc(PpWord funcCode, u8 mfrId)
 		funcCode);
 #endif
 
-	pciCmd((u16)(PciCmdFunction | funcCode | (pciParity(funcCode) << PciShiftParity)));
+	pciCmd(static_cast<u16>(PciCmdFunction | funcCode | (pciParity(funcCode) << PciShiftParity)));
 
 	return(FcAccepted);
 }
@@ -244,7 +241,7 @@ static void pciIo(u8 mfrId)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static PpWord pciIn(void)
+static PpWord pciIn()
 {
 	PpWord data = pciStatus() & Mask12;
 
@@ -276,12 +273,12 @@ static void pciOut(PpWord data)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void pciFull(void)
+static void pciFull()
 {
 #if DEBUG
 	fprintf(pciLog, " O(%03X)", pci->data);
 #endif
-	pciCmd((u16)(PciCmdFull | pci->data | (pciParity(pci->data) << PciShiftParity)));
+	pciCmd(static_cast<u16>(PciCmdFull | pci->data | (pciParity(pci->data) << PciShiftParity)));
 }
 
 /*--------------------------------------------------------------------------
@@ -292,7 +289,7 @@ static void pciFull(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void pciEmpty(void)
+static void pciEmpty()
 {
 #if DEBUG
 	fprintf(pciLog, " E");
@@ -342,7 +339,7 @@ static void pciDisconnect(u8 mfrId)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static u16 pciFlags(void)
+static u16 pciFlags()
 {
 #if DEBUG
 	u16 s = pciStatus();
@@ -372,10 +369,10 @@ static void pciCmd(PpWord data)
 
 	do
 	{
-		DeviceIoControl(hDevice, IOCTL_CYBER_CHANNEL_GET, NULL, 0, &status, sizeof(status), &bytesReturned, NULL);
+		DeviceIoControl(hDevice, IOCTL_CYBER_CHANNEL_GET, nullptr, 0, &status, sizeof(status), &bytesReturned, nullptr);
 	} while ((status & PciStaBusy) != 0);
 
-	DeviceIoControl(hDevice, IOCTL_CYBER_CHANNEL_PUT, &data, sizeof(data), NULL, 0, &bytesReturned, NULL);
+	DeviceIoControl(hDevice, IOCTL_CYBER_CHANNEL_PUT, &data, sizeof(data), nullptr, 0, &bytesReturned, nullptr);
 }
 
 /*--------------------------------------------------------------------------
@@ -386,12 +383,12 @@ static void pciCmd(PpWord data)
 **  Returns:        PCI status word
 **
 **------------------------------------------------------------------------*/
-static u16 pciStatus(void)
+static u16 pciStatus()
 {
 	DWORD bytesReturned;
 	u16 data;
 
-	DeviceIoControl(hDevice, IOCTL_CYBER_CHANNEL_GET, NULL, 0, &data, sizeof(data), &bytesReturned, NULL);
+	DeviceIoControl(hDevice, IOCTL_CYBER_CHANNEL_GET, nullptr, 0, &data, sizeof(data), &bytesReturned, nullptr);
 	return(data);
 }
 
@@ -432,18 +429,17 @@ static BOOL GetDevicePath()
 	SP_DEVINFO_DATA DeviceInfoData;
 
 	ULONG size;
-	int count, i, index;
 	// ReSharper disable once CppInitializedValueIsAlwaysRewritten
-	BOOL status = TRUE;
-	TCHAR *DeviceName = NULL;
-	TCHAR *DeviceLocation = NULL;
+	BOOL status = true;
+	TCHAR *DeviceName = nullptr;
+	TCHAR *DeviceLocation = nullptr;
 
 	//
 	//  Retrieve the device information for all devices.
 	//
-	hDevInfo = SetupDiGetClassDevs((LPGUID)&GUID_DEVINTERFACE_CYBER_CHANNEL,
-		NULL,
-		NULL,
+	hDevInfo = SetupDiGetClassDevs(const_cast<LPGUID>(&GUID_DEVINTERFACE_CYBER_CHANNEL),
+		nullptr,
+		nullptr,
 		DIGCF_DEVICEINTERFACE |
 		DIGCF_PRESENT);
 
@@ -455,10 +451,10 @@ static BOOL GetDevicePath()
 	//
 	//  Determine how many devices are present.
 	//
-	count = 0;
+	int count = 0;
 	while (SetupDiEnumDeviceInterfaces(hDevInfo,
-		NULL,
-		(LPGUID)&GUID_DEVINTERFACE_CYBER_CHANNEL,
+		nullptr,
+		const_cast<LPGUID>(&GUID_DEVINTERFACE_CYBER_CHANNEL),
 		count++,  //Cycle through the available devices.
 		&DeviceInterfaceData)
 		// ReSharper disable once CppPossiblyErroneousEmptyStatements
@@ -491,10 +487,10 @@ static BOOL GetDevicePath()
 	//  a device.  If there is only one device, select it
 	//  by default.
 	//
-	i = 0;
+	int i = 0;
 	while (SetupDiEnumDeviceInterfaces(hDevInfo,
-		NULL,
-		(LPGUID)&GUID_DEVINTERFACE_CYBER_CHANNEL,
+		nullptr,
+		const_cast<LPGUID>(&GUID_DEVINTERFACE_CYBER_CHANNEL),
 		i,
 		&DeviceInterfaceData))
 	{
@@ -504,10 +500,10 @@ static BOOL GetDevicePath()
 		//
 		SetupDiGetDeviceInterfaceDetail(hDevInfo,
 			&DeviceInterfaceData,
-			NULL,
+			nullptr,
 			0,
 			&size,
-			NULL);
+			nullptr);
 
 		if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
 		{
@@ -515,7 +511,7 @@ static BOOL GetDevicePath()
 			return FALSE;
 		}
 
-		pDeviceInterfaceDetail = (PSP_DEVICE_INTERFACE_DETAIL_DATA)malloc(size);
+		pDeviceInterfaceDetail = static_cast<PSP_DEVICE_INTERFACE_DETAIL_DATA>(malloc(size));
 
 		if (!pDeviceInterfaceDetail)
 		{
@@ -531,7 +527,7 @@ static BOOL GetDevicePath()
 			&DeviceInterfaceData,
 			pDeviceInterfaceDetail,
 			size,
-			NULL,
+			nullptr,
 			&DeviceInfoData);
 
 		free(pDeviceInterfaceDetail);
@@ -551,8 +547,8 @@ static BOOL GetDevicePath()
 		SetupDiGetDeviceRegistryProperty(hDevInfo,
 			&DeviceInfoData,
 			SPDRP_DEVICEDESC,
-			NULL,
-			(PBYTE)DeviceName,
+			nullptr,
+			reinterpret_cast<PBYTE>(DeviceName),
 			0,
 			&size);
 
@@ -562,7 +558,7 @@ static BOOL GetDevicePath()
 			return FALSE;
 		}
 
-		DeviceName = (TCHAR*)malloc(size);
+		DeviceName = static_cast<TCHAR*>(malloc(size));
 		if (!DeviceName)
 		{
 			printf("Insufficient memory.\n");
@@ -572,10 +568,10 @@ static BOOL GetDevicePath()
 		status = SetupDiGetDeviceRegistryProperty(hDevInfo,
 			&DeviceInfoData,
 			SPDRP_DEVICEDESC,
-			NULL,
-			(PBYTE)DeviceName,
+			nullptr,
+			reinterpret_cast<PBYTE>(DeviceName),
 			size,
-			NULL);
+			nullptr);
 		if (!status)
 		{
 			printf("SetupDiGetDeviceRegistryProperty failed, Error: %d", GetLastError());
@@ -589,35 +585,35 @@ static BOOL GetDevicePath()
 		SetupDiGetDeviceRegistryProperty(hDevInfo,
 			&DeviceInfoData,
 			SPDRP_LOCATION_INFORMATION,
-			NULL,
-			(PBYTE)DeviceLocation,
+			nullptr,
+			reinterpret_cast<PBYTE>(DeviceLocation),
 			0,
 			&size);
 
 		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
 		{
-			DeviceLocation = (TCHAR*)malloc(size);
+			DeviceLocation = static_cast<TCHAR*>(malloc(size));
 
-			if (DeviceLocation != NULL)
+			if (DeviceLocation != nullptr)
 			{
 				status = SetupDiGetDeviceRegistryProperty(hDevInfo,
 					&DeviceInfoData,
 					SPDRP_LOCATION_INFORMATION,
-					NULL,
-					(PBYTE)DeviceLocation,
+					nullptr,
+					reinterpret_cast<PBYTE>(DeviceLocation),
 					size,
-					NULL);
+					nullptr);
 				if (!status)
 				{
 					free(DeviceLocation);
-					DeviceLocation = NULL;
+					DeviceLocation = nullptr;
 				}
 			}
 
 		}
 		else
 		{
-			DeviceLocation = NULL;
+			DeviceLocation = nullptr;
 		}
 
 		//
@@ -632,12 +628,12 @@ static BOOL GetDevicePath()
 		}
 
 		free(DeviceName);
-		DeviceName = NULL;
+		DeviceName = nullptr;
 
 		if (DeviceLocation)
 		{
 			free(DeviceLocation);
-			DeviceLocation = NULL;
+			DeviceLocation = nullptr;
 		}
 
 		i++; // Cycle through the available devices.
@@ -646,7 +642,7 @@ static BOOL GetDevicePath()
 	//
 	//  Select device.
 	//
-	index = 0;
+	int index = 0;
 	if (count > 1)
 	{
 		printf("Too many CYBER channel boards\n");
@@ -657,8 +653,8 @@ static BOOL GetDevicePath()
 	//  Get information for specific device.
 	//
 	status = SetupDiEnumDeviceInterfaces(hDevInfo,
-		NULL,
-		(LPGUID)&GUID_DEVINTERFACE_CYBER_CHANNEL,
+		nullptr,
+		const_cast<LPGUID>(&GUID_DEVINTERFACE_CYBER_CHANNEL),
 		index,
 		&DeviceInterfaceData);
 
@@ -673,23 +669,23 @@ static BOOL GetDevicePath()
 	//
 	SetupDiGetDeviceInterfaceDetail(hDevInfo,
 		&DeviceInterfaceData,
-		NULL,
+		nullptr,
 		0,
 		&size,
-		NULL);
+		nullptr);
 
 	if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
 	{
 		printf("SetupDiGetDeviceInterfaceDetail failed, Error: %d", GetLastError());
-		return FALSE;
+		return false;
 	}
 
-	pDeviceInterfaceDetail = (PSP_DEVICE_INTERFACE_DETAIL_DATA)malloc(size);
+	pDeviceInterfaceDetail = static_cast<PSP_DEVICE_INTERFACE_DETAIL_DATA>(malloc(size));
 
 	if (!pDeviceInterfaceDetail)
 	{
 		printf("Insufficient memory.\n");
-		return FALSE;
+		return false;
 	}
 
 	//
@@ -701,7 +697,7 @@ static BOOL GetDevicePath()
 		&DeviceInterfaceData,
 		pDeviceInterfaceDetail,
 		size,
-		NULL,
+		nullptr,
 		&DeviceInfoData);
 	if (!status)
 	{
@@ -724,12 +720,12 @@ static BOOL GetDeviceHandle()
 {
 	BOOL status = TRUE;
 
-	if (pDeviceInterfaceDetail == NULL)
+	if (pDeviceInterfaceDetail == nullptr)
 	{
 		status = GetDevicePath();
 	}
 
-	if (pDeviceInterfaceDetail == NULL)
+	if (pDeviceInterfaceDetail == nullptr)
 	{
 		status = FALSE;
 	}
@@ -743,10 +739,10 @@ static BOOL GetDeviceHandle()
 		hDevice = CreateFile(pDeviceInterfaceDetail->DevicePath,
 			GENERIC_READ | GENERIC_WRITE,
 			FILE_SHARE_READ | FILE_SHARE_WRITE,
-			NULL,
+			nullptr,
 			OPEN_EXISTING,
 			0,
-			NULL);
+			nullptr);
 
 		if (hDevice == INVALID_HANDLE_VALUE)
 		{

@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter, Paul Koning
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: npu_async.c
+**  Name: npu_async.cpp
 **
 **  Description:
 **      Perform emulation of the ASYNC TIP in an NPU consisting of a
@@ -116,10 +116,7 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId)
 {
 	u8 *blk = bp->data + BlkOffData;
 	int len = bp->numBytes - BlkOffData;
-	u8 dbc;
 	u8 fe;
-	int textlen;
-	u8 *ptrUS;
 
 	/*
 	**  Locate TCB dealing with this connection.
@@ -135,7 +132,7 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId)
 	/*
 	**  Extract Data Block Clarifier settings.
 	*/
-	dbc = *blk++;
+	u8 dbc = *blk++;
 	len -= 1;
 	npuTp->dbcNoEchoplex = (dbc & DbcEchoplex) != 0;
 	npuTp->dbcNoCursorPos = (dbc & DbcNoCursorPos) != 0;
@@ -143,7 +140,7 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId)
 	if ((dbc & DbcTransparent) != 0)
 	{
 		npuNetSend(npuTp, blk, len);
-		npuNetQueueAck(npuTp, (u8)(bp->data[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN)), mfrId);
+		npuNetQueueAck(npuTp, static_cast<u8>(bp->data[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN)), mfrId);
 		return;
 	}
 
@@ -181,8 +178,8 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId)
 		/*
 		**  Locate the US byte which defines the end-of-line.
 		*/
-		ptrUS = (u8*)memchr(blk, ChrUS, len);
-		if (ptrUS == NULL)
+		u8 *ptrUS = static_cast<u8*>(memchr(blk, ChrUS, len));
+		if (ptrUS == nullptr)
 		{
 			/*
 			**  No US byte in the rest of the buffer, so send the entire
@@ -195,7 +192,7 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId)
 		/*
 		**  Send the line.
 		*/
-		textlen = (int)(ptrUS - blk);
+		int textlen = static_cast<int>(ptrUS - blk);
 		npuNetSend(npuTp, blk, textlen);
 
 		/*
@@ -213,7 +210,7 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId)
 		len -= textlen + 1;
 	}
 
-	npuNetQueueAck(npuTp, (u8)(bp->data[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN)), mfrId);
+	npuNetQueueAck(npuTp, static_cast<u8>(bp->data[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN)), mfrId);
 }
 
 /*--------------------------------------------------------------------------
@@ -251,7 +248,7 @@ void npuAsyncProcessUplineData(Tcb *tp, u8 mfrId)
 	*/
 	if (!tp->dbcNoEchoplex)
 	{
-		echoLen = (int)(echoPtr - echoBuffer);
+		echoLen = static_cast<int>(echoPtr - echoBuffer);
 		if (echoLen)
 		{
 			npuNetSend(tp, echoBuffer, echoLen);
@@ -275,16 +272,16 @@ void npuAsyncFlushUplineTransparent(Tcb *tp, u8 mfrId)
 		/*
 		**  Terminate transparent mode unless sticky timeout has been selected.
 		*/
-		tp->params.fvXInput = FALSE;
+		tp->params.fvXInput = false;
 	}
 
 	/*
 	**  Send the upline data.
 	*/
 	tp->inBuf[BlkOffDbc] = DbcTransparent;
-	npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
+	npuBipRequestUplineCanned(tp->inBuf, static_cast<int>(tp->inBufPtr - tp->inBuf), mfrId);
 	npuTipInputReset(tp);
-	tp->xInputTimerRunning = FALSE;
+	tp->xInputTimerRunning = false;
 }
 
 /*
@@ -389,7 +386,7 @@ static void npuAsyncDoFeBefore(u8 fe)
 		break;
 	}
 
-	npuTp->lastOpWasInput = FALSE;
+	npuTp->lastOpWasInput = false;
 }
 
 /*--------------------------------------------------------------------------
@@ -427,26 +424,22 @@ static void npuAsyncDoFeAfter(u8 fe)
 **------------------------------------------------------------------------*/
 static void npuAsyncProcessUplineTransparent(Tcb *tp, u8 mfrId)
 {
-	u8 *dp;
-	int len;
-	u8 ch;
-
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	dp = tp->inputData;
-	len = tp->inputCount;
+	u8 *dp = tp->inputData;
+	int len = tp->inputCount;
 
 	/*
 	**  Cancel transparent input forwarding timeout.
 	*/
-	tp->xInputTimerRunning = FALSE;
+	tp->xInputTimerRunning = false;
 
 	/*
 	**  Process transparent input.
 	*/
 	while (len--)
 	{
-		ch = *dp++;
+		u8 ch = *dp++;
 
 		if (tp->params.fvEchoplex)
 		{
@@ -460,21 +453,21 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp, u8 mfrId)
 				/*
 				**  Terminate single message transparent mode.
 				*/
-				tp->params.fvXInput = FALSE;
+				tp->params.fvXInput = false;
 			}
 
 			/*
 			**  Send the upline data.
 			*/
 			tp->inBuf[BlkOffDbc] = DbcTransparent;
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
+			npuBipRequestUplineCanned(tp->inBuf, static_cast<int>(tp->inBufPtr - tp->inBuf), mfrId);
 			npuTipInputReset(tp);
 		}
 		else if (ch == tp->params.fvUserBreak2 && tp->params.fvEnaXUserBreak)
 		{
 			*tp->inBufPtr++ = ch;
 			tp->inBuf[BlkOffDbc] = DbcTransparent;
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
+			npuBipRequestUplineCanned(tp->inBuf, static_cast<int>(tp->inBufPtr - tp->inBuf), mfrId);
 			npuTipInputReset(tp);
 		}
 		else
@@ -488,14 +481,14 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp, u8 mfrId)
 					/*
 					**  Terminate single message transparent mode.
 					*/
-					tp->params.fvXInput = FALSE;
+					tp->params.fvXInput = false;
 				}
 
 				/*
 				**  Send the upline data.
 				*/
 				tp->inBuf[BlkOffDbc] = DbcTransparent;
-				npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
+				npuBipRequestUplineCanned(tp->inBuf, static_cast<int>(tp->inBufPtr - tp->inBuf), mfrId);
 				npuTipInputReset(tp);
 			}
 		}
@@ -507,7 +500,7 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp, u8 mfrId)
 	if (tp->params.fvXTimeout && tp->inBufStart != tp->inBufPtr)
 	{
 		tp->xStartCycle = mfr->activeChannel->mfr->cycles;  // DRS??!!
-		tp->xInputTimerRunning = TRUE;
+		tp->xInputTimerRunning = true;
 	}
 }
 
@@ -522,12 +515,8 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp, u8 mfrId)
 **------------------------------------------------------------------------*/
 static void npuAsyncProcessUplineAscii(Tcb *tp, u8 mfrId)
 {
-	u8 *dp;
-	int len;
-	u8 ch;
-
-	dp = tp->inputData;
-	len = tp->inputCount;
+	u8 *dp = tp->inputData;
+	int len = tp->inputCount;
 
 	/*
 	**  Process normalised input.
@@ -536,7 +525,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp, u8 mfrId)
 
 	while (len--)
 	{
-		ch = *dp++ & Mask7;
+		u8 ch = *dp++ & Mask7;
 
 		/*
 		**  Ignore the following characters when at the begin of a line.
@@ -564,14 +553,14 @@ static void npuAsyncProcessUplineAscii(Tcb *tp, u8 mfrId)
 				/*
 				**  XON (turn output on)
 				*/
-				tp->xoff = FALSE;
+				tp->xoff = false;
 			}
 			else
 			{
 				/*
 				**  XOFF (turn output off)
 				*/
-				tp->xoff = TRUE;
+				tp->xoff = true;
 			}
 
 			continue;
@@ -584,7 +573,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp, u8 mfrId)
 			**  EOL or Cancel entered - send the input upline.
 			*/
 			*tp->inBufPtr++ = ch;
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
+			npuBipRequestUplineCanned(tp->inBuf, static_cast<int>(tp->inBufPtr - tp->inBuf), mfrId);
 			npuTipInputReset(tp);
 
 			/*
@@ -595,12 +584,12 @@ static void npuAsyncProcessUplineAscii(Tcb *tp, u8 mfrId)
 				/*
 				**  DBC prevented echoplex for this line.
 				*/
-				tp->dbcNoEchoplex = FALSE;
+				tp->dbcNoEchoplex = false;
 				echoPtr = echoBuffer;
 			}
 			else
 			{
-				echoLen = (int)(echoPtr - echoBuffer);
+				echoLen = static_cast<int>(echoPtr - echoBuffer);
 				if (echoLen)
 				{
 					npuNetSend(tp, echoBuffer, echoLen);
@@ -613,7 +602,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp, u8 mfrId)
 			*/
 			if (tp->dbcNoCursorPos)
 			{
-				tp->dbcNoCursorPos = FALSE;
+				tp->dbcNoCursorPos = false;
 			}
 			else
 			{
@@ -660,7 +649,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp, u8 mfrId)
 			**  Send long lines.
 			*/
 			tp->inBuf[BlkOffBTBSN] = BtHTBLK | (tp->uplineBsn << BlkShiftBSN);
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
+			npuBipRequestUplineCanned(tp->inBuf, static_cast<int>(tp->inBufPtr - tp->inBuf), mfrId);
 			npuTipInputReset(tp);
 		}
 	}
@@ -677,14 +666,10 @@ static void npuAsyncProcessUplineAscii(Tcb *tp, u8 mfrId)
 **------------------------------------------------------------------------*/
 static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId)
 {
-	u8 *dp;
-	int len;
-	u8 ch;
 	int i;
-	int cnt;
 
-	dp = tp->inputData;
-	len = tp->inputCount;
+	u8 *dp = tp->inputData;
+	int len = tp->inputCount;
 
 	/*
 	**  Process normalised input.
@@ -693,7 +678,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId)
 
 	while (len--)
 	{
-		ch = *dp++ & Mask7;
+		u8 ch = *dp++ & Mask7;
 
 		/*
 		**  Ignore the following characters.
@@ -730,14 +715,14 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId)
 				/*
 				**  XON (turn output on)
 				*/
-				tp->xoff = FALSE;
+				tp->xoff = false;
 			}
 			else
 			{
 				/*
 				**  XOFF (turn output off)
 				*/
-				tp->xoff = TRUE;
+				tp->xoff = true;
 			}
 
 			continue;
@@ -751,7 +736,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId)
 			**  to build and send the sequence.
 			*/
 			echoPtr = echoBuffer;
-			cnt = (int)(tp->inBufPtr - tp->inBufStart);
+			int cnt = static_cast<int>(tp->inBufPtr - tp->inBufStart);
 			for (i = cnt; i > 0; i--)
 			{
 				*echoPtr++ = ChrBS;
@@ -774,13 +759,13 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId)
 			*echoPtr++ = '*';
 			*echoPtr++ = '\r';
 			*echoPtr++ = '\n';
-			npuNetSend(tp, echoBuffer, (int)(echoPtr - echoBuffer));
+			npuNetSend(tp, echoBuffer, static_cast<int>(echoPtr - echoBuffer));
 
 			/*
 			**  Send the line, but signal the cancel character.
 			*/
 			tp->inBuf[BlkOffDbc] = DbcCancel;
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
+			npuBipRequestUplineCanned(tp->inBuf, static_cast<int>(tp->inBufPtr - tp->inBuf), mfrId);
 
 			/*
 			**  Reset input and echoplex buffers.
@@ -818,7 +803,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId)
 			/*
 			**  EOL entered - send the input upline.
 			*/
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
+			npuBipRequestUplineCanned(tp->inBuf, static_cast<int>(tp->inBufPtr - tp->inBuf), mfrId);
 			npuTipInputReset(tp);
 
 			/*
@@ -829,12 +814,12 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId)
 				/*
 				**  DBC prevented echoplex for this line.
 				*/
-				tp->dbcNoEchoplex = FALSE;
+				tp->dbcNoEchoplex = false;
 				echoPtr = echoBuffer;
 			}
 			else
 			{
-				echoLen = (int)(echoPtr - echoBuffer);
+				echoLen = static_cast<int>(echoPtr - echoBuffer);
 				if (echoLen)
 				{
 					npuNetSend(tp, echoBuffer, echoLen);
@@ -847,7 +832,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId)
 			*/
 			if (tp->dbcNoCursorPos)
 			{
-				tp->dbcNoCursorPos = FALSE;
+				tp->dbcNoCursorPos = false;
 			}
 			else
 			{
@@ -888,7 +873,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId)
 			**  Send long lines.
 			*/
 			tp->inBuf[BlkOffBTBSN] = BtHTBLK | (tp->uplineBsn << BlkShiftBSN);
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
+			npuBipRequestUplineCanned(tp->inBuf, static_cast<int>(tp->inBufPtr - tp->inBuf), mfrId);
 			npuTipInputReset(tp);
 		}
 	}
@@ -905,14 +890,10 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId)
 **------------------------------------------------------------------------*/
 static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId)
 {
-	u8 *dp;
-	int len;
-	u8 ch;
 	int i;
-	int cnt;
 
-	dp = tp->inputData;
-	len = tp->inputCount;
+	u8 *dp = tp->inputData;
+	int len = tp->inputCount;
 
 	/*
 	**  Process normalised input.
@@ -921,7 +902,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId)
 
 	while (len--)
 	{
-		ch = *dp++ & Mask7;
+		u8 ch = *dp++ & Mask7;
 
 		/*
 		**  Ignore the following characters.
@@ -946,14 +927,14 @@ static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId)
 				/*
 				**  XON (turn output on)
 				*/
-				tp->xoff = FALSE;
+				tp->xoff = false;
 			}
 			else
 			{
 				/*
 				**  XOFF (turn output off)
 				*/
-				tp->xoff = TRUE;
+				tp->xoff = true;
 			}
 
 			continue;
@@ -967,7 +948,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId)
 			**  to build and send the sequence.
 			*/
 			echoPtr = echoBuffer;
-			cnt = (int)(tp->inBufPtr - tp->inBufStart);
+			int cnt = static_cast<int>(tp->inBufPtr - tp->inBufStart);
 			for (i = cnt; i > 0; i--)
 			{
 				*echoPtr++ = ChrBS;
@@ -990,13 +971,13 @@ static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId)
 			*echoPtr++ = '*';
 			*echoPtr++ = '\r';
 			*echoPtr++ = '\n';
-			npuNetSend(tp, echoBuffer, (int)(echoPtr - echoBuffer));
+			npuNetSend(tp, echoBuffer, static_cast<int>(echoPtr - echoBuffer));
 
 			/*
 			**  Send the line, but signal the cancel character.
 			*/
 			tp->inBuf[BlkOffDbc] = DbcCancel;
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
+			npuBipRequestUplineCanned(tp->inBuf, static_cast<int>(tp->inBufPtr - tp->inBuf), mfrId);
 
 			/*
 			**  Reset input and echoplex buffers.
@@ -1034,9 +1015,9 @@ static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId)
 			/*
 			**  EOL entered - send the input upline.
 			*/
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
+			npuBipRequestUplineCanned(tp->inBuf, static_cast<int>(tp->inBufPtr - tp->inBuf), mfrId);
 			npuTipInputReset(tp);
-			tp->lastOpWasInput = TRUE;
+			tp->lastOpWasInput = true;
 
 			/*
 			**  Optionally echo characters.
@@ -1046,12 +1027,12 @@ static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId)
 				/*
 				**  DBC prevented echoplex for this line.
 				*/
-				tp->dbcNoEchoplex = FALSE;
+				tp->dbcNoEchoplex = false;
 				echoPtr = echoBuffer;
 			}
 			else
 			{
-				echoLen = (int)(echoPtr - echoBuffer);
+				echoLen = static_cast<int>(echoPtr - echoBuffer);
 				if (echoLen)
 				{
 					npuNetSend(tp, echoBuffer, echoLen);
@@ -1064,7 +1045,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId)
 			*/
 			if (tp->dbcNoCursorPos)
 			{
-				tp->dbcNoCursorPos = FALSE;
+				tp->dbcNoCursorPos = false;
 			}
 			else
 			{
@@ -1127,7 +1108,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId)
 			**  Send long lines.
 			*/
 			tp->inBuf[BlkOffBTBSN] = BtHTBLK | (tp->uplineBsn << BlkShiftBSN);
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
+			npuBipRequestUplineCanned(tp->inBuf, static_cast<int>(tp->inBufPtr - tp->inBuf), mfrId);
 			npuTipInputReset(tp);
 		}
 	}

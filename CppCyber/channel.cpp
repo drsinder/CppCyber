@@ -2,7 +2,8 @@
 **
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017**
-**  Name: channel.c
+**
+**  Name: channel.cpp
 **
 **  Description:
 **      Perform emulation of CDC 6600 channels.
@@ -91,8 +92,8 @@ ChSlot *channelInit(u8 count, MMainFrame *mfr)
 	**  Allocate channel structures.
 	*/
 	mfr->channelCount = count;
-	mfr->channel = (ChSlot*)calloc(MaxChannels, sizeof(ChSlot));
-	if (mfr->channel == NULL)
+	mfr->channel = static_cast<ChSlot*>(calloc(MaxChannels, sizeof(ChSlot)));
+	if (mfr->channel == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate channel control blocks\n");
 		exit(1);
@@ -127,8 +128,6 @@ ChSlot *channelInit(u8 count, MMainFrame *mfr)
 void channelTerminate(u8 mfrID)
 {
 	DevSlot *dp;
-	DevSlot *fp;
-	u8 i;
 
 	/*
 	**  Give some devices a chance to cleanup and free allocated memory of all
@@ -136,7 +135,7 @@ void channelTerminate(u8 mfrID)
 	*/
 	for (ch = 0; ch < BigIron->chasis[mfrID]->channelCount; ch++)
 	{
-		for (dp = BigIron->chasis[mfrID]->channel[ch].firstDevice; dp != NULL; dp = dp->next)
+		for (dp = BigIron->chasis[mfrID]->channel[ch].firstDevice; dp != nullptr; dp = dp->next)
 		{
 			if (dp->devType == DtDcc6681)
 			{
@@ -156,26 +155,26 @@ void channelTerminate(u8 mfrID)
 			/*
 			**  Free all unit contexts and close all open files.
 			*/
-			for (i = 0; i < MaxUnits; i++)
+			for (u8 i = 0; i < MaxUnits; i++)
 			{
-				if (dp->context[i] != NULL)
+				if (dp->context[i] != nullptr)
 				{
 					free(dp->context[i]);
 				}
 
-				if (dp->fcb[i] != NULL)
+				if (dp->fcb[i] != nullptr)
 				{
 					fclose(dp->fcb[i]);
 				}
 			}
 		}
 
-		for (dp = BigIron->chasis[mfrID]->channel[ch].firstDevice; dp != NULL;)
+		for (dp = BigIron->chasis[mfrID]->channel[ch].firstDevice; dp != nullptr;)
 		{
 			/*
 			**  Free all device control blocks.
 			*/
-			fp = dp;
+			DevSlot *fp = dp;
 			dp = dp->next;
 			if (mfrID == 0 )
 				free(fp);
@@ -200,16 +199,13 @@ void channelTerminate(u8 mfrID)
 **------------------------------------------------------------------------*/
 DevSlot *channelFindDevice(u8 channelNo, u8 devType, u8 mfrID)
 {
-	DevSlot *device;
-	ChSlot *cp;
-
-	cp = BigIron->chasis[mfrID]->channel + channelNo;
-	device = cp->firstDevice;
+	ChSlot *cp = BigIron->chasis[mfrID]->channel + channelNo;
+	DevSlot *device = cp->firstDevice;
 
 	/*
 	**  Try to locate device control block.
 	*/
-	while (device != NULL)
+	while (device != nullptr)
 	{
 		if (device->devType == devType 
 			&& device->mfrID == mfrID)
@@ -220,7 +216,7 @@ DevSlot *channelFindDevice(u8 channelNo, u8 devType, u8 mfrID)
 		device = device->next;
 	}
 
-	return(NULL);
+	return(nullptr);
 }
 
 /*--------------------------------------------------------------------------
@@ -236,16 +232,14 @@ DevSlot *channelFindDevice(u8 channelNo, u8 devType, u8 mfrID)
 **------------------------------------------------------------------------*/
 DevSlot *channelAttach(u8 channelNo, u8 eqNo, u8 devType, u8 mfrID)
 {
-	DevSlot *device;
-
 	MMainFrame *mfr = BigIron->chasis[mfrID];
 	mfr->activeChannel = BigIron->chasis[mfrID]->channel + channelNo;
-	device = mfr->activeChannel->firstDevice;
+	DevSlot *device = mfr->activeChannel->firstDevice;
 
 	/*
 	**  Try to locate existing device control block.
 	*/
-	while (device != NULL)
+	while (device != nullptr)
 	{
 		if (device->devType == devType
 			&& device->eqNo == eqNo
@@ -260,8 +254,8 @@ DevSlot *channelAttach(u8 channelNo, u8 eqNo, u8 devType, u8 mfrID)
 	/*
 	**  No device control block of this type found, allocate new one.
 	*/
-	device = (DevSlot*)calloc(1, sizeof(DevSlot));
-	if (device == NULL)
+	device = static_cast<DevSlot*>(calloc(1, sizeof(DevSlot)));
+	if (device == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate control block for Channel %d\n", channelNo);
 		exit(1);
@@ -296,8 +290,8 @@ void channelFunction(PpWord funcCode, u8 mfrId)
 
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	mfr->activeChannel->full = FALSE;
-	for (mfr->activeDevice = mfr->activeChannel->firstDevice; mfr->activeDevice != NULL; mfr->activeDevice = mfr->activeDevice->next)
+	mfr->activeChannel->full = false;
+	for (mfr->activeDevice = mfr->activeChannel->firstDevice; mfr->activeDevice != nullptr; mfr->activeDevice = mfr->activeDevice->next)
 	{
 		status = mfr->activeDevice->func(funcCode, mfrId);
 		if (status == FcAccepted)
@@ -314,20 +308,20 @@ void channelFunction(PpWord funcCode, u8 mfrId)
 			/*
 			**  Device has processed function code - no need for I/O.
 			*/
-			mfr->activeChannel->ioDevice = NULL;
+			mfr->activeChannel->ioDevice = nullptr;
 			break;
 		}
 	}
 
-	if (mfr->activeDevice == NULL || status == FcDeclined)
+	if (mfr->activeDevice == nullptr || status == FcDeclined)
 	{
 		/*
 		**  No device has claimed the function code - keep channel active
 		**  and full, but disconnect device.
 		*/
-		mfr->activeChannel->ioDevice = NULL;
-		mfr->activeChannel->full = TRUE;
-		mfr->activeChannel->active = TRUE;
+		mfr->activeChannel->ioDevice = nullptr;
+		mfr->activeChannel->full = true;
+		mfr->activeChannel->active = true;
 	}
 }
 
@@ -343,9 +337,9 @@ void channelActivate(u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	mfr->activeChannel->active = TRUE;
+	mfr->activeChannel->active = true;
 
-	if (mfr->activeChannel->ioDevice != NULL)
+	if (mfr->activeChannel->ioDevice != nullptr)
 	{
 		mfr->activeDevice = mfr->activeChannel->ioDevice;
 		mfr->activeDevice->activate(mfrId);
@@ -364,16 +358,16 @@ void channelDisconnect(u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	mfr->activeChannel->active = FALSE;
+	mfr->activeChannel->active = false;
 
-	if (mfr->activeChannel->ioDevice != NULL)
+	if (mfr->activeChannel->ioDevice != nullptr)
 	{
 		mfr->activeDevice = mfr->activeChannel->ioDevice;
 		mfr->activeDevice->disconnect(mfrId);
 	}
 	else
 	{
-		mfr->activeChannel->full = FALSE;
+		mfr->activeChannel->full = false;
 	}
 }
 
@@ -393,7 +387,7 @@ void channelIo(u8 mfrId)
 	**  Perform request.
 	*/
 	if ((mfr->activeChannel->active || mfr->activeChannel->id == ChClock)
-		&& mfr->activeChannel->ioDevice != NULL)
+		&& mfr->activeChannel->ioDevice != nullptr)
 	{
 		mfr->activeDevice = mfr->activeChannel->ioDevice;
 		mfr->activeDevice->io(mfrId);
@@ -412,7 +406,7 @@ void channelCheckIfActive(u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	if (mfr->activeChannel->ioDevice != NULL)
+	if (mfr->activeChannel->ioDevice != nullptr)
 	{
 		mfr->activeDevice = mfr->activeChannel->ioDevice;
 		if (mfr->activeDevice->devType == DtPciChannel)
@@ -435,7 +429,7 @@ void channelCheckIfFull(u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	if (mfr->activeChannel->ioDevice != NULL)
+	if (mfr->activeChannel->ioDevice != nullptr)
 	{
 		mfr->activeDevice = mfr->activeChannel->ioDevice;
 		if (mfr->activeDevice == nullptr)
@@ -461,7 +455,7 @@ void channelOut(u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	if (mfr->activeChannel->ioDevice != NULL)
+	if (mfr->activeChannel->ioDevice != nullptr)
 	{
 		mfr->activeDevice = mfr->activeChannel->ioDevice;
 		if (mfr->activeDevice->devType == DtPciChannel)
@@ -484,7 +478,7 @@ void channelIn(u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	if (mfr->activeChannel->ioDevice != 0 )  //NULL)
+	if (mfr->activeChannel->ioDevice != nullptr )  //nullptr)
 	{
 		mfr->activeDevice = mfr->activeChannel->ioDevice;
 		if (mfr->activeDevice->devType == DtPciChannel)
@@ -507,7 +501,7 @@ void channelSetFull(u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	if (mfr->activeChannel->ioDevice != NULL)
+	if (mfr->activeChannel->ioDevice != nullptr)
 	{
 		mfr->activeDevice = mfr->activeChannel->ioDevice;
 		if (mfr->activeDevice->devType == DtPciChannel)
@@ -516,7 +510,7 @@ void channelSetFull(u8 mfrId)
 		}
 	}
 
-	mfr->activeChannel->full = TRUE;
+	mfr->activeChannel->full = true;
 }
 
 /*--------------------------------------------------------------------------
@@ -531,7 +525,7 @@ void channelSetEmpty(u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	if (mfr->activeChannel->ioDevice != NULL)
+	if (mfr->activeChannel->ioDevice != nullptr)
 	{
 		mfr->activeDevice = mfr->activeChannel->ioDevice;
 		if (mfr->activeDevice == nullptr)
@@ -543,7 +537,7 @@ void channelSetEmpty(u8 mfrId)
 		}
 	}
 	out:
-	mfr->activeChannel->full = FALSE;
+	mfr->activeChannel->full = false;
 }
 
 /*--------------------------------------------------------------------------
@@ -556,21 +550,19 @@ void channelSetEmpty(u8 mfrId)
 **------------------------------------------------------------------------*/
 void channelStep(u8 mfrID)
 {
-	ChSlot *cc;
-
 	/*
 	**  Process any delayed disconnects.
 	*/
 	for (ch = 0; ch < BigIron->chasis[mfrID]->channelCount; ch++)
 	{
-		cc = &BigIron->chasis[mfrID]->channel[ch];
+		ChSlot *cc = &BigIron->chasis[mfrID]->channel[ch];
 		if (cc->delayDisconnect != 0)
 		{
 			cc->delayDisconnect -= 1;
 			if (cc->delayDisconnect == 0)
 			{
-				cc->active = FALSE;
-				cc->discAfterInput = FALSE;
+				cc->active = false;
+				cc->discAfterInput = false;
 			}
 		}
 

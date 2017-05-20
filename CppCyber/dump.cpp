@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: dump.c
+**  Name: dump.cpp
 **
 **  Description:
 **      Perform dump of PP and CPU memory as well as post-mortem
@@ -87,20 +87,19 @@ static FILE *ppuF[024 * 2];
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void dumpInit(void)
+void dumpInit()
 {
-	u8 pp;
 	char ppDumpName[20];
 
 	cpuF[0] = fopen("mainframe0.dmp", "wt");
-	if (cpuF[0] == NULL)
+	if (cpuF[0] == nullptr)
 	{
 		logError(LogErrorLocation, "can't open cpu0 dump");
 	}
 	if (BigIron->initMainFrames == 2)
 	{
 		cpuF[1] = fopen("mainframe1.dmp", "wt");
-		if (cpuF[1] == NULL)
+		if (cpuF[1] == nullptr)
 		{
 			logError(LogErrorLocation, "can't open mainframe1 dump");
 		}
@@ -108,11 +107,11 @@ void dumpInit(void)
 
 	for (int k = 0; k < BigIron->initMainFrames; k++)
 	{
-		for (pp = 0; pp < BigIron->pps; pp++)
+		for (u8 pp = 0; pp < BigIron->pps; pp++)
 		{
 			sprintf(ppDumpName, "ppu%02o-%o.dmp", pp, k);
 			ppuF[pp+k*024] = fopen(ppDumpName, "wt");
-			if (ppuF[pp] == NULL)
+			if (ppuF[pp] == nullptr)
 			{
 				logError(LogErrorLocation, "can't open ppu[%02o-%o] dump", pp, k);
 			}
@@ -128,20 +127,18 @@ void dumpInit(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void dumpTerminate(void)
+void dumpTerminate()
 {
-	u8 pp;
-
 	for (u8 k = 0; k < BigIron->initMainFrames; k++)
 	{
-		if (cpuF[k] != NULL)
+		if (cpuF[k] != nullptr)
 		{
 			fclose(cpuF[k]);
 		}
 
-		for (pp = 0; pp < BigIron->pps; pp++)
+		for (u8 pp = 0; pp < BigIron->pps; pp++)
 		{
-			if (ppuF[pp+ k*024] != NULL)
+			if (ppuF[pp+ k*024] != nullptr)
 			{
 				fclose(ppuF[pp]);
 			}
@@ -157,17 +154,15 @@ void dumpTerminate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void dumpAll(void)
+void dumpAll()
 {
-	u8 pp;
-
 	fprintf(stderr, "dumping core...");
 	fflush(stderr);
 
 	for (u8 k = 0; k < BigIron->initMainFrames; k++)
 	{
 		dumpCpu(k);
-		for (pp = 0; pp < BigIron->pps; pp++)
+		for (u8 pp = 0; pp < BigIron->pps; pp++)
 		{
 			dumpPpu(pp, k);
 		}
@@ -186,11 +181,7 @@ void dumpCpu(u8 mfrID)
 {
 	u32 addr;
 	CpWord data;
-	CpWord lastData;
-	bool duplicateLine;
-	u8 ch;
 	u8 i;
-	u8 shiftCount;
 
 	for (int cpunum = 0; cpunum < BigIron->initCpus; cpunum++)
 	{
@@ -246,19 +237,19 @@ void dumpCpu(u8 mfrID)
 			fprintf(cpuF[mfrID], "X%d ", i);
 			data = cpu.regX[i];
 			fprintf(cpuF[mfrID], "%04o %04o %04o %04o %04o   ",
-				(PpWord)((data >> 48) & Mask12),
-				(PpWord)((data >> 36) & Mask12),
-				(PpWord)((data >> 24) & Mask12),
-				(PpWord)((data >> 12) & Mask12),
-				(PpWord)((data)& Mask12));
+				static_cast<PpWord>((data >> 48) & Mask12),
+				static_cast<PpWord>((data >> 36) & Mask12),
+				static_cast<PpWord>((data >> 24) & Mask12),
+				static_cast<PpWord>((data >> 12) & Mask12),
+				static_cast<PpWord>((data) & Mask12));
 			fprintf(cpuF[mfrID], "\n");
 		}
 
 		fprintf(cpuF[mfrID], "\n");
 	}
 
-	lastData = ~BigIron->chasis[mfrID]->cpMem[0];
-	duplicateLine = FALSE;
+	CpWord lastData = ~BigIron->chasis[mfrID]->cpMem[0];
+	bool duplicateLine = false;
 	for (addr = 0; addr < BigIron->chasis[mfrID]->cpuMaxMemory; addr++)
 	{
 		data = BigIron->chasis[mfrID]->cpMem[addr];
@@ -268,26 +259,26 @@ void dumpCpu(u8 mfrID)
 			if (!duplicateLine)
 			{
 				fprintf(cpuF[mfrID], "     DUPLICATED LINES.\n");
-				duplicateLine = TRUE;
+				duplicateLine = true;
 			}
 		}
 		else
 		{
-			duplicateLine = FALSE;
+			duplicateLine = false;
 			lastData = data;
 			fprintf(cpuF[mfrID], "%07o   ", addr & Mask21);
 			fprintf(cpuF[mfrID], "%04o %04o %04o %04o %04o   ",
-				(PpWord)((data >> 48) & Mask12),
-				(PpWord)((data >> 36) & Mask12),
-				(PpWord)((data >> 24) & Mask12),
-				(PpWord)((data >> 12) & Mask12),
-				(PpWord)((data)& Mask12));
+				static_cast<PpWord>((data >> 48) & Mask12),
+				static_cast<PpWord>((data >> 36) & Mask12),
+				static_cast<PpWord>((data >> 24) & Mask12),
+				static_cast<PpWord>((data >> 12) & Mask12),
+				static_cast<PpWord>((data) & Mask12));
 
-			shiftCount = 60;
+			u8 shiftCount = 60;
 			for (i = 0; i < 10; i++)
 			{
 				shiftCount -= 6;
-				ch = (u8)((data >> shiftCount) & Mask6);
+				u8 ch = static_cast<u8>((data >> shiftCount) & Mask6);
 				fprintf(cpuF[mfrID], "%c", cdcToAscii[ch]);
 			}
 		}
@@ -315,18 +306,15 @@ void dumpCpu(u8 mfrID)
 **------------------------------------------------------------------------*/
 void dumpPpu(u8 pp, u8 mfrID)
 {
-	u32 addr;
 	PpWord *pm = BigIron->chasis[mfrID]->ppBarrel[pp]->ppu.mem;
 	FILE *pf = ppuF[pp+mfrID*024];
-	u8 i;
-	PpWord pw;
 
 	fprintf(pf, "P   %04o\n", BigIron->chasis[mfrID]->ppBarrel[pp]->ppu.regP);
 	fprintf(pf, "A %06o\n", BigIron->chasis[mfrID]->ppBarrel[pp]->ppu.regA);
 	fprintf(pf, "R %08o\n", BigIron->chasis[mfrID]->ppBarrel[pp]->ppu.regR);
 	fprintf(pf, "\n");
 
-	for (addr = 0; addr < PpMemSize; addr += 8)
+	for (u32 addr = 0; addr < PpMemSize; addr += 8)
 	{
 		fprintf(pf, "%04o   ", addr & Mask12);
 		fprintf(pf, "%04o %04o %04o %04o %04o %04o %04o %04o  ",
@@ -339,9 +327,9 @@ void dumpPpu(u8 pp, u8 mfrID)
 			pm[addr + 6] & Mask12,
 			pm[addr + 7] & Mask12);
 
-		for (i = 0; i < 8; i++)
+		for (u8 i = 0; i < 8; i++)
 		{
-			pw = pm[addr + i] & Mask12;
+			PpWord pw = pm[addr + i] & Mask12;
 			fprintf(pf, "%c%c", cdcToAscii[(pw >> 6) & Mask6], cdcToAscii[pw & Mask6]);
 		}
 
@@ -360,17 +348,14 @@ void dumpPpu(u8 pp, u8 mfrID)
 **------------------------------------------------------------------------*/
 void dumpDisassemblePpu(u8 pp)  // DRS??!! both mainframes   // not called in prod.
 {
-	u32 addr;
 	PpWord *pm = BigIron->chasis[0]->ppBarrel[pp]->ppu.mem;
 	char ppDisName[20];
-	FILE *pf;
 	char str[80];
 	u8 cnt;
-	PpWord pw0, pw1;
 
 	sprintf(ppDisName, "ppu%02o.dis", pp);
-	pf = fopen(ppDisName, "wt");
-	if (pf == NULL)
+	FILE *pf = fopen(ppDisName, "wt");
+	if (pf == nullptr)
 	{
 		logError(LogErrorLocation, "can't open %s", ppDisName);
 		return;
@@ -380,15 +365,15 @@ void dumpDisassemblePpu(u8 pp)  // DRS??!! both mainframes   // not called in pr
 	fprintf(pf, "A %06o\n", BigIron->chasis[0]->ppBarrel[pp]->ppu.regA);
 	fprintf(pf, "\n");
 
-	for (addr = 0100; addr < PpMemSize; addr += cnt)
+	for (u32 addr = 0100; addr < PpMemSize; addr += cnt)
 	{
 		fprintf(pf, "%04o  ", addr & Mask12);
 
 		cnt = traceDisassembleOpcode(str, pm + addr);
 		fputs(str, pf);
 
-		pw0 = pm[addr] & Mask12;
-		pw1 = pm[addr + 1] & Mask12;
+		PpWord pw0 = pm[addr] & Mask12;
+		PpWord pw1 = pm[addr + 1] & Mask12;
 		fprintf(pf, "   %04o ", pw0);
 		if (cnt == 2)
 		{
@@ -421,12 +406,11 @@ void dumpDisassemblePpu(u8 pp)  // DRS??!! both mainframes   // not called in pr
 **------------------------------------------------------------------------*/
 void dumpRunningPpu(u8 pp)
 {
-	FILE *pf;
 	char ppDumpName[20];
 
 	sprintf(ppDumpName, "ppu%02o_run.dmp", pp);
-	pf = fopen(ppDumpName, "wt");
-	if (pf == NULL)
+	FILE *pf = fopen(ppDumpName, "wt");
+	if (pf == nullptr)
 	{
 		logError(LogErrorLocation, "can't open %s", ppDumpName);
 		return;
@@ -437,7 +421,7 @@ void dumpRunningPpu(u8 pp)
 	dumpPpu(pp, 0);
 	fclose(pf);
 
-	ppuF[pp] = NULL;
+	ppuF[pp] = nullptr;
 }
 
 /*--------------------------------------------------------------------------
@@ -451,7 +435,7 @@ void dumpRunningPpu(u8 pp)
 void dumpRunningCpu(u8 mfrID)
 {
 	cpuF[mfrID] = fopen("cpu_run.dmp", "wt");
-	if (cpuF[mfrID] == NULL)
+	if (cpuF[mfrID] == nullptr)
 	{
 		logError(LogErrorLocation, "can't open cpu_run.dmp");
 		return;
@@ -460,7 +444,7 @@ void dumpRunningCpu(u8 mfrID)
 	dumpCpu(mfrID);
 	fclose(cpuF[mfrID]);
 
-	cpuF[mfrID] = NULL;
+	cpuF[mfrID] = nullptr;
 }
 
 /*---------------------------  End Of File  ------------------------------*/

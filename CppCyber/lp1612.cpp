@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: lp1612.c
+**  Name: lp1612.cpp
 **
 **  Description:
 **      Perform emulation of CDC 6600 1612 line printer.
@@ -118,7 +118,6 @@ static void lp1612Disconnect(u8 mfrId);
 **------------------------------------------------------------------------*/
 void lp1612Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 {
-	DevSlot *dp;
 	char fname[80];
 
 	(void)deviceName;
@@ -135,7 +134,7 @@ void lp1612Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 		exit(1);
 	}
 
-	dp = channelAttach(channelNo, eqNo, DtLp1612, mfrID);
+	DevSlot *dp = channelAttach(channelNo, eqNo, DtLp1612, mfrID);
 
 	dp->activate = lp1612Activate;
 	dp->disconnect = lp1612Disconnect;
@@ -148,7 +147,7 @@ void lp1612Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	*/
 	sprintf(fname, "LP1612_C%02o", channelNo);
 	dp->fcb[0] = fopen(fname, "w+t");
-	if (dp->fcb[0] == NULL)
+	if (dp->fcb[0] == nullptr)
 	{
 		fprintf(stderr, "Failed to open %s\n", fname);
 		exit(1);
@@ -171,20 +170,17 @@ void lp1612Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 void lp1612RemovePaper(char *params)
 {
-	DevSlot *dp;
-	int numParam;
 	int channelNo;
 	int equipmentNo;
 	int mfrID;
 	time_t currentTime;
-	struct tm t;
 	char fname[80];
 	char fnameNew[80];
 
 	/*
 	**  Operator wants to remove paper.
 	*/
-	numParam = sscanf(params, "%o,%o,%o", &mfrID, &channelNo, &equipmentNo);
+	int numParam = sscanf(params, "%o,%o,%o", &mfrID, &channelNo, &equipmentNo);
 
 	/*
 	**  Check parameters.
@@ -210,8 +206,8 @@ void lp1612RemovePaper(char *params)
 	/*
 	**  Locate the device control block.
 	*/
-	dp = channelFindDevice((u8)channelNo, DtLp1612, mfrID);
-	if (dp == NULL)
+	DevSlot *dp = channelFindDevice(static_cast<u8>(channelNo), DtLp1612, mfrID);
+	if (dp == nullptr)
 	{
 		return;
 	}
@@ -221,7 +217,7 @@ void lp1612RemovePaper(char *params)
 	*/
 	fflush(dp->fcb[0]);
 	fclose(dp->fcb[0]);
-	dp->fcb[0] = NULL;
+	dp->fcb[0] = nullptr;
 
 	/*
 	**  Rename the device file to the format "LP1612_yyyymmdd_hhmmss".
@@ -229,7 +225,7 @@ void lp1612RemovePaper(char *params)
 	sprintf(fname, "LP1612_C%02o", channelNo);
 
 	time(&currentTime);
-	t = *localtime(&currentTime);
+	struct tm t = *localtime(&currentTime);
 	sprintf(fnameNew, "LP1612_%04d%02d%02d_%02d%02d%02d.txt",  // drs add .txt
 		t.tm_year + 1900,
 		t.tm_mon + 1,
@@ -252,7 +248,7 @@ void lp1612RemovePaper(char *params)
 	/*
 	**  Check if the open succeeded.
 	*/
-	if (dp->fcb[0] == NULL)
+	if (dp->fcb[0] == nullptr)
 	{
 		printf("Failed to open %s\n", fname);
 		return;
@@ -359,13 +355,13 @@ static void lp1612Io(u8 mfrId)
 		if (mfr->activeChannel->full)
 		{
 			fputc(extBcdToAscii[mfr->activeChannel->data & 077], fcb);
-			mfr->activeChannel->full = FALSE;
+			mfr->activeChannel->full = false;
 		}
 		break;
 
 	case FcPrintStatusReq:
 		mfr->activeChannel->data = mfr->activeChannel->status;
-		mfr->activeChannel->full = TRUE;
+		mfr->activeChannel->full = true;
 		mfr->activeDevice->fcode = 0;
 		mfr->activeChannel->status = 0;
 		break;

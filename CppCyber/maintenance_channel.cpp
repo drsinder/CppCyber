@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: maintenance_channel.c
+**  Name: maintenance_channel.cpp
 **
 **  Description:
 **      Perform emulation of maintenance channel.
@@ -301,8 +301,6 @@ static FILE *mchLog = NULL;
 **------------------------------------------------------------------------*/
 void mchInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 {
-	DevSlot *dp;
-
 	(void)eqNo;
 	(void)deviceName;
 
@@ -313,7 +311,7 @@ void mchInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	}
 #endif
 
-	dp = channelAttach(channelNo, eqNo, DtMch, mfrID);
+	DevSlot *dp = channelAttach(channelNo, eqNo, DtMch, mfrID);
 	dp->activate = mchActivate;
 	dp->disconnect = mchDisconnect;
 	dp->func = mchFunc;
@@ -366,12 +364,10 @@ void mchInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 static FcStatus mchFunc(PpWord funcCode, u8 mfrId)
 {
-	PpWord connCode;
-	PpWord opCode;
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	connCode = funcCode & FcConnMask;
-	opCode = funcCode & FcOpMask;
+	PpWord connCode = funcCode & FcConnMask;
+	PpWord opCode = funcCode & FcOpMask;
 	//PpWord typeCode = funcCode & FcTypeMask;
 
 #if DEBUG
@@ -417,7 +413,7 @@ static FcStatus mchFunc(PpWord funcCode, u8 mfrId)
 	case FcOpWrite:
 	case FcOpEchoData:
 		mchLocation = 0;
-		mchAddressReady = FALSE;
+		mchAddressReady = false;
 		mfr->activeDevice->recordLength = 2;
 		break;
 
@@ -440,16 +436,13 @@ static FcStatus mchFunc(PpWord funcCode, u8 mfrId)
 **------------------------------------------------------------------------*/
 static void mchIo(u8 mfrId)
 {
-	PpWord connCode;
-	PpWord opCode;
-	PpWord typeCode;
 	u64 *dp;
 	int shiftCount;
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	connCode = mfr->activeDevice->fcode & FcConnMask;
-	opCode = mfr->activeDevice->fcode & FcOpMask;
-	typeCode = mfr->activeDevice->fcode & FcTypeMask;
+	PpWord connCode = mfr->activeDevice->fcode & FcConnMask;
+	PpWord opCode = mfr->activeDevice->fcode & FcOpMask;
+	PpWord typeCode = mfr->activeDevice->fcode & FcTypeMask;
 
 	switch (opCode)
 	{
@@ -464,7 +457,7 @@ static void mchIo(u8 mfrId)
 #if DEBUG
 				fprintf(mchLog, " a%02X", activeChannel->data);
 #endif
-				mfr->activeChannel->full = FALSE;
+				mfr->activeChannel->full = false;
 				mfr->activeDevice->recordLength -= 1;
 
 				if (mfr->activeDevice->recordLength == 0)
@@ -512,13 +505,13 @@ static void mchIo(u8 mfrId)
 					mfr->activeDevice->recordLength -= 1;
 					shiftCount = ((mfr->activeDevice->recordLength + typeCode) % 8) * 8;
 
-					mfr->activeChannel->data = (PpWord)((dp[mchLocation] >> shiftCount) & Mask8);
+					mfr->activeChannel->data = static_cast<PpWord>((dp[mchLocation] >> shiftCount) & Mask8);
 				}
 				else
 				{
 					mfr->activeChannel->data = 0;
 				}
-				mfr->activeChannel->full = TRUE;
+				mfr->activeChannel->full = true;
 #if DEBUG
 				fprintf(mchLog, " i%02X", activeChannel->data);
 #endif
@@ -535,7 +528,7 @@ static void mchIo(u8 mfrId)
 #if DEBUG
 				fprintf(mchLog, " a%02X", activeChannel->data);
 #endif
-				mfr->activeChannel->full = FALSE;
+				mfr->activeChannel->full = false;
 				mfr->activeDevice->recordLength -= 1;
 
 				if (mfr->activeDevice->recordLength == 0)
@@ -583,8 +576,8 @@ static void mchIo(u8 mfrId)
 					mfr->activeDevice->recordLength -= 1;
 					shiftCount = ((mfr->activeDevice->recordLength + typeCode) % 8) * 8;
 
-					dp[mchLocation] &= ~((u64)Mask8 << shiftCount);
-					dp[mchLocation] |= ((u64)mfr->activeChannel->data & Mask8) << shiftCount;
+					dp[mchLocation] &= ~(static_cast<u64>(Mask8) << shiftCount);
+					dp[mchLocation] |= (static_cast<u64>(mfr->activeChannel->data) & Mask8) << shiftCount;
 				}
 
 #if DEBUG
@@ -599,17 +592,17 @@ static void mchIo(u8 mfrId)
 					/*
 					**  Deadstart PP.
 					*/
-					u8 pi = (u8)(dp[mchLocation] >> 24) & Mask5;
-					u8 ci = (u8)(dp[mchLocation] >> 16) & Mask5;
+					u8 pi = static_cast<u8>(dp[mchLocation] >> 24) & Mask5;
+					u8 ci = static_cast<u8>(dp[mchLocation] >> 16) & Mask5;
 
 					mfr->ppBarrel[pi]->ppu.opD = ci;
-					mfr->channel[ci].active = TRUE;
+					mfr->channel[ci].active = true;
 
 					/*
 					**  Set PP to INPUT (71) instruction.
 					*/
 					mfr->ppBarrel[pi]->ppu.opF = 071;
-					mfr->ppBarrel[pi]->ppu.busy = TRUE;
+					mfr->ppBarrel[pi]->ppu.busy = true;
 
 					/*
 					**  Clear P register and location zero of PP.
@@ -623,7 +616,7 @@ static void mchIo(u8 mfrId)
 					mfr->ppBarrel[pi]->ppu.regA = 010000;
 				}
 
-				mfr->activeChannel->full = FALSE;
+				mfr->activeChannel->full = false;
 			}
 		}
 
@@ -637,7 +630,7 @@ static void mchIo(u8 mfrId)
 #if DEBUG
 				fprintf(mchLog, " a%02X", activeChannel->data);
 #endif
-				mfr->activeChannel->full = FALSE;
+				mfr->activeChannel->full = false;
 				mfr->activeDevice->recordLength -= 1;
 
 				if (mfr->activeDevice->recordLength == 0)
@@ -653,8 +646,8 @@ static void mchIo(u8 mfrId)
 		{
 			if (!mfr->activeChannel->full)
 			{
-				mfr->activeChannel->data = (PpWord)mchLocation;
-				mfr->activeChannel->full = TRUE;
+				mfr->activeChannel->data = static_cast<PpWord>(mchLocation);
+				mfr->activeChannel->full = true;
 #if DEBUG
 				fprintf(mchLog, " e%02X", activeChannel->data);
 #endif
@@ -667,7 +660,7 @@ static void mchIo(u8 mfrId)
 		if (!mfr->activeChannel->full)
 		{
 			mfr->activeChannel->data = 0;
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 		}
 
 		break;
@@ -704,7 +697,7 @@ static void mchDisconnect(u8 mfrId)
 	case FcOpWrite:
 		if (!mchAddressReady)
 		{
-			mchAddressReady = TRUE;
+			mchAddressReady = true;
 			mfr->activeDevice->recordLength = 8;
 		}
 

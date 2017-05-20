@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: npu_tip.c
+**  Name: npu_tip.cpp
 **
 **  Description:
 **      Perform emulation of the Terminal Interface Protocol in an NPU
@@ -176,9 +176,9 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
-static void npuTipSetupDefaultTc2(void);
-static void npuTipSetupDefaultTc3(void);
-static void npuTipSetupDefaultTc7(void);
+static void npuTipSetupDefaultTc2();
+static void npuTipSetupDefaultTc3();
+static void npuTipSetupDefaultTc7();
 
 /*
 **  ----------------
@@ -264,15 +264,12 @@ TipParams defaultTc7;
 **------------------------------------------------------------------------*/
 void npuTipInit(u8 mfrId)
 {
-	int i;
-	Tcb *tp;
-
 	/*
 	**  Allocate TCBs.
 	*/
 	npuTcbCount = npuNetTcpConns;
-	npuTcbs = (Tcb*)calloc(npuTcbCount, sizeof(Tcb));
-	if (npuTcbs == NULL)
+	npuTcbs = static_cast<Tcb*>(calloc(npuTcbCount, sizeof(Tcb)));
+	if (npuTcbs == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate NPU TCBs\n");
 		exit(1);
@@ -288,8 +285,8 @@ void npuTipInit(u8 mfrId)
 	/*
 	**  Initialise TCBs.
 	*/
-	tp = npuTcbs;
-	for (i = 0; i < npuNetTcpConns; i++, tp++)
+	Tcb *tp = npuTcbs;
+	for (int i = 0; i < npuNetTcpConns; i++, tp++)
 	{
 		tp->portNumber = i + 1;
 		tp->params = defaultTc3;
@@ -300,7 +297,7 @@ void npuTipInit(u8 mfrId)
 	/*
 	**  Initialise network.
 	*/
-	npuNetInit(TRUE, mfrId);
+	npuNetInit(true, mfrId);
 }
 
 /*--------------------------------------------------------------------------
@@ -313,13 +310,12 @@ void npuTipInit(u8 mfrId)
 **------------------------------------------------------------------------*/
 void npuTipReset(u8 mfrId)
 {
-	int i;
 	Tcb *tp = npuTcbs;
 
 	/*
 	**  Iterate through all TCBs.
 	*/
-	for (i = 0; i < npuNetTcpConns; i++, tp++)
+	for (int i = 0; i < npuNetTcpConns; i++, tp++)
 	{
 		memset(tp, 0, sizeof(Tcb));
 		tp->portNumber = i + 1;
@@ -331,7 +327,7 @@ void npuTipReset(u8 mfrId)
 	/*
 	**  Re-initialise network.
 	*/
-	npuNetInit(FALSE, mfrId);
+	npuNetInit(false, mfrId);
 }
 
 /*--------------------------------------------------------------------------
@@ -350,13 +346,11 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority, u8 mfrId)
 	static int count = 0;
 	u8 *block = bp->data;
 	Tcb *tp;
-	u8 cn;
-	bool last;
 
 	/*
 	**  Determine associated terminal control block.
 	*/
-	cn = block[BlkOffCN];
+	u8 cn = block[BlkOffCN];
 	if (cn == 0 || cn > npuTcbCount)
 	{
 		npuLogMessage("Unexpected TIP connection number %u in message %02X/%02X in state %d", cn, block[BlkOffPfc], block[BlkOffSfc]);
@@ -395,7 +389,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority, u8 mfrId)
 			/*
 			**  Resume output marker after user break 1 or 2.
 			*/
-			tp->breakPending = FALSE;
+			tp->breakPending = false;
 		}
 
 		/*
@@ -411,7 +405,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority, u8 mfrId)
 	case BtHTMSG:
 		if (tp->state == StTermHostConnected)
 		{
-			last = (block[BlkOffBTBSN] & BlkMaskBT) == BtHTMSG;
+			bool last = (block[BlkOffBTBSN] & BlkMaskBT) == BtHTMSG;
 			npuAsyncProcessDownlineData(block[BlkOffCN], bp, last, mfrId);
 		}
 		else
@@ -464,7 +458,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority, u8 mfrId)
 		/*
 		**  Interrupt command.  Discard any pending output.
 		*/
-		tp->xoff = FALSE;
+		tp->xoff = false;
 		npuTipDiscardOutputQ(tp, mfrId);
 		intrRsp[BlkOffCN] = block[BlkOffCN];
 		intrRsp[BlkOffBTBSN] &= BlkMaskBT;
@@ -500,7 +494,7 @@ void npuTipTerminateConnection(Tcb *tp, u8 mfrId)
 	/*
 	**  Clean up flow control state and discard any pending output.
 	*/
-	tp->xoff = FALSE;
+	tp->xoff = false;
 	npuTipDiscardOutputQ(tp, mfrId);
 	tp->state = StTermHostDisconnect;
 
@@ -705,7 +699,7 @@ bool npuTipParseFnFv(u8 *mp, int len, Tcb *tp)
 				**  If flow control is now disabled, turn off the xoff flag
 				**  if it was set.
 				*/
-				tp->xoff = FALSE;
+				tp->xoff = false;
 			}
 			break;
 
@@ -840,7 +834,7 @@ bool npuTipParseFnFv(u8 *mp, int len, Tcb *tp)
 		len -= 2;
 	}
 
-	return(TRUE);
+	return(true);
 }
 
 /*--------------------------------------------------------------------------
@@ -893,8 +887,6 @@ void npuTipInputReset(Tcb *tp)
 **------------------------------------------------------------------------*/
 void npuTipSendUserBreak(Tcb *tp, u8 bt, u8 mfrId)
 {
-	u8 *mp;
-
 	/*
 	**  Ignore user break if previous break has not yet been processed.
 	*/
@@ -903,12 +895,12 @@ void npuTipSendUserBreak(Tcb *tp, u8 bt, u8 mfrId)
 		return;
 	}
 
-	tp->breakPending = TRUE;
+	tp->breakPending = true;
 
 	/*
 	**  Build upline ICMD.
 	*/
-	mp = tp->inBuf;
+	u8 *mp = tp->inBuf;
 	*mp++ = AddrHost;           // DN
 	*mp++ = AddrNpu;            // SN
 	*mp++ = tp->portNumber;     // CN
@@ -918,7 +910,7 @@ void npuTipSendUserBreak(Tcb *tp, u8 bt, u8 mfrId)
 	/*
 	**  Send the ICMD.
 	*/
-	npuBipRequestUplineCanned(tp->inBuf, (int)(mp - tp->inBuf), mfrId);
+	npuBipRequestUplineCanned(tp->inBuf, static_cast<int>(mp - tp->inBuf), mfrId);
 
 	/*
 	**  Increment BSN.
@@ -943,7 +935,7 @@ void npuTipSendUserBreak(Tcb *tp, u8 bt, u8 mfrId)
 	/*
 	**  Send the BI/MARK.
 	*/
-	npuBipRequestUplineCanned(tp->inBuf, (int)(mp - tp->inBuf), mfrId);
+	npuBipRequestUplineCanned(tp->inBuf, static_cast<int>(mp - tp->inBuf), mfrId);
 
 	/*
 	**  Purge output and send back all acknowledgments.
@@ -970,7 +962,7 @@ void npuTipDiscardOutputQ(Tcb *tp, u8 mfrId)
 {
 	NpuBuffer *bp;
 
-	while ((bp = npuBipQueueExtract(&tp->outputQ)) != NULL)
+	while ((bp = npuBipQueueExtract(&tp->outputQ)) != nullptr)
 	{
 		if (bp->blockSeqNo != 0)
 		{
@@ -1018,56 +1010,56 @@ void npuTipNotifySent(Tcb *tp, u8 blockSeqNo, u8 mfrId)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void npuTipSetupDefaultTc2(void)
+static void npuTipSetupDefaultTc2()
 {
 	defaultTc2.fvAbortBlock = 'X' - 0x40;
 	defaultTc2.fvBlockFactor = 1;
-	defaultTc2.fvBreakAsUser = FALSE;
+	defaultTc2.fvBreakAsUser = false;
 	defaultTc2.fvBS = ChrBS;
 	defaultTc2.fvUserBreak1 = 'P' - 0x40;
 	defaultTc2.fvUserBreak2 = 'T' - 0x40;
-	defaultTc2.fvEnaXUserBreak = FALSE;
+	defaultTc2.fvEnaXUserBreak = false;
 	defaultTc2.fvCI = 0;
-	defaultTc2.fvCIAuto = FALSE;
+	defaultTc2.fvCIAuto = false;
 	defaultTc2.fvCN = 'X' - 0x40;
-	defaultTc2.fvCursorPos = TRUE;
+	defaultTc2.fvCursorPos = true;
 	defaultTc2.fvCT = ChrESC;
-	defaultTc2.fvXCharFlag = FALSE;
+	defaultTc2.fvXCharFlag = false;
 	defaultTc2.fvXCnt = 2043;
 	defaultTc2.fvXChar = ChrCR;
-	defaultTc2.fvXTimeout = FALSE;
-	defaultTc2.fvXModeMultiple = FALSE;
+	defaultTc2.fvXTimeout = false;
+	defaultTc2.fvXModeMultiple = false;
 	defaultTc2.fvEOB = ChrEOT;
 	defaultTc2.fvEOBterm = 2;
 	defaultTc2.fvEOBCursorPos = 3;
 	defaultTc2.fvEOL = ChrCR;
 	defaultTc2.fvEOLTerm = 1;
 	defaultTc2.fvEOLCursorPos = 2;
-	defaultTc2.fvEchoplex = TRUE;
-	defaultTc2.fvFullASCII = FALSE;
-	defaultTc2.fvInFlowControl = FALSE;
-	defaultTc2.fvXInput = FALSE;
+	defaultTc2.fvEchoplex = true;
+	defaultTc2.fvFullASCII = false;
+	defaultTc2.fvInFlowControl = false;
+	defaultTc2.fvXInput = false;
 	defaultTc2.fvInputDevice = 0;
 	defaultTc2.fvLI = 0;
-	defaultTc2.fvLIAuto = FALSE;
-	defaultTc2.fvLockKeyboard = FALSE;
-	defaultTc2.fvOutFlowControl = FALSE;
+	defaultTc2.fvLIAuto = false;
+	defaultTc2.fvLockKeyboard = false;
+	defaultTc2.fvOutFlowControl = false;
 	defaultTc2.fvOutputDevice = 1;
 	defaultTc2.fvParity = 2;
-	defaultTc2.fvPG = FALSE;
+	defaultTc2.fvPG = false;
 	defaultTc2.fvPL = 24;
 	defaultTc2.fvPW = 80;
-	defaultTc2.fvSpecialEdit = FALSE;
+	defaultTc2.fvSpecialEdit = false;
 	defaultTc2.fvTC = Tc721;
-	defaultTc2.fvXStickyTimeout = FALSE;
+	defaultTc2.fvXStickyTimeout = false;
 	defaultTc2.fvXModeDelimiter = 0;
-	defaultTc2.fvDuplex = FALSE;
+	defaultTc2.fvDuplex = false;
 	defaultTc2.fvTermTransBs = 1;
-	defaultTc2.fvSolicitInput = FALSE;
+	defaultTc2.fvSolicitInput = false;
 	defaultTc2.fvCIDelay = 0;
 	defaultTc2.fvLIDelay = 0;
 	defaultTc2.fvHostNode = 1;
-	defaultTc2.fvAutoConnect = FALSE;
+	defaultTc2.fvAutoConnect = false;
 	defaultTc2.fvPriority = 1;
 	defaultTc2.fvUBL = 7;
 	defaultTc2.fvABL = 2;
@@ -1084,56 +1076,56 @@ static void npuTipSetupDefaultTc2(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void npuTipSetupDefaultTc3(void)
+static void npuTipSetupDefaultTc3()
 {
 	defaultTc3.fvAbortBlock = 'X' - 0x40;
 	defaultTc3.fvBlockFactor = 1;
-	defaultTc3.fvBreakAsUser = FALSE;
+	defaultTc3.fvBreakAsUser = false;
 	defaultTc3.fvBS = ChrBS;
 	defaultTc3.fvUserBreak1 = 'P' - 0x40;
 	defaultTc3.fvUserBreak2 = 'T' - 0x40;
-	defaultTc3.fvEnaXUserBreak = FALSE;
+	defaultTc3.fvEnaXUserBreak = false;
 	defaultTc3.fvCI = 0;
-	defaultTc3.fvCIAuto = FALSE;
+	defaultTc3.fvCIAuto = false;
 	defaultTc3.fvCN = 'X' - 0x40;
-	defaultTc3.fvCursorPos = TRUE;
+	defaultTc3.fvCursorPos = true;
 	defaultTc3.fvCT = ChrESC;
-	defaultTc3.fvXCharFlag = FALSE;
+	defaultTc3.fvXCharFlag = false;
 	defaultTc3.fvXCnt = 2043;
 	defaultTc3.fvXChar = ChrCR;
-	defaultTc3.fvXTimeout = FALSE;
-	defaultTc3.fvXModeMultiple = FALSE;
+	defaultTc3.fvXTimeout = false;
+	defaultTc3.fvXModeMultiple = false;
 	defaultTc3.fvEOB = ChrEOT;
 	defaultTc3.fvEOBterm = 2;
 	defaultTc3.fvEOBCursorPos = 3;
 	defaultTc3.fvEOL = ChrCR;
 	defaultTc3.fvEOLTerm = 1;
 	defaultTc3.fvEOLCursorPos = 2;
-	defaultTc3.fvEchoplex = TRUE;
-	defaultTc3.fvFullASCII = FALSE;
-	defaultTc3.fvInFlowControl = FALSE;
-	defaultTc3.fvXInput = FALSE;
+	defaultTc3.fvEchoplex = true;
+	defaultTc3.fvFullASCII = false;
+	defaultTc3.fvInFlowControl = false;
+	defaultTc3.fvXInput = false;
 	defaultTc3.fvInputDevice = 0;
 	defaultTc3.fvLI = 0;
-	defaultTc3.fvLIAuto = FALSE;
-	defaultTc3.fvLockKeyboard = FALSE;
-	defaultTc3.fvOutFlowControl = FALSE;
+	defaultTc3.fvLIAuto = false;
+	defaultTc3.fvLockKeyboard = false;
+	defaultTc3.fvOutFlowControl = false;
 	defaultTc3.fvOutputDevice = 1;
 	defaultTc3.fvParity = 2;
-	defaultTc3.fvPG = FALSE;
+	defaultTc3.fvPG = false;
 	defaultTc3.fvPL = 24;
 	defaultTc3.fvPW = 80;
-	defaultTc3.fvSpecialEdit = FALSE;
+	defaultTc3.fvSpecialEdit = false;
 	defaultTc3.fvTC = Tc721;
-	defaultTc3.fvXStickyTimeout = FALSE;
+	defaultTc3.fvXStickyTimeout = false;
 	defaultTc3.fvXModeDelimiter = 0;
-	defaultTc3.fvDuplex = FALSE;
+	defaultTc3.fvDuplex = false;
 	defaultTc3.fvTermTransBs = 1;
-	defaultTc3.fvSolicitInput = FALSE;
+	defaultTc3.fvSolicitInput = false;
 	defaultTc3.fvCIDelay = 0;
 	defaultTc3.fvLIDelay = 0;
 	defaultTc3.fvHostNode = 1;
-	defaultTc3.fvAutoConnect = FALSE;
+	defaultTc3.fvAutoConnect = false;
 	defaultTc3.fvPriority = 1;
 	defaultTc3.fvUBL = 7;
 	defaultTc3.fvABL = 2;
@@ -1150,56 +1142,56 @@ static void npuTipSetupDefaultTc3(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void npuTipSetupDefaultTc7(void)
+static void npuTipSetupDefaultTc7()
 {
 	defaultTc7.fvAbortBlock = 'X' - 0x40;
 	defaultTc7.fvBlockFactor = 1;
-	defaultTc7.fvBreakAsUser = FALSE;
+	defaultTc7.fvBreakAsUser = false;
 	defaultTc7.fvBS = ChrBS;
 	defaultTc7.fvUserBreak1 = 'P' - 0x40;
 	defaultTc7.fvUserBreak2 = 'T' - 0x40;
-	defaultTc7.fvEnaXUserBreak = FALSE;
+	defaultTc7.fvEnaXUserBreak = false;
 	defaultTc7.fvCI = 0;
-	defaultTc7.fvCIAuto = FALSE;
+	defaultTc7.fvCIAuto = false;
 	defaultTc7.fvCN = 'X' - 0x40;
-	defaultTc7.fvCursorPos = TRUE;
+	defaultTc7.fvCursorPos = true;
 	defaultTc7.fvCT = '%';
-	defaultTc7.fvXCharFlag = FALSE;
+	defaultTc7.fvXCharFlag = false;
 	defaultTc7.fvXCnt = 2043;
 	defaultTc7.fvXChar = ChrCR;
-	defaultTc7.fvXTimeout = FALSE;
-	defaultTc7.fvXModeMultiple = FALSE;
+	defaultTc7.fvXTimeout = false;
+	defaultTc7.fvXModeMultiple = false;
 	defaultTc7.fvEOB = ChrEOT;
 	defaultTc7.fvEOBterm = 2;
 	defaultTc7.fvEOBCursorPos = 3;
 	defaultTc7.fvEOL = ChrCR;
 	defaultTc7.fvEOLTerm = 1;
 	defaultTc7.fvEOLCursorPos = 2;
-	defaultTc7.fvEchoplex = TRUE;
-	defaultTc7.fvFullASCII = FALSE;
-	defaultTc7.fvInFlowControl = TRUE;
-	defaultTc7.fvXInput = FALSE;
+	defaultTc7.fvEchoplex = true;
+	defaultTc7.fvFullASCII = false;
+	defaultTc7.fvInFlowControl = true;
+	defaultTc7.fvXInput = false;
 	defaultTc7.fvInputDevice = 0;
 	defaultTc7.fvLI = 0;
-	defaultTc7.fvLIAuto = FALSE;
-	defaultTc7.fvLockKeyboard = FALSE;
-	defaultTc7.fvOutFlowControl = TRUE;
+	defaultTc7.fvLIAuto = false;
+	defaultTc7.fvLockKeyboard = false;
+	defaultTc7.fvOutFlowControl = true;
 	defaultTc7.fvOutputDevice = 1;
 	defaultTc7.fvParity = 2;
-	defaultTc7.fvPG = FALSE;
+	defaultTc7.fvPG = false;
 	defaultTc7.fvPL = 24;
 	defaultTc7.fvPW = 80;
-	defaultTc7.fvSpecialEdit = FALSE;
+	defaultTc7.fvSpecialEdit = false;
 	defaultTc7.fvTC = TcX364;
-	defaultTc7.fvXStickyTimeout = FALSE;
+	defaultTc7.fvXStickyTimeout = false;
 	defaultTc7.fvXModeDelimiter = 0;
-	defaultTc7.fvDuplex = FALSE;
+	defaultTc7.fvDuplex = false;
 	defaultTc7.fvTermTransBs = 1;
-	defaultTc7.fvSolicitInput = FALSE;
+	defaultTc7.fvSolicitInput = false;
 	defaultTc7.fvCIDelay = 0;
 	defaultTc7.fvLIDelay = 0;
 	defaultTc7.fvHostNode = 1;
-	defaultTc7.fvAutoConnect = FALSE;
+	defaultTc7.fvAutoConnect = false;
 	defaultTc7.fvPriority = 1;
 	defaultTc7.fvUBL = 7;
 	defaultTc7.fvABL = 2;

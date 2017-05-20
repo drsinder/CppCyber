@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Paul Koning, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: cr3447.c
+**  Name: cr3447.cpp
 **
 **  Description:
 **      Perform emulation of CDC 3447 card reader controller.
@@ -159,9 +159,6 @@ static FILE *cr3447Log = NULL;
 **------------------------------------------------------------------------*/
 void cr3447Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 {
-	DevSlot *up;
-	CrContext *cc;
-
 #if DEBUG
 	if (cr3447Log == NULL)
 	{
@@ -169,7 +166,7 @@ void cr3447Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	}
 #endif
 
-	up = dcc6681Attach(channelNo, eqNo, 0, DtCr3447, mfrID);
+	DevSlot *up = dcc6681Attach(channelNo, eqNo, 0, DtCr3447, mfrID);
 
 	up->activate = cr3447Activate;
 	up->disconnect = cr3447Disconnect;
@@ -179,26 +176,26 @@ void cr3447Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	/*
 	**  Only one card reader unit is possible per equipment.
 	*/
-	if (up->context[0] != NULL)
+	if (up->context[0] != nullptr)
 	{
 		fprintf(stderr, "Only one CR3447 unit is possible per equipment\n");
 		exit(1);
 	}
 
-	cc = (CrContext*)calloc(1, sizeof(CrContext));
-	if (cc == NULL)
+	CrContext *cc = static_cast<CrContext*>(calloc(1, sizeof(CrContext)));
+	if (cc == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate CR3447 context block\n");
 		exit(1);
 	}
 
-	up->context[0] = (void *)cc;
+	up->context[0] = static_cast<void *>(cc);
 
 	/*
 	**  Setup character set translation table.
 	*/
 	cc->table = asciiTo026;     // default translation table
-	if (deviceName != NULL)
+	if (deviceName != nullptr)
 	{
 		if (strcmp(deviceName, "029") == 0)
 		{
@@ -227,19 +224,15 @@ void cr3447Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 void cr3447LoadCards(char *params)
 {
-	CrContext *cc;
-	DevSlot *dp;
-	int numParam;
 	int channelNo;
 	int equipmentNo;
 	int mfrID;
-	FILE *fcb;
 	static char str[200];
 
 	/*
 	**  Operator wants to load new card stack.
 	*/
-	numParam = sscanf(params, "%o,%o,%o,%s", &mfrID, &channelNo, &equipmentNo, str);
+	int numParam = sscanf(params, "%o,%o,%o,%s", &mfrID, &channelNo, &equipmentNo, str);
 
 	MMainFrame *mfr = BigIron->chasis[mfrID];
 
@@ -273,32 +266,32 @@ void cr3447LoadCards(char *params)
 	/*
 	**  Locate the device control block.
 	*/
-	dp = dcc6681FindDevice((u8)mfrID, (u8)channelNo, (u8)equipmentNo, DtCr3447);
-	if (dp == NULL)
+	DevSlot *dp = dcc6681FindDevice(static_cast<u8>(mfrID), static_cast<u8>(channelNo), static_cast<u8>(equipmentNo), DtCr3447);
+	if (dp == nullptr)
 	{
 		return;
 	}
 
-	cc = (CrContext *)(dp->context[0]);
+	CrContext *cc = static_cast<CrContext *>(dp->context[0]);
 
 	/*
 	**  Ensure the tray is empty.
 	*/
-	if (dp->fcb[0] != NULL)
+	if (dp->fcb[0] != nullptr)
 	{
 		printf("Input tray full\n");
 		return;
 	}
 
-	dp->fcb[0] = NULL;
+	dp->fcb[0] = nullptr;
 	cc->status = StCr3447Eof;
 
-	fcb = fopen(str, "r");
+	FILE *fcb = fopen(str, "r");
 
 	/*
 	**  Check if the open succeeded.
 	*/
-	if (fcb == NULL)
+	if (fcb == nullptr)
 	{
 		printf("Failed to open %s\n", str);
 		return;
@@ -308,7 +301,7 @@ void cr3447LoadCards(char *params)
 	cc->status = StCr3447Ready;
 	cr3447NextCard(dp, cc);
 
-	mfr->activeDevice = channelFindDevice((u8)channelNo, DtDcc6681, mfrID);
+	mfr->activeDevice = channelFindDevice(static_cast<u8>(channelNo), DtDcc6681, mfrID);
 	dcc6681Interrupt((cc->status & cc->intmask) != 0, mfrID);
 
 	printf("CR3447 loaded with %s", str);
@@ -333,7 +326,6 @@ void cr3447LoadCards(char *params)
 **------------------------------------------------------------------------*/
 static FcStatus cr3447Func(PpWord funcCode, u8 mfrId)
 {
-	CrContext *cc;
 	FcStatus st;
 
 	MMainFrame *mfr = BigIron->chasis[mfrId];
@@ -347,7 +339,7 @@ static FcStatus cr3447Func(PpWord funcCode, u8 mfrId)
 		cr3447Func2String(funcCode));
 #endif
 
-	cc = (CrContext *)mfr->active3000Device->context[0];
+	CrContext *cc = static_cast<CrContext *>(mfr->active3000Device->context[0]);
 
 	switch (funcCode)
 	{
@@ -376,19 +368,19 @@ static FcStatus cr3447Func(PpWord funcCode, u8 mfrId)
 		break;
 
 	case FcCr3447Binary:
-		cc->binary = TRUE;
+		cc->binary = true;
 		st = FcProcessed;
 		break;
 
 	case FcCr3447Deselect:
 	case FcCr3447Clear:
 		cc->intmask = 0;
-		cc->binary = FALSE;
+		cc->binary = false;
 		st = FcProcessed;
 		break;
 
 	case FcCr3447BCD:
-		cc->binary = FALSE;
+		cc->binary = false;
 		st = FcProcessed;
 		break;
 
@@ -443,12 +435,9 @@ static FcStatus cr3447Func(PpWord funcCode, u8 mfrId)
 **------------------------------------------------------------------------*/
 static void cr3447Io(u8 mfrId)
 {
-	CrContext *cc;
-	PpWord c;
-
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	cc = (CrContext *)mfr->active3000Device->context[0];
+	CrContext *cc = static_cast<CrContext *>(mfr->active3000Device->context[0]);
 
 	switch (mfr->active3000Device->fcode)
 	{
@@ -463,7 +452,7 @@ static void cr3447Io(u8 mfrId)
 		if (!mfr->activeChannel->full)
 		{
 			mfr->activeChannel->data = (cc->status & (cc->intmask | StCr3447NonIntStatus));
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 #if DEBUG
 			fprintf(cr3447Log, " %04o", activeChannel->data);
 #endif
@@ -481,7 +470,7 @@ static void cr3447Io(u8 mfrId)
 			break;
 		}
 
-		if (mfr->active3000Device->fcb[0] == NULL)
+		if (mfr->active3000Device->fcb[0] == nullptr)
 		{
 			cc->status = StCr3447Eof;
 			break;
@@ -501,12 +490,12 @@ static void cr3447Io(u8 mfrId)
 					cc->status |= StCr3447ErrorInt;
 				}
 
-				mfr->activeChannel->discAfterInput = TRUE;
+				mfr->activeChannel->discAfterInput = true;
 			}
 		}
 		else
 		{
-			c = cc->card[cc->col++];
+			PpWord c = cc->card[cc->col++];
 			if (cc->rawcard)
 			{
 				mfr->activeChannel->data = c;
@@ -522,7 +511,7 @@ static void cr3447Io(u8 mfrId)
 				mfr->activeChannel->data += asciiToBcd[c];
 			}
 
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 #if DEBUG
 			fprintf(cr3447Log, " %04o", activeChannel->data);
 #endif
@@ -561,8 +550,6 @@ static void cr3447Activate(u8 mfrId)
 **------------------------------------------------------------------------*/
 static void cr3447Disconnect(u8 mfrId)
 {
-	CrContext *cc;
-
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 #if DEBUG
@@ -575,17 +562,17 @@ static void cr3447Disconnect(u8 mfrId)
 	/*
 	**  Abort pending device disconnects - the PP is doing the disconnect.
 	*/
-	mfr->activeChannel->discAfterInput = FALSE;
+	mfr->activeChannel->discAfterInput = false;
 
 	/*
 	**  Advance to next card.
 	*/
-	cc = (CrContext *)mfr->active3000Device->context[0];
-	if (cc != NULL)
+	CrContext *cc = static_cast<CrContext *>(mfr->active3000Device->context[0]);
+	if (cc != nullptr)
 	{
 		cc->status |= StCr3447EoiInt;
 		dcc6681Interrupt((cc->status & cc->intmask) != 0, mfrId);
-		if (mfr->active3000Device->fcb[0] != NULL && cc->col != 0)
+		if (mfr->active3000Device->fcb[0] != nullptr && cc->col != 0)
 		{
 			cr3447NextCard(mfr->active3000Device, cc);
 		}
@@ -603,32 +590,28 @@ static void cr3447Disconnect(u8 mfrId)
 static void cr3447NextCard(DevSlot *up, CrContext *cc)
 {
 	static char buffer[326];
-	char *cp;
 	char c;
-	int value;
 	int i;
-	int j;
-	PpWord col1;
 
 	/*
 	**  Initialise read.
 	*/
 	cc->getcardcycle = up->mfr->cycles;
 	cc->col = 0;
-	cc->rawcard = FALSE;
+	cc->rawcard = false;
 
 	/*
 	**  Read the next card.
 	*/
-	cp = fgets(buffer, sizeof(buffer), up->fcb[0]);
-	if (cp == NULL)
+	char *cp = fgets(buffer, sizeof(buffer), up->fcb[0]);
+	if (cp == nullptr)
 	{
 		/*
 		**  If the last card wasn't a 6/7/8/9 card, fake one.
 		*/
 		if (cc->card[0] != 00017)
 		{
-			cc->rawcard = TRUE;//    ???? what if we don't read binary (i.e. cc->binary)
+			cc->rawcard = true;//    ???? what if we don't read binary (i.e. cc->binary)
 			cc->status |= StCr3447Binary;
 			memset(cc->card, 0, sizeof(cc->card));
 			cc->card[0] = 00017;
@@ -636,7 +619,7 @@ static void cr3447NextCard(DevSlot *up, CrContext *cc)
 		}
 
 		fclose(up->fcb[0]);
-		up->fcb[0] = NULL;
+		up->fcb[0] = nullptr;
 		cc->status = StCr3447Eof;
 		return;
 	}
@@ -649,7 +632,7 @@ static void cr3447NextCard(DevSlot *up, CrContext *cc)
 		/*
 		**  EOI = 6/7/8/9 card.
 		*/
-		cc->rawcard = TRUE;
+		cc->rawcard = true;
 		cc->status |= StCr3447Binary;
 		memset(cc->card, 0, sizeof(cc->card));
 		cc->card[0] = 00017;
@@ -663,7 +646,7 @@ static void cr3447NextCard(DevSlot *up, CrContext *cc)
 			/*
 			**  EOI = 6/7/8/9 card.
 			*/
-			cc->rawcard = TRUE;
+			cc->rawcard = true;
 			cc->status |= StCr3447Binary;
 			memset(cc->card, 0, sizeof(cc->card));
 			cc->card[0] = 00017;
@@ -675,7 +658,7 @@ static void cr3447NextCard(DevSlot *up, CrContext *cc)
 			/*
 			**  EOF = 6/7/9 card.
 			*/
-			cc->rawcard = TRUE;
+			cc->rawcard = true;
 			cc->status |= StCr3447Binary;
 			memset(cc->card, 0, sizeof(cc->card));
 			cc->card[0] = 00015;
@@ -687,7 +670,7 @@ static void cr3447NextCard(DevSlot *up, CrContext *cc)
 			/*
 			**  EOR = 7/8/9 card.
 			*/
-			cc->rawcard = TRUE;
+			cc->rawcard = true;
 			cc->status |= StCr3447Binary;
 			memset(cc->card, 0, sizeof(cc->card));
 			cc->card[0] = 00007;
@@ -699,8 +682,8 @@ static void cr3447NextCard(DevSlot *up, CrContext *cc)
 			/*
 			**  Raw binary card.
 			*/
-			cc->rawcard = TRUE;
-			col1 = buffer[4] & Mask5;
+			cc->rawcard = true;
+			PpWord col1 = buffer[4] & Mask5;
 			if (col1 == 00005)
 			{
 				cc->status |= StCr3447Binary;
@@ -717,7 +700,7 @@ static void cr3447NextCard(DevSlot *up, CrContext *cc)
 		/*
 		**  Skip over any characters past column 80 (if line is longer).
 		*/
-		if ((cp = strchr(buffer, '\n')) == NULL)
+		if ((cp = strchr(buffer, '\n')) == nullptr)
 		{
 			do
 			{
@@ -747,7 +730,7 @@ static void cr3447NextCard(DevSlot *up, CrContext *cc)
 		/*
 		**  Skip over any characters past column 324 (if line is longer).
 		*/
-		if ((cp = strchr(buffer, '\n')) == NULL)
+		if ((cp = strchr(buffer, '\n')) == nullptr)
 		{
 			do
 			{
@@ -770,8 +753,8 @@ static void cr3447NextCard(DevSlot *up, CrContext *cc)
 		cp = buffer + 4;
 		for (i = 0; i < 80; i++)
 		{
-			value = 0;
-			for (j = 0; j < 4; j++)
+			int value = 0;
+			for (int j = 0; j < 4; j++)
 			{
 				if (cp[j] >= '0' && cp[j] <= '7')
 				{

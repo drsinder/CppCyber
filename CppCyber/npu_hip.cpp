@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter, Paul Koning
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: npu_hip.c
+**  Name: npu_hip.cpp
 **
 **  Description:
 **      Perform emulation of the Host Interface Protocol in an NPU
@@ -145,10 +145,10 @@ static void npuHipIo(u8 mfrId);
 static void npuHipActivate(u8 mfrId);
 static void npuHipDisconnect(u8 mfrId);
 static void npuHipWriteNpuStatus(PpWord status, u8 mfrId);
-static PpWord npuHipReadNpuStatus(void);
+static PpWord npuHipReadNpuStatus();
 static char *npuHipFunc2String(PpWord funcCode);
 #if DEBUG
-static void npuLogFlush(void);
+static void npuLogFlush();
 static void npuLogByte(int b);
 #endif
 
@@ -177,7 +177,7 @@ typedef enum
 static HipState hipState = StHipInit;
 
 #if DEBUG
-static FILE *npuLog = NULL;
+static FILE *npuLog = nullptr;
 static char npuLogBuf[LogLineLength + 1];
 static int npuLogCol = 0;
 #endif
@@ -207,14 +207,13 @@ void npuInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	if (mfrID == 1)
 		return;	// do not init two instances!  DRS??!!
 
-	DevSlot *dp;
 	MMainFrame *mfr = BigIron->chasis[mfrID];
 
 	(void)unitNo;
 	(void)deviceName;
 
 #if DEBUG
-	if (npuLog == NULL)
+	if (npuLog == nullptr)
 	{
 		npuLog = fopen("npulog.txt", "wt");
 	}
@@ -223,7 +222,7 @@ void npuInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	/*
 	**  Attach device to channel and initialise device control block.
 	*/
-	dp = channelAttach(channelNo, eqNo, DtNpu, mfrID);
+	DevSlot *dp = channelAttach(channelNo, eqNo, DtNpu, mfrID);
 	dp->activate = npuHipActivate;
 	dp->disconnect = npuHipDisconnect;
 	dp->func = npuHipFunc;
@@ -234,8 +233,8 @@ void npuInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	/*
 	**  Allocate and initialise NPU parameters.
 	*/
-	npu = (NpuParam*)calloc(1, sizeof(NpuParam));
-	if (npu == NULL)
+	npu = static_cast<NpuParam*>(calloc(1, sizeof(NpuParam)));
+	if (npu == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate npu context block\n");
 		exit(1);
@@ -271,7 +270,7 @@ bool npuHipUplineBlock(NpuBuffer *bp, u8 mfrId)
 {
 	if (hipState != StHipIdle)
 	{
-		return(FALSE);
+		return(false);
 	}
 
 	if (bp->numBytes <= 256)
@@ -285,7 +284,7 @@ bool npuHipUplineBlock(NpuBuffer *bp, u8 mfrId)
 
 	npu->buffer = bp;
 	hipState = StHipUpline;
-	return(TRUE);
+	return(true);
 }
 
 /*--------------------------------------------------------------------------
@@ -301,19 +300,19 @@ bool npuHipDownlineBlock(NpuBuffer *bp, u8 mfrId)
 {
 	if (hipState != StHipIdle)
 	{
-		return(FALSE);
+		return(false);
 	}
 
-	if (bp == NULL)
+	if (bp == nullptr)
 	{
 		npuHipWriteNpuStatus(StNpuNotReadyOutput, mfrId);
-		return(FALSE);
+		return(false);
 	}
 
 	npuHipWriteNpuStatus(StNpuReadyOutput, mfrId);
 	npu->buffer = bp;
 	hipState = StHipDownline;
-	return(TRUE);
+	return(true);
 }
 
 /*--------------------------------------------------------------------------
@@ -461,13 +460,13 @@ static FcStatus npuHipFunc(PpWord funcCode, u8 mfrId)
 
 	case FcNpuInData:
 		bp = npu->buffer;
-		if (bp == NULL)
+		if (bp == nullptr)
 		{
 			/*
 			**  Unexpected input request by host.
 			*/
 			hipState = StHipIdle;
-			npu->npuData = NULL;
+			npu->npuData = nullptr;
 			mfr->activeDevice->recordLength = 0;
 			mfr->activeDevice->fcode = 0;
 			return(FcDeclined);
@@ -479,13 +478,13 @@ static FcStatus npuHipFunc(PpWord funcCode, u8 mfrId)
 
 	case FcNpuOutData:
 		bp = npu->buffer;
-		if (bp == NULL)
+		if (bp == nullptr)
 		{
 			/*
 			**  Unexpected output request by host.
 			*/
 			hipState = StHipIdle;
-			npu->npuData = NULL;
+			npu->npuData = nullptr;
 			mfr->activeDevice->recordLength = 0;
 			mfr->activeDevice->fcode = 0;
 			return(FcDeclined);
@@ -537,7 +536,9 @@ static FcStatus npuHipFunc(PpWord funcCode, u8 mfrId)
 **------------------------------------------------------------------------*/
 static void npuHipIo(u8 mfrId)
 {
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	PpWord orderType;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	u8 orderValue;
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
@@ -548,7 +549,7 @@ static void npuHipIo(u8 mfrId)
 
 	case FcNpuInNpuStatus:
 		mfr->activeChannel->data = npuHipReadNpuStatus();
-		mfr->activeChannel->full = TRUE;
+		mfr->activeChannel->full = true;
 #if DEBUG
 		fprintf(npuLog, " %03X", activeChannel->data);
 #endif
@@ -556,7 +557,7 @@ static void npuHipIo(u8 mfrId)
 
 	case FcNpuInCouplerStatus:
 		mfr->activeChannel->data = npu->regCouplerStatus;
-		mfr->activeChannel->full = TRUE;
+		mfr->activeChannel->full = true;
 #if DEBUG
 		if (npu->regCouplerStatus != 0)
 		{
@@ -573,7 +574,7 @@ static void npuHipIo(u8 mfrId)
 
 	case FcNpuInNpuOrder:
 		mfr->activeChannel->data = npu->regOrder;
-		mfr->activeChannel->full = TRUE;
+		mfr->activeChannel->full = true;
 #if DEBUG
 		fprintf(npuLog, " %03X", activeChannel->data);
 #endif
@@ -588,7 +589,7 @@ static void npuHipIo(u8 mfrId)
 		if (mfr->activeDevice->recordLength > 0)
 		{
 			mfr->activeChannel->data = *npu->npuData++;
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 
 			mfr->activeDevice->recordLength -= 1;
 			if (mfr->activeDevice->recordLength == 0)
@@ -597,7 +598,7 @@ static void npuHipIo(u8 mfrId)
 				**  Transmission complete.
 				*/
 				mfr->activeChannel->data |= 04000;
-				mfr->activeChannel->discAfterInput = TRUE;
+				mfr->activeChannel->discAfterInput = true;
 				mfr->activeDevice->fcode = 0;
 				hipState = StHipIdle;
 				npuBipNotifyUplineSent(mfrId);
@@ -615,7 +616,7 @@ static void npuHipIo(u8 mfrId)
 #if DEBUG
 			npuLogByte(activeChannel->data);
 #endif
-			mfr->activeChannel->full = FALSE;
+			mfr->activeChannel->full = false;
 			if (mfr->activeDevice->recordLength < MaxBuffer)
 			{
 				*npu->npuData++ = mfr->activeChannel->data & Mask8;
@@ -664,9 +665,11 @@ static void npuHipIo(u8 mfrId)
 				activeChannel->data, activeChannel->data >> 8, orderCode[(activeChannel->data >> 8) & 7]);
 #endif
 			npu->regOrder = mfr->activeChannel->data;
+			// ReSharper disable once CppJoinDeclarationAndAssignment
 			orderType = mfr->activeChannel->data & OrdMaskType;
-			orderValue = (u8)(mfr->activeChannel->data & OrdMaskValue);
-			mfr->activeChannel->full = FALSE;
+			// ReSharper disable once CppJoinDeclarationAndAssignment
+			orderValue = static_cast<u8>(mfr->activeChannel->data & OrdMaskValue);
+			mfr->activeChannel->full = false;
 
 			// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 			switch (orderType)
@@ -713,7 +716,7 @@ static void npuHipIo(u8 mfrId)
 		**  Dummy data because we don't support dumping.
 		*/
 		mfr->activeChannel->data = 0;
-		mfr->activeChannel->full = TRUE;
+		mfr->activeChannel->full = true;
 		break;
 
 	case FcNpuOutMemAddr0:
@@ -722,7 +725,7 @@ static void npuHipIo(u8 mfrId)
 		/*
 		**  Ignore data because we don't support loading and dumping.
 		*/
-		mfr->activeChannel->full = FALSE;
+		mfr->activeChannel->full = false;
 		break;
 
 	case FcNpuStartNpu:
@@ -786,7 +789,7 @@ static void npuHipWriteNpuStatus(PpWord status, u8 mfrId)
 **  Returns:        NPU status register value.
 **
 **------------------------------------------------------------------------*/
-static PpWord npuHipReadNpuStatus(void)
+static PpWord npuHipReadNpuStatus()
 {
 	PpWord value = npu->regNpuStatus;
 

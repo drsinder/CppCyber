@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: interlock_channel.c
+**  Name: interlock_channel.cpp
 **
 **  Description:
 **      Perform emulation of interlock register on channel 15.
@@ -102,35 +102,30 @@ static FILE *ilrLog = NULL;
 **------------------------------------------------------------------------*/
 void ilrInit(u8 registerSize, u8 mfrID)
 {
-	DevSlot *dp;
-
-	//for (u8 k = 0; k < BigIron->initMainFrames; k++)
-	{
 #if DEBUG
-		if (ilrLog == NULL)
-		{
-			ilrLog = fopen("ilrlog.txt", "wt");
-		}
+	if (ilrLog == NULL)
+	{
+		ilrLog = fopen("ilrlog.txt", "wt");
+	}
 #endif
 
-		dp = channelAttach(ChInterlock, 0, DtInterlockRegister, mfrID);
-		dp->activate = ilrActivate;
-		dp->disconnect = ilrDisconnect;
-		dp->func = ilrFunc;
-		dp->io = ilrIo;
+	DevSlot *dp = channelAttach(ChInterlock, 0, DtInterlockRegister, mfrID);
+	dp->activate = ilrActivate;
+	dp->disconnect = ilrDisconnect;
+	dp->func = ilrFunc;
+	dp->io = ilrIo;
 
-		dp->mfr->channel[ChInterlock].active = TRUE;
-		dp->mfr->channel[ChInterlock].ioDevice = dp;
-		dp->mfr->channel[ChInterlock].hardwired = TRUE;
+	dp->mfr->channel[ChInterlock].active = true;
+	dp->mfr->channel[ChInterlock].ioDevice = dp;
+	dp->mfr->channel[ChInterlock].hardwired = true;
 
-		ilrBits = registerSize;
-		ilrWords = (ilrBits + 11) / 12;
+	ilrBits = registerSize;
+	ilrWords = (ilrBits + 11) / 12;
 
-		/*
-		**  Print a friendly message.
-		*/
-		printf("Interlock Register initialised on channel %o\n", ChInterlock);
-	}
+	/*
+	**  Print a friendly message.
+	*/
+	printf("Interlock Register initialised on channel %o\n", ChInterlock);
 }
 
 /*--------------------------------------------------------------------------
@@ -166,7 +161,7 @@ static void ilrIo(u8 mfrId)
 
 	if (!mfr->activeChannel->inputPending && mfr->activeChannel->full)
 	{
-		mfr->activeChannel->inputPending = TRUE;
+		mfr->activeChannel->inputPending = true;
 		ilrExecute(mfr->activeChannel->data, mfrId);
 	}
 }
@@ -207,14 +202,12 @@ static void ilrDisconnect(u8 mfrId)
 static void ilrExecute(PpWord func, u8 mfrId)
 {
 	static PpWord interlockRegister[InterlockWords] = { 0 };
-	u8 code;
-	u8 designator;
 	u8 word;
 	u8 bit;
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	code = (func >> 9) & 7;
-	designator = func & 0177;
+	u8 code = (func >> 9) & 7;
+	u8 designator = func & 0177;
 
 	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (code)
@@ -349,7 +342,7 @@ static void ilrExecute(PpWord func, u8 mfrId)
 		break;
 	}
 
-	mfr->activeChannel->full = TRUE;
+	mfr->activeChannel->full = true;
 
 #if DEBUG
 	{

@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2010, Tom Hunter, Paul Koning
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: lp3000.c
+**  Name: lp3000.cpp
 **
 **  Description:
 **      Perform emulation of CDC 3000 series printers/controllers.
@@ -181,7 +181,7 @@ static FcStatus lp3000Func(PpWord funcCode, u8 mfrId);
 static void lp3000Io(u8 mfrId);
 static void lp3000Activate(u8 mfrId);
 static void lp3000Disconnect(u8 mfrId);
-static void lp3000DebugData(void);
+static void lp3000DebugData();
 static char *lp3000Func2String(PpWord funcCode);
 
 /*
@@ -196,7 +196,7 @@ static char *lp3000Func2String(PpWord funcCode);
 **  -----------------
 */
 #if DEBUG
-static FILE *lp3000Log = NULL;
+static FILE *lp3000Log = nullptr;
 #define MaxLine 1000
 static PpWord lineData[MaxLine];
 static int linePos = 0;
@@ -227,7 +227,7 @@ void lp501Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	int flags = Lp3000Type501;
 
 #if DEBUG
-	if (lp3000Log == NULL)
+	if (lp3000Log == nullptr)
 	{
 		lp3000Log = fopen("lp3000log.txt", "wt");
 	}
@@ -236,7 +236,7 @@ void lp501Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	(void)eqNo;
 	(void)deviceName;
 
-	if (deviceName == NULL ||
+	if (deviceName == nullptr ||
 		strcmp(deviceName, "3555") == 0)
 	{
 		flags |= Lp3000Type3555;
@@ -271,7 +271,7 @@ void lp512Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	int flags = Lp3000Type512;
 
 #if DEBUG
-	if (lp3000Log == NULL)
+	if (lp3000Log == nullptr)
 	{
 		lp3000Log = fopen("lp3000log.txt", "wt");
 	}
@@ -280,7 +280,7 @@ void lp512Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	(void)eqNo;
 	(void)deviceName;
 
-	if (deviceName == NULL ||
+	if (deviceName == nullptr ||
 		strcmp(deviceName, "3555") == 0)
 	{
 		flags |= Lp3000Type3555;
@@ -319,12 +319,10 @@ void lp512Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 static void lp3000Init(u8 mfrID, u8 unitNo, u8 eqNo, u8 channelNo, int flags)
 {
-	DevSlot *up;
 	char tempfname[80]; //drs
 	char fname[256];	//drs
-	LpContext *lc;
 
-	up = dcc6681Attach(channelNo, eqNo, unitNo, DtLp5xx, mfrID);
+	DevSlot *up = dcc6681Attach(channelNo, eqNo, unitNo, DtLp5xx, mfrID);
 
 	up->activate = lp3000Activate;
 	up->disconnect = lp3000Disconnect;
@@ -334,20 +332,20 @@ static void lp3000Init(u8 mfrID, u8 unitNo, u8 eqNo, u8 channelNo, int flags)
 	/*
 	**  Only one printer unit is possible per equipment.
 	*/
-	if (up->context[0] != NULL)
+	if (up->context[0] != nullptr)
 	{
 		fprintf(stderr, "Only one LP5xx unit is possible per equipment\n");
 		exit(1);
 	}
 
-	lc = (LpContext *)calloc(1, sizeof(LpContext));
-	if (lc == NULL)
+	LpContext *lc = static_cast<LpContext *>(calloc(1, sizeof(LpContext)));
+	if (lc == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate LP5xx context block\n");
 		exit(1);
 	}
 
-	up->context[0] = (void *)lc;
+	up->context[0] = static_cast<void *>(lc);
 	lc->flags = flags;
 
 	/*
@@ -357,7 +355,7 @@ static void lp3000Init(u8 mfrID, u8 unitNo, u8 eqNo, u8 channelNo, int flags)
 	strcpy(fname, printDir);
 	strcat(fname, tempfname);
 	up->fcb[0] = fopen(fname, "w");
-	if (up->fcb[0] == NULL)
+	if (up->fcb[0] == nullptr)
 	{
 		fprintf(stderr, "Failed to open %s\n", fname);
 		exit(1);
@@ -383,13 +381,10 @@ static void lp3000Init(u8 mfrID, u8 unitNo, u8 eqNo, u8 channelNo, int flags)
 **------------------------------------------------------------------------*/
 void lp3000RemovePaper(char *params)
 {
-	DevSlot *dp;
-	int numParam;
 	int channelNo;
 	int equipmentNo;
 	int mfrID;
 	time_t currentTime;
-	struct tm t;
 	char tempfname[256];
 	char fname[256];
 	char fnameNew[256];
@@ -397,7 +392,7 @@ void lp3000RemovePaper(char *params)
 	/*
 	**  Operator wants to remove paper.
 	*/
-	numParam = sscanf(params, "%o,%o,%o", &mfrID, &channelNo, &equipmentNo);
+	int numParam = sscanf(params, "%o,%o,%o", &mfrID, &channelNo, &equipmentNo);
 
 	/*
 	**  Check parameters.
@@ -423,8 +418,8 @@ void lp3000RemovePaper(char *params)
 	/*
 	**  Locate the device control block.
 	*/
-	dp = dcc6681FindDevice((u8)mfrID, (u8)channelNo, (u8)equipmentNo, DtLp5xx);
-	if (dp == NULL)
+	DevSlot *dp = dcc6681FindDevice(static_cast<u8>(mfrID), static_cast<u8>(channelNo), static_cast<u8>(equipmentNo), DtLp5xx);
+	if (dp == nullptr)
 	{
 		return;
 	}
@@ -434,7 +429,7 @@ void lp3000RemovePaper(char *params)
 	*/
 	fflush(dp->fcb[0]);
 	fclose(dp->fcb[0]);
-	dp->fcb[0] = NULL;
+	dp->fcb[0] = nullptr;
 
 	/*
 	**  Rename the device file to the format "LP5xx_yyyymmdd_hhmmss".
@@ -444,7 +439,7 @@ void lp3000RemovePaper(char *params)
 	strcat(fname, tempfname);
 
 	time(&currentTime);
-	t = *localtime(&currentTime);
+	struct tm t = *localtime(&currentTime);
 	sprintf(tempfname, "LP5xx_%04d%02d%02d_%02d%02d%02d.txt",    //drs add .txt
 		t.tm_year + 1900,
 		t.tm_mon + 1,
@@ -470,7 +465,7 @@ void lp3000RemovePaper(char *params)
 	/*
 	**  Check if the open succeeded.
 	*/
-	if (dp->fcb[0] == NULL)
+	if (dp->fcb[0] == nullptr)
 	{
 		printf("Failed to open %s\n", fname);
 		return;
@@ -490,7 +485,7 @@ void lp3000RemovePaper(char *params)
 				fnameNew[i] = '\\';
 		}
 		// ReSharper disable once CppEntityNeverUsed
-		intptr_t ret = _spawnl(_P_DETACH, printApp, printApp, fnameNew, printApp, NULL);
+		intptr_t ret = _spawnl(_P_DETACH, printApp, printApp, fnameNew, printApp, nullptr);
 		printf("\n\nOperator> ");
 	}
 #endif
@@ -508,14 +503,12 @@ void lp3000RemovePaper(char *params)
 **------------------------------------------------------------------------*/
 static FcStatus lp3000Func(PpWord funcCode, u8 mfrId)
 {
-	FILE *fcb;
-	LpContext *lc;
 	char packer[100];
 
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	fcb = mfr->active3000Device->fcb[0];
-	lc = (LpContext *)mfr->active3000Device->context[0];
+	FILE *fcb = mfr->active3000Device->fcb[0];
+	LpContext *lc = static_cast<LpContext *>(mfr->active3000Device->context[0]);
 
 	/*
 	**  Note that we don't emulate the VFU, so all VFU control codes
@@ -555,7 +548,7 @@ static FcStatus lp3000Func(PpWord funcCode, u8 mfrId)
 				sprintf(packer, "%i,%i,%i", mfrID, mfr->active3000Device->channel->id, mfr->active3000Device->eqNo);
 				lp3000RemovePaper(packer);
 			}
-			lc->printed = FALSE;
+			lc->printed = false;
 		}
 		return(FcProcessed);
 
@@ -679,7 +672,7 @@ static FcStatus lp3000Func(PpWord funcCode, u8 mfrId)
 			lc->flags |= Lp3000IntReady | Lp3000IntReadyEna;
 			if (lc->keepInt)
 			{
-				lc->keepInt = FALSE;
+				lc->keepInt = false;
 			}
 			else
 			{
@@ -699,7 +692,7 @@ static FcStatus lp3000Func(PpWord funcCode, u8 mfrId)
 			lc->flags |= Lp3000IntEnd | Lp3000IntEndEna;
 			if (lc->keepInt)
 			{
-				lc->keepInt = FALSE;
+				lc->keepInt = false;
 			}
 			else
 			{
@@ -754,7 +747,7 @@ static FcStatus lp3000Func(PpWord funcCode, u8 mfrId)
 			lc->flags |= Lp3000IntReady | Lp3000IntReadyEna;
 			if (lc->keepInt)
 			{
-				lc->keepInt = FALSE;
+				lc->keepInt = false;
 			}
 			else
 			{
@@ -774,7 +767,7 @@ static FcStatus lp3000Func(PpWord funcCode, u8 mfrId)
 			lc->flags |= Lp3000IntEnd | Lp3000IntEndEna;
 			if (lc->keepInt)
 			{
-				lc->keepInt = FALSE;
+				lc->keepInt = false;
 			}
 			else
 			{
@@ -807,12 +800,10 @@ static FcStatus lp3000Func(PpWord funcCode, u8 mfrId)
 **------------------------------------------------------------------------*/
 static void lp3000Io(u8 mfrId)
 {
-	FILE *fcb;
-	LpContext *lc;
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	fcb = mfr->active3000Device->fcb[0];
-	lc = (LpContext *)mfr->active3000Device->context[0];
+	FILE *fcb = mfr->active3000Device->fcb[0];
+	LpContext *lc = static_cast<LpContext *>(mfr->active3000Device->context[0]);
 
 	/*
 	**  Process printer I/O.
@@ -820,7 +811,7 @@ static void lp3000Io(u8 mfrId)
 	switch (mfr->active3000Device->fcode)
 	{
 	default:
-		mfr->activeChannel->full = FALSE;
+		mfr->activeChannel->full = false;
 		break;
 
 	case Fc6681Output:
@@ -844,15 +835,15 @@ static void lp3000Io(u8 mfrId)
 				// 512 printer, output ASCII
 				fputc(mfr->activeChannel->data & 0377, fcb);
 			}
-			mfr->activeChannel->full = FALSE;
-			lc->printed = TRUE;
-			lc->keepInt = TRUE;
+			mfr->activeChannel->full = false;
+			lc->printed = true;
+			lc->keepInt = true;
 		}
 		break;
 
 	case Fc6681Output + 1:
 		// Fill image memory, just ignore that data
-		mfr->activeChannel->full = FALSE;
+		mfr->activeChannel->full = false;
 		break;
 
 	case Fc6681DevStatusReq:
@@ -860,7 +851,7 @@ static void lp3000Io(u8 mfrId)
 		mfr->activeChannel->data = StPrintReady |
 			(lc->flags &
 			(StPrintIntReady | StPrintIntEnd));
-		mfr->activeChannel->full = TRUE;
+		mfr->activeChannel->full = true;
 		mfr->active3000Device->fcode = 0;
 		break;
 	}
@@ -913,7 +904,7 @@ static void lp3000Disconnect(u8 mfrId)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void lp3000DebugData(void)
+static void lp3000DebugData()
 {
 #if DEBUG
 	int i;

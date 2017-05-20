@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Gerard J van der Grinten, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: tpmux.c
+**  Name: tpmux.cpp
 **
 **  Description:
 **      Perform emulation of the two port multiplexer.
@@ -293,22 +293,18 @@ static u16 telnetConns = 2;
 **------------------------------------------------------------------------*/
 void tpMuxInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 {
-	DevSlot *dp;
-	PortParam *mp;
-	u8 i;
-
 	(void)eqNo;
 	(void)deviceName;
 
-	dp = channelAttach(channelNo, eqNo, DtTpm, mfrID);
+	DevSlot *dp = channelAttach(channelNo, eqNo, DtTpm, mfrID);
 	dp->activate = tpMuxActivate;
 	dp->disconnect = tpMuxDisconnect;
 	dp->func = tpMuxFunc;
 	dp->io = tpMuxIo;
 	dp->selectedUnit = -1;
 
-	mp = (PortParam*)calloc(1, sizeof(PortParam) * telnetConns);
-	if (mp == NULL)
+	PortParam *mp = static_cast<PortParam*>(calloc(1, sizeof(PortParam) * telnetConns));
+	if (mp == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate two port mux context block\n");
 		exit(1);
@@ -319,10 +315,10 @@ void tpMuxInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	/*
 	**  Initialise port control blocks.
 	*/
-	for (i = 0; i < telnetConns; i++)
+	for (u8 i = 0; i < telnetConns; i++)
 	{
 		mp->status = 00026;
-		mp->active = FALSE;
+		mp->active = false;
 		mp->connFd = 0;
 		mp->id = i;
 		mp += 1;
@@ -350,10 +346,9 @@ void tpMuxInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 static FcStatus tpMuxFunc(PpWord funcCode, u8 mfrId)
 {
-	int funcParam;
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	funcParam = funcCode & 077;
+	int funcParam = funcCode & 077;
 	switch (funcCode & 07700)
 	{
 	default:
@@ -416,7 +411,6 @@ static FcStatus tpMuxFunc(PpWord funcCode, u8 mfrId)
 **------------------------------------------------------------------------*/
 static void tpMuxIo(u8 mfrId)
 {
-	PortParam *mp;
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 	if (mfr->activeDevice->selectedUnit < 0)
@@ -424,7 +418,7 @@ static void tpMuxIo(u8 mfrId)
 		return;
 	}
 
-	mp = (PortParam *)mfr->activeDevice->context[0] + mfr->activeDevice->selectedUnit;
+	PortParam *mp = static_cast<PortParam *>(mfr->activeDevice->context[0]) + mfr->activeDevice->selectedUnit;
 
 	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (mfr->activeDevice->fcode & 00700)
@@ -443,15 +437,15 @@ static void tpMuxIo(u8 mfrId)
 			}
 
 			mfr->activeChannel->data = mp->status;
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 		}
 		break;
 
 	case FcTpmReadChar:
 		if (!mfr->activeChannel->full && (mp->status & 00010) != 0)
 		{
-			mfr->activeChannel->data = (PpWord)mp->input | 06000;
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->data = static_cast<PpWord>(mp->input) | 06000;
+			mfr->activeChannel->full = true;
 			mp->status &= ~00010;
 #if DEBUG
 			printf("read port %d -  %04o\n", mp->id, activeChannel->data);
@@ -465,14 +459,14 @@ static void tpMuxIo(u8 mfrId)
 			/*
 			**  Output data.
 			*/
-			mfr->activeChannel->full = FALSE;
+			mfr->activeChannel->full = false;
 
 			if (mp->active)
 			{
 				/*
 				**  Port with active TCP connection.
 				*/
-				mp->output[mfr->activeDevice->recordLength] = (char)mfr->activeChannel->data & 0177;
+				mp->output[mfr->activeDevice->recordLength] = static_cast<char>(mfr->activeChannel->data) & 0177;
 				mfr->activeDevice->recordLength++;
 				if (mfr->activeDevice->recordLength == sizeof(mp->output))
 				{
@@ -510,7 +504,6 @@ static void tpMuxActivate(u8 mfrId)
 **------------------------------------------------------------------------*/
 static void tpMuxDisconnect(u8 mfrId)
 {
-	PortParam *mp;
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 	if (mfr->activeDevice->selectedUnit < 0)
@@ -518,7 +511,7 @@ static void tpMuxDisconnect(u8 mfrId)
 		return;
 	}
 
-	mp = (PortParam *)mfr->activeDevice->context[0] + mfr->activeDevice->selectedUnit;
+	PortParam *mp = static_cast<PortParam *>(mfr->activeDevice->context[0]) + mfr->activeDevice->selectedUnit;
 
 	if (mfr->activeDevice->fcode == FcTpmWriteChar)
 	{
@@ -544,27 +537,26 @@ static void tpMuxDisconnect(u8 mfrId)
 static void tpMuxCreateThread(DevSlot *dp)
 {
 #if defined(_WIN32)
-	static bool firstMux = TRUE;
+	static bool firstMux = true;
 	DWORD dwThreadId;
-	HANDLE hThread;
 
 	if (firstMux)
 	{
-		firstMux = FALSE;
+		firstMux = false;
 	}
 
 	/*
 	**  Create TCP thread.
 	*/
-	hThread = CreateThread(
-		NULL,                                       // no security attribute 
+	HANDLE hThread = CreateThread(
+		nullptr,                                       // no security attribute 
 		0,                                          // default stack size 
-		(LPTHREAD_START_ROUTINE)tpMuxThread,
-		(LPVOID)dp,                                 // thread parameter 
+		reinterpret_cast<LPTHREAD_START_ROUTINE>(tpMuxThread),
+		static_cast<LPVOID>(dp),                                 // thread parameter 
 		0,                                          // not suspended 
 		&dwThreadId);                               // returns thread ID 
 
-	if (hThread == NULL)
+	if (hThread == nullptr)
 	{
 		fprintf(stderr, "Failed to create tpMux thread\n");
 		exit(1);
@@ -602,15 +594,12 @@ static void tpMuxThread(void *param)
 static void *tpMuxThread(void *param)
 #endif
 {
-	DevSlot *dp = (DevSlot *)param;
-	SOCKET listenFd;
+	DevSlot *dp = static_cast<DevSlot *>(param);
 	struct sockaddr_in server;
 	struct sockaddr_in from;
-	PortParam *mp;
 	u8 i;
 	int reuse = 1;
 #if defined(_WIN32)
-	int fromLen;
 #else
 	socklen_t fromLen;
 #endif
@@ -618,7 +607,7 @@ static void *tpMuxThread(void *param)
 	/*
 	**  Create TCP socket and bind to specified port.
 	*/
-	listenFd = socket(AF_INET, SOCK_STREAM, 0);
+	SOCKET listenFd = socket(AF_INET, SOCK_STREAM, 0);
 	if (listenFd < 0)
 	// ReSharper disable once CppUnreachableCode
 	{
@@ -630,13 +619,13 @@ static void *tpMuxThread(void *param)
 #endif
 	}
 
-	setsockopt(listenFd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse));
+	setsockopt(listenFd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&reuse), sizeof(reuse));
 	memset(&server, 0, sizeof(server));
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = inet_addr("0.0.0.0");
 	server.sin_port = htons(telnetPort);
 
-	if (bind(listenFd, (struct sockaddr *)&server, sizeof(server)) < 0)
+	if (bind(listenFd, reinterpret_cast<struct sockaddr *>(&server), sizeof(server)) < 0)
 	{
 		printf("tpMux: Can't bind to socket\n");
 #if defined(_WIN32)
@@ -656,12 +645,12 @@ static void *tpMuxThread(void *param)
 #endif
 	}
 
-	while (1)
+	while (true)
 	{
 		/*
 		**  Find a free port control block.
 		*/
-		mp = (PortParam *)dp->context[0];
+		PortParam *mp = static_cast<PortParam *>(dp->context[0]);
 		for (i = 0; i < telnetConns; i++)
 		{
 			if (!mp->active)
@@ -688,13 +677,13 @@ static void *tpMuxThread(void *param)
 		/*
 		**  Wait for a connection.
 		*/
-		fromLen = sizeof(from);
-		mp->connFd = accept(listenFd, (struct sockaddr *)&from, &fromLen);
+		int fromLen = sizeof(from);
+		mp->connFd = accept(listenFd, reinterpret_cast<struct sockaddr *>(&from), &fromLen);
 
 		/*
 		**  Mark connection as active.
 		*/
-		mp->active = TRUE;
+		mp->active = true;
 		printf("tpMux: Received connection on port %d\n", mp->id);
 	}
 
@@ -714,7 +703,6 @@ static void *tpMuxThread(void *param)
 **------------------------------------------------------------------------*/
 static int tpMuxCheckInput(PortParam *mp)
 {
-	int i;
 	fd_set readFds;
 	fd_set exceptFds;
 	struct timeval timeout;
@@ -728,10 +716,10 @@ static int tpMuxCheckInput(PortParam *mp)
 	timeout.tv_sec = 0;
 	timeout.tv_usec = 0;
 
-	select(((int)mp->connFd + 1), &readFds, NULL, &exceptFds, &timeout);
+	select((static_cast<int>(mp->connFd) + 1), &readFds, nullptr, &exceptFds, &timeout);
 	if (FD_ISSET(mp->connFd, &readFds))
 	{
-		i = recv(mp->connFd, &data, 1, 0);
+		int i = recv(mp->connFd, &data, 1, 0);
 		if (i == 1)
 		{
 			return(data);
@@ -743,7 +731,7 @@ static int tpMuxCheckInput(PortParam *mp)
 #else
 			close(mp->connFd);
 #endif
-			mp->active = FALSE;
+			mp->active = false;
 			printf("tpMux: Connection dropped on port %d\n", mp->id);
 			return(-1);
 		}
@@ -755,7 +743,7 @@ static int tpMuxCheckInput(PortParam *mp)
 #else
 		close(mp->connFd);
 #endif
-		mp->active = FALSE;
+		mp->active = false;
 		printf("tpMux: Connection dropped on port %d\n", mp->id);
 		return(-1);
 	}

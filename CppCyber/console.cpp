@@ -99,7 +99,7 @@ static void consoleDisconnect1(u8 mfrId);
 */
 static u8 currentFont;
 static u16 currentOffset;
-static bool emptyDrop = FALSE;
+static bool emptyDrop = false;
 
 
 /* Ring buffer for keyboard input */
@@ -115,7 +115,7 @@ u8 *p;
 #if MaxMainFrames == 2
 static u8 currentFont1;
 static u16 currentOffset1;
-static bool emptyDrop1 = FALSE;
+static bool emptyDrop1 = false;
 
 static u8 keyRing1[KeyBufSize];
 static u32 keyIn1, keyOut1;
@@ -148,15 +148,13 @@ u8 *p1;
 **------------------------------------------------------------------------*/
 void consoleInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 {
-	DevSlot *dp;
-
 	(void)eqNo;
 	(void)unitNo;
 	(void)deviceName;
 
 	keyIn = keyOut = 0;
 
-	dp = channelAttach(channelNo, eqNo, DtConsole, mfrID);
+	DevSlot *dp = channelAttach(channelNo, eqNo, DtConsole, mfrID);
 
 	if (mfrID == 0)
 	{
@@ -203,7 +201,7 @@ static FcStatus consoleFunc(PpWord funcCode, u8 mfrId)
 	if (mfr->activeChannel->mfrID != 0)
 		printf("consoleFunc mfrID = %d\n", mfr->activeChannel->mfrID);
 
-	mfr->activeChannel->full = FALSE;
+	mfr->activeChannel->full = false;
 
 	switch (funcCode)
 	{
@@ -274,7 +272,7 @@ static FcStatus consoleFunc1(PpWord funcCode, u8 mfrId)
 	if (mfr->activeChannel->mfrID !=1)
 		printf("consoleFunc1 mfrID = %d\n", mfr->activeChannel->mfrID);
 
-	mfr->activeChannel->full = FALSE;
+	mfr->activeChannel->full = false;
 
 	switch (funcCode)
 	{
@@ -365,9 +363,7 @@ bool autoDate1 = false;		// enter date/time automatically - year 98 MF1
 
 void consoleQueueKey(char ch)
 {
-	int nextin;
-
-	nextin = keyIn + 1;
+	int nextin = keyIn + 1;
 	if (nextin == KeyBufSize)
 	{
 		nextin = 0;
@@ -389,21 +385,18 @@ void consoleQueueKey(char ch)
 **
 **------------------------------------------------------------------------*/
 static u64 keyloops = 0;
-char consoleGetKey(void)
+char consoleGetKey()
 {
-	int nextout;
-	char key;
-
 	if (keyIn == keyOut)
 		return 0;
 	if ((++keyloops % 3L) != 1)
 		return 0;
-	nextout = keyOut + 1;
+	int nextout = keyOut + 1;
 	if (nextout == KeyBufSize)
 	{
 		nextout = 0;
 	}
-	key = keyRing[keyOut];
+	char key = keyRing[keyOut];
 	keyOut = nextout;
 	//printf("keyout %c\n", consoleToAscii[key]);
 	return key;
@@ -422,9 +415,7 @@ char consoleGetKey(void)
 
 void consoleQueueKey1(char ch)
 {
-	int nextin;
-
-	nextin = keyIn1 + 1;
+	int nextin = keyIn1 + 1;
 	if (nextin == KeyBufSize)
 	{
 		nextin = 0;
@@ -446,21 +437,18 @@ void consoleQueueKey1(char ch)
 **
 **------------------------------------------------------------------------*/
 static u64 keyloops1 = 0;
-char consoleGetKey1(void)
+char consoleGetKey1()
 {
-	int nextout;
-	char key;
-
 	if (keyIn1 == keyOut1)
 		return 0;
 	if ((++keyloops1 % 3L) != 1)
 		return 0;
-	nextout = keyOut1 + 1;
+	int nextout = keyOut1 + 1;
 	if (nextout == KeyBufSize)
 	{
 		nextout = 0;
 	}
-	key = keyRing1[keyOut1];
+	char key = keyRing1[keyOut1];
 	keyOut1 = nextout;
 	//printf("keyout %c\n", consoleToAscii[key]);
 	return key;
@@ -489,9 +477,9 @@ static void consoleIo(u8 mfrId)
 	case Fc6612Sel16CharRight:
 		if (mfr->activeChannel->full)
 		{
-			emptyDrop = FALSE;
+			emptyDrop = false;
 
-			ch = (u8)((mfr->activeChannel->data >> 6) & Mask6);
+			ch = static_cast<u8>((mfr->activeChannel->data >> 6) & Mask6);
 
 			if (ch >= 060)
 			{
@@ -500,14 +488,14 @@ static void consoleIo(u8 mfrId)
 					/*
 					**  Vertical coordinate.
 					*/
-					windowSetY((u16)(mfr->activeChannel->data & Mask9));
+					windowSetY(static_cast<u16>(mfr->activeChannel->data & Mask9));
 				}
 				else
 				{
 					/*
 					**  Horizontal coordinate.
 					*/
-					windowSetX((u16)((mfr->activeChannel->data & Mask9) + currentOffset));
+					windowSetX(static_cast<u16>((mfr->activeChannel->data & Mask9) + currentOffset));
 				}
 			}
 			else
@@ -527,8 +515,8 @@ static void consoleIo(u8 mfrId)
 				*/
 				if ((mfr->activeDevice->fcode == Fc6612Sel32CharLeft ||
 					mfr->activeDevice->fcode == Fc6612Sel32CharRight) &&
-					((mfr->activeChannel->data >> 6) & Mask6) == asciiToCdc[(u8)autoDateString[autoPos]] &&
-					(mfr->activeChannel->data & Mask6) == asciiToCdc[(u8)autoDateString[autoPos + 1]])
+					((mfr->activeChannel->data >> 6) & Mask6) == asciiToCdc[static_cast<u8>(autoDateString[autoPos])] &&
+					(mfr->activeChannel->data & Mask6) == asciiToCdc[static_cast<u8>(autoDateString[autoPos + 1])])
 				{
 					/*
 					**  It matches so far.  Let's see if we're done.
@@ -542,7 +530,7 @@ static void consoleIo(u8 mfrId)
 						**  there is no typeahead, and keyboard
 						**  is in "easy" mode.
 						*/
-						autoDate = FALSE;
+						autoDate = false;
 						if (keyOut == keyIn ) // && !keyboardTrue)
 						{
 							time(&t);
@@ -551,7 +539,7 @@ static void consoleIo(u8 mfrId)
 								"%y%m%d\n%H%M%S\n",
 								localtime(&t));
 							*ts = autoDateYear[0]; *(ts+1) = autoDateYear[1];
-							for (p = (u8 *)ts; *p; p++)
+							for (p = reinterpret_cast<u8 *>(ts); *p; p++)
 							{
 								consoleQueueKey(asciiToConsole[*p]);
 							}
@@ -574,16 +562,16 @@ static void consoleIo(u8 mfrId)
 				}
 			}
 		}
-		mfr->activeChannel->full = FALSE;
+		mfr->activeChannel->full = false;
 		break;
 
 	case Fc6612Sel512DotsLeft:
 	case Fc6612Sel512DotsRight:
 		if (mfr->activeChannel->full)
 		{
-			emptyDrop = FALSE;
+			emptyDrop = false;
 
-			ch = (u8)((mfr->activeChannel->data >> 6) & Mask6);
+			ch = static_cast<u8>((mfr->activeChannel->data >> 6) & Mask6);
 
 			if (ch >= 060)
 			{
@@ -592,7 +580,7 @@ static void consoleIo(u8 mfrId)
 					/*
 					**  Vertical coordinate.
 					*/
-					windowSetY((u16)(mfr->activeChannel->data & Mask9));
+					windowSetY(static_cast<u16>(mfr->activeChannel->data & Mask9));
 					windowQueue('.');
 				}
 				else
@@ -600,11 +588,11 @@ static void consoleIo(u8 mfrId)
 					/*
 					**  Horizontal coordinate.
 					*/
-					windowSetX((u16)((mfr->activeChannel->data & Mask9) + currentOffset));
+					windowSetX(static_cast<u16>((mfr->activeChannel->data & Mask9) + currentOffset));
 				}
 			}
 
-			mfr->activeChannel->full = FALSE;
+			mfr->activeChannel->full = false;
 		}
 		break;
 
@@ -615,7 +603,7 @@ static void consoleIo(u8 mfrId)
 		{
 			mfr->activeChannel->data = consoleGetKey();
 		}
-		mfr->activeChannel->full = TRUE;
+		mfr->activeChannel->full = true;
 		mfr->activeChannel->status = 0;
 		mfr->activeDevice->fcode = 0;
 		mfr->activeChannel->mfr->ppKeyIn = 0;
@@ -647,9 +635,9 @@ static void consoleIo1(u8 mfrId)
 	case Fc6612Sel16CharRight:
 		if (mfr->activeChannel->full)
 		{
-			emptyDrop1 = FALSE;
+			emptyDrop1 = false;
 
-			ch = (u8)((mfr->activeChannel->data >> 6) & Mask6);
+			ch = static_cast<u8>((mfr->activeChannel->data >> 6) & Mask6);
 
 			if (ch >= 060)
 			{
@@ -658,14 +646,14 @@ static void consoleIo1(u8 mfrId)
 					/*
 					**  Vertical coordinate.
 					*/
-					windowSetY1((u16)(mfr->activeChannel->data & Mask9));
+					windowSetY1(static_cast<u16>(mfr->activeChannel->data & Mask9));
 				}
 				else
 				{
 					/*
 					**  Horizontal coordinate.
 					*/
-					windowSetX1((u16)((mfr->activeChannel->data & Mask9) + currentOffset1));
+					windowSetX1(static_cast<u16>((mfr->activeChannel->data & Mask9) + currentOffset1));
 				}
 			}
 			else
@@ -685,8 +673,8 @@ static void consoleIo1(u8 mfrId)
 				*/
 				if ((mfr->activeDevice->fcode == Fc6612Sel32CharLeft ||
 					mfr->activeDevice->fcode == Fc6612Sel32CharRight) &&
-					((mfr->activeChannel->data >> 6) & Mask6) == asciiToCdc[(u8)autoDateString[autoPos1]] &&
-					(mfr->activeChannel->data & Mask6) == asciiToCdc[(u8)autoDateString[autoPos1 + 1]])
+					((mfr->activeChannel->data >> 6) & Mask6) == asciiToCdc[static_cast<u8>(autoDateString[autoPos1])] &&
+					(mfr->activeChannel->data & Mask6) == asciiToCdc[static_cast<u8>(autoDateString[autoPos1 + 1])])
 				{
 					/*
 					**  It matches so far.  Let's see if we're done.
@@ -700,7 +688,7 @@ static void consoleIo1(u8 mfrId)
 						**  there is no typeahead, and keyboard
 						**  is in "easy" mode.
 						*/
-						autoDate1 = FALSE;
+						autoDate1 = false;
 						if (keyOut1 == keyIn1) // && !keyboardTrue)
 						{
 							time(&t1);
@@ -709,7 +697,7 @@ static void consoleIo1(u8 mfrId)
 								"%y%m%d\n%H%M%S\n",
 								localtime(&t1));
 							*ts1 = autoDateYear[0]; *(ts1 + 1) = autoDateYear[1];
-							for (p1 = (u8 *)ts1; *p1; p1++)
+							for (p1 = reinterpret_cast<u8 *>(ts1); *p1; p1++)
 							{
 								consoleQueueKey1(asciiToConsole[*p1]);
 							}
@@ -732,7 +720,7 @@ static void consoleIo1(u8 mfrId)
 				}
 			}
 
-			mfr->activeChannel->full = FALSE;
+			mfr->activeChannel->full = false;
 		}
 		break;
 
@@ -740,9 +728,9 @@ static void consoleIo1(u8 mfrId)
 	case Fc6612Sel512DotsRight:
 		if (mfr->activeChannel->full)
 		{
-			emptyDrop1 = FALSE;
+			emptyDrop1 = false;
 
-			ch = (u8)((mfr->activeChannel->data >> 6) & Mask6);
+			ch = static_cast<u8>((mfr->activeChannel->data >> 6) & Mask6);
 
 			if (ch >= 060)
 			{
@@ -751,7 +739,7 @@ static void consoleIo1(u8 mfrId)
 					/*
 					**  Vertical coordinate.
 					*/
-					windowSetY1((u16)(mfr->activeChannel->data & Mask9));
+					windowSetY1(static_cast<u16>(mfr->activeChannel->data & Mask9));
 					windowQueue1('.');
 				}
 				else
@@ -759,11 +747,11 @@ static void consoleIo1(u8 mfrId)
 					/*
 					**  Horizontal coordinate.
 					*/
-					windowSetX1((u16)((mfr->activeChannel->data & Mask9) + currentOffset1));
+					windowSetX1(static_cast<u16>((mfr->activeChannel->data & Mask9) + currentOffset1));
 				}
 			}
 
-			mfr->activeChannel->full = FALSE;
+			mfr->activeChannel->full = false;
 		}
 		break;
 
@@ -774,7 +762,7 @@ static void consoleIo1(u8 mfrId)
 		{
 			mfr->activeChannel->data = consoleGetKey1();
 		}
-		mfr->activeChannel->full = TRUE;
+		mfr->activeChannel->full = true;
 		mfr->activeChannel->status = 0;
 		mfr->activeDevice->fcode = 0;
 		mfr->activeChannel->mfr->ppKeyIn = 0;
@@ -792,12 +780,12 @@ static void consoleIo1(u8 mfrId)
 **------------------------------------------------------------------------*/
 static void consoleActivate(u8 mfrId)
 {
-	emptyDrop = TRUE;
+	emptyDrop = true;
 }
 #if MaxMainFrames == 2
 static void consoleActivate1(u8 mfrId)
 {
-	emptyDrop1 = TRUE;
+	emptyDrop1 = true;
 }
 #endif
 /*--------------------------------------------------------------------------
@@ -813,7 +801,7 @@ static void consoleDisconnect(u8 mfrId)
 	if (emptyDrop)
 	{
 		windowUpdate();
-		emptyDrop = FALSE;
+		emptyDrop = false;
 	}
 }
 #if MaxMainFrames == 2
@@ -822,7 +810,7 @@ static void consoleDisconnect1(u8 mfrId)
 	if (emptyDrop1)
 	{
 		windowUpdate1();
-		emptyDrop1 = FALSE;
+		emptyDrop1 = false;
 	}
 }
 #endif

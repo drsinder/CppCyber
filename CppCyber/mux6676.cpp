@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: mux6676.c
+**  Name: mux6676.cpp
 **
 **  Description:
 **      Perform emulation of CDC 6676 data set controller (terminal mux).
@@ -132,10 +132,6 @@ static void *mux6676Thread(void *param);
 **------------------------------------------------------------------------*/
 void mux6676Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 {
-	DevSlot *dp;
-	PortParam *mp;
-	u8 i;
-
 	if (mfrID == 1)
 		return;	// do not init two instances!  DRS??!!
 
@@ -143,7 +139,7 @@ void mux6676Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	(void)unitNo;
 	(void)deviceName;
 
-	dp = channelAttach(channelNo, eqNo, DtMux6676, mfrID);
+	DevSlot *dp = channelAttach(channelNo, eqNo, DtMux6676, mfrID);
 
 	dp->activate = mux6676Activate;
 	dp->disconnect = mux6676Disconnect;
@@ -153,14 +149,14 @@ void mux6676Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	/*
 	**  Only one MUX6676 unit is possible per equipment.
 	*/
-	if (dp->context[0] != NULL)
+	if (dp->context[0] != nullptr)
 	{
 		fprintf(stderr, "Only one MUX6676 unit is possible per equipment\n");
 		exit(1);
 	}
 
-	mp = (PortParam*)calloc(1, sizeof(PortParam) * mux6676TelnetConns);
-	if (mp == NULL)
+	PortParam *mp = static_cast<PortParam*>(calloc(1, sizeof(PortParam) * mux6676TelnetConns));
+	if (mp == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate MUX6676 context block\n");
 		exit(1);
@@ -171,9 +167,9 @@ void mux6676Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	/*
 	**  Initialise port control blocks.
 	*/
-	for (i = 0; i < mux6676TelnetConns; i++)
+	for (u8 i = 0; i < mux6676TelnetConns; i++)
 	{
-		mp->active = FALSE;
+		mp->active = false;
 		mp->connFd = 0;
 		mp->id = i;
 		mp += 1;
@@ -201,13 +197,12 @@ void mux6676Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 static FcStatus mux6676Func(PpWord funcCode, u8 mfrId)
 {
-	u8 eqNo;
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 	// ReSharper disable once CppEntityNeverUsed
-	PortParam *mp = (PortParam *)mfr->activeDevice->context[0];
+	PortParam *mp = static_cast<PortParam *>(mfr->activeDevice->context[0]);
 
-	eqNo = (funcCode & Fc6676EqMask) >> Fc6676EqShift;
+	u8 eqNo = (funcCode & Fc6676EqMask) >> Fc6676EqShift;
 	if (eqNo != mfr->activeDevice->eqNo)
 	{
 		/*
@@ -245,12 +240,11 @@ static FcStatus mux6676Func(PpWord funcCode, u8 mfrId)
 static void mux6676Io(u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
-
-	PortParam *cp = (PortParam *)mfr->activeDevice->context[0];
-	PortParam *mp;
-	PpWord function;
-	u8 portNumber;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	char x;
+	PortParam *cp = static_cast<PortParam *>(mfr->activeDevice->context[0]);
+	PortParam *mp;
+	u8 portNumber;
 	int in;
 
 	switch (mfr->activeDevice->fcode)
@@ -264,8 +258,8 @@ static void mux6676Io(u8 mfrId)
 			/*
 			**  Output data.
 			*/
-			mfr->activeChannel->full = FALSE;
-			portNumber = (u8)mfr->activeDevice->recordLength++;
+			mfr->activeChannel->full = false;
+			portNumber = static_cast<u8>(mfr->activeDevice->recordLength++);
 			if (portNumber < mux6676TelnetConns)
 			{
 				mp = cp + portNumber;
@@ -274,13 +268,14 @@ static void mux6676Io(u8 mfrId)
 					/*
 					**  Port with active TCP connection.
 					*/
-					function = mfr->activeChannel->data >> 9;
+					PpWord function = mfr->activeChannel->data >> 9;
 					switch (function)
 					{
 					case 4:
 						/*
 						**  Send data with parity stripped off.
 						*/
+						// ReSharper disable once CppJoinDeclarationAndAssignment
 						x = (mfr->activeChannel->data >> 1) & 0x7f;
 						send(mp->connFd, &x, 1, 0);
 						break;
@@ -294,7 +289,7 @@ static void mux6676Io(u8 mfrId)
 #else
 						close(mp->connFd);
 #endif
-						mp->active = FALSE;
+						mp->active = false;
 						printf("mux6676: Host closed connection on port %d\n", mp->id);
 						break;
 
@@ -310,8 +305,8 @@ static void mux6676Io(u8 mfrId)
 		if (!mfr->activeChannel->full)
 		{
 			mfr->activeChannel->data = 0;
-			mfr->activeChannel->full = TRUE;
-			portNumber = (u8)mfr->activeDevice->recordLength++;
+			mfr->activeChannel->full = true;
+			portNumber = static_cast<u8>(mfr->activeDevice->recordLength++);
 			if (portNumber < mux6676TelnetConns)
 			{
 				mp = cp + portNumber;
@@ -337,7 +332,7 @@ static void mux6676Io(u8 mfrId)
 			mfr->activeChannel->data |= St6676InputRequired;
 		}
 
-		mfr->activeChannel->full = TRUE;
+		mfr->activeChannel->full = true;
 		break;
 	}
 }
@@ -379,27 +374,26 @@ static void mux6676Disconnect(u8 mfrId)
 static void mux6676CreateThread(DevSlot *dp)
 {
 #if defined(_WIN32)
-	static bool firstMux = TRUE;
+	static bool firstMux = true;
 	DWORD dwThreadId;
-	HANDLE hThread;
 
 	if (firstMux)
 	{
-		firstMux = FALSE;
+		firstMux = false;
 	}
 
 	/*
 	**  Create TCP thread.
 	*/
-	hThread = CreateThread(
-		NULL,                                       // no security attribute 
+	HANDLE hThread = CreateThread(
+		nullptr,                                       // no security attribute 
 		0,                                          // default stack size 
-		(LPTHREAD_START_ROUTINE)mux6676Thread,
-		(LPVOID)dp,                                 // thread parameter 
+		reinterpret_cast<LPTHREAD_START_ROUTINE>(mux6676Thread),
+		static_cast<LPVOID>(dp),                                 // thread parameter 
 		0,                                          // not suspended 
 		&dwThreadId);                               // returns thread ID 
 
-	if (hThread == NULL)
+	if (hThread == nullptr)
 	{
 		fprintf(stderr, "Failed to create mux6676 thread\n");
 		exit(1);
@@ -437,15 +431,12 @@ static void mux6676Thread(void *param)
 static void *mux6676Thread(void *param)
 #endif
 {
-	DevSlot *dp = (DevSlot *)param;
-	SOCKET listenFd;
+	DevSlot *dp = static_cast<DevSlot *>(param);
 	struct sockaddr_in server;
 	struct sockaddr_in from;
-	PortParam *mp;
 	u8 i;
 	int reuse = 1;
 #if defined(_WIN32)
-	int fromLen;
 #else
 	socklen_t fromLen;
 #endif
@@ -453,7 +444,7 @@ static void *mux6676Thread(void *param)
 	/*
 	**  Create TCP socket and bind to specified port.
 	*/
-	listenFd = socket(AF_INET, SOCK_STREAM, 0);
+	SOCKET listenFd = socket(AF_INET, SOCK_STREAM, 0);
 	if (listenFd < 0)
 	// ReSharper disable once CppUnreachableCode
 	{
@@ -465,13 +456,13 @@ static void *mux6676Thread(void *param)
 #endif
 	}
 
-	setsockopt(listenFd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse));
+	setsockopt(listenFd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&reuse), sizeof(reuse));
 	memset(&server, 0, sizeof(server));
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = inet_addr("0.0.0.0");
 	server.sin_port = htons(mux6676TelnetPort);
 
-	if (bind(listenFd, (struct sockaddr *)&server, sizeof(server)) < 0)
+	if (bind(listenFd, reinterpret_cast<struct sockaddr *>(&server), sizeof(server)) < 0)
 	{
 		printf("mux6676: Can't bind to socket\n");
 #if defined(_WIN32)
@@ -491,12 +482,12 @@ static void *mux6676Thread(void *param)
 #endif
 	}
 
-	while (1)
+	while (true)
 	{
 		/*
 		**  Find a free port control block.
 		*/
-		mp = (PortParam *)dp->context[dp->selectedUnit];
+		PortParam *mp = static_cast<PortParam *>(dp->context[dp->selectedUnit]);
 		for (i = 0; i < mux6676TelnetConns; i++)
 		{
 			if (!mp->active)
@@ -522,13 +513,13 @@ static void *mux6676Thread(void *param)
 		/*
 		**  Wait for a connection.
 		*/
-		fromLen = sizeof(from);
-		mp->connFd = accept(listenFd, (struct sockaddr *)&from, &fromLen);
+		int fromLen = sizeof(from);
+		mp->connFd = accept(listenFd, reinterpret_cast<struct sockaddr *>(&from), &fromLen);
 
 		/*
 		**  Mark connection as active.
 		*/
-		mp->active = TRUE;
+		mp->active = true;
 		printf("mux6676: Received connection on port %d\n", mp->id);
 	}
 
@@ -548,7 +539,6 @@ static void *mux6676Thread(void *param)
 **------------------------------------------------------------------------*/
 static int mux6676CheckInput(PortParam *mp)
 {
-	int i;
 	fd_set readFds;
 	fd_set exceptFds;
 	struct timeval timeout;
@@ -562,10 +552,10 @@ static int mux6676CheckInput(PortParam *mp)
 	timeout.tv_sec = 0;
 	timeout.tv_usec = 0;
 
-	select((int)mp->connFd + 1, &readFds, NULL, &exceptFds, &timeout);
+	select(static_cast<int>(mp->connFd) + 1, &readFds, nullptr, &exceptFds, &timeout);
 	if (FD_ISSET(mp->connFd, &readFds))
 	{
-		i = recv(mp->connFd, &data, 1, 0);
+		int i = recv(mp->connFd, &data, 1, 0);
 		if (i == 1)
 		{
 			return(data);
@@ -577,7 +567,7 @@ static int mux6676CheckInput(PortParam *mp)
 #else
 			close(mp->connFd);
 #endif
-			mp->active = FALSE;
+			mp->active = false;
 			printf("mux6676: Connection dropped on port %d\n", mp->id);
 			return(-1);
 		}
@@ -589,7 +579,7 @@ static int mux6676CheckInput(PortParam *mp)
 #else
 		close(mp->connFd);
 #endif
-		mp->active = FALSE;
+		mp->active = false;
 		printf("mux6676: Connection dropped on port %d\n", mp->id);
 		return(-1);
 	}
@@ -611,17 +601,15 @@ static bool mux6676InputRequired(u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	PortParam *cp = (PortParam *)mfr->activeDevice->context[0];
+	PortParam *cp = static_cast<PortParam *>(mfr->activeDevice->context[0]);
 	PortParam *mp;
-	int i;
 	fd_set readFds;
 	fd_set exceptFds;
 	struct timeval timeout;
-	int numSocks;
 
 	FD_ZERO(&readFds);
 	FD_ZERO(&exceptFds);
-	for (i = 0; i < mux6676TelnetConns; i++)
+	for (int i = 0; i < mux6676TelnetConns; i++)
 	{
 		mp = cp + i;
 		if (mp->active)
@@ -636,7 +624,7 @@ static bool mux6676InputRequired(u8 mfrId)
 
 	// ReSharper disable once CppCStyleCast
 	// ReSharper disable once CppDeclaratorMightNotBeInitialized
-	numSocks = select((int)mp->connFd + 1, &readFds, NULL, &exceptFds, &timeout);
+	int numSocks = select((int)mp->connFd + 1, &readFds, nullptr, &exceptFds, &timeout);
 
 	return(numSocks > 0);
 }

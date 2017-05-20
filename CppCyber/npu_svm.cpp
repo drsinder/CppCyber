@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: npu_svm.c
+**  Name: npu_svm.cpp
 **
 **  Description:
 **      Perform emulation of the Service Message (SVM) subsystem in an NPU
@@ -227,7 +227,7 @@ static u8 oldRegLevel = 0;
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuSvmInit(void)
+void npuSvmInit()
 {
 	/*
 	**  Set initial state.
@@ -243,7 +243,7 @@ void npuSvmInit(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuSvmReset(void)
+void npuSvmReset()
 {
 	/*
 	**  Set initial state.
@@ -291,10 +291,10 @@ bool npuSvmConnectTerminal(Tcb *tp, u8 mfrId)
 	if (npuSvmRequestTerminalConfig(tp, mfrId))
 	{
 		tp->state = StTermRequestConfig;
-		return(TRUE);
+		return(true);
 	}
 
-	return(FALSE);
+	return(false);
 }
 
 /*--------------------------------------------------------------------------
@@ -310,7 +310,6 @@ void npuSvmProcessBuffer(NpuBuffer *bp, u8 mfrId)
 {
 	u8 *block = bp->data;
 	Tcb *tp;
-	u8 cn;
 
 	/*
 	**  Ensure there is at least a minimal service message.
@@ -344,7 +343,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp, u8 mfrId)
 	/*
 	**  Connection number for all service messages must be zero.
 	*/
-	cn = block[BlkOffCN];
+	u8 cn = block[BlkOffCN];
 	if (cn != 0)
 	{
 		/*
@@ -560,7 +559,7 @@ void npuSvmDiscRequestTerminal(Tcb *tp, u8 mfrId)
 		/*
 		**  Clean up flow control state and discard any pending output.
 		*/
-		tp->xoff = FALSE;
+		tp->xoff = false;
 		npuTipDiscardOutputQ(tp, mfrId);
 		tp->state = StTermNpuDisconnect;
 
@@ -603,7 +602,7 @@ void npuSvmDiscReplyTerminal(Tcb *tp, u8 mfrId)
 **                  otherwise.
 **
 **------------------------------------------------------------------------*/
-bool npuSvmIsReady(void)
+bool npuSvmIsReady()
 {
 	return(svmState == StReady);
 }
@@ -627,19 +626,16 @@ bool npuSvmIsReady(void)
 **------------------------------------------------------------------------*/
 static bool npuSvmRequestTerminalConfig(Tcb *tp, u8 mfrId)
 {
-	NpuBuffer *bp;
-	u8 *mp;
-
-	bp = npuBipBufGet();
-	if (bp == NULL)
+	NpuBuffer *bp = npuBipBufGet();
+	if (bp == nullptr)
 	{
-		return(FALSE);
+		return(false);
 	}
 
 	/*
 	**  Assemble configure request.
 	*/
-	mp = bp->data;
+	u8 *mp = bp->data;
 
 	*mp++ = AddrHost;           // DN
 	*mp++ = AddrNpu;            // SN
@@ -651,14 +647,14 @@ static bool npuSvmRequestTerminalConfig(Tcb *tp, u8 mfrId)
 	*mp++ = 0;                  // sub-port number (always 0 for async ports)
 	*mp++ = (0 << 7) | (tp->tipType << 3); // no auto recognition; TIP type; subtype 0
 
-	bp->numBytes = (u16)(mp - bp->data);
+	bp->numBytes = static_cast<u16>(mp - bp->data);
 
 	/*
 	**  Send the request.
 	*/
 	npuBipRequestUplineTransfer(bp, mfrId);
 
-	return(TRUE);
+	return(true);
 }
 
 /*--------------------------------------------------------------------------
@@ -675,12 +671,7 @@ static bool npuSvmProcessTerminalConfig(Tcb *tp, NpuBuffer *bp)
 {
 	u8 *mp = bp->data;
 	int len = bp->numBytes;
-	u8 deviceType;
-	u8 subTip;
 	u8 termName[7];
-	u8 termClass;
-	u8 status;
-	u8 codeSet;
 
 	/*
 	**  Extract configuration.
@@ -694,26 +685,26 @@ static bool npuSvmProcessTerminalConfig(Tcb *tp, NpuBuffer *bp)
 	u8 address1 = *mp++;
 	// ReSharper disable once CppEntityNeverUsed
 	u8 address2 = *mp++;
-	deviceType = *mp++;
-	subTip = *mp++;
+	u8 deviceType = *mp++;
+	u8 subTip = *mp++;
 
 	memcpy(termName, mp, sizeof(termName));
 	mp += sizeof(termName);
 
-	termClass = *mp++;
-	status = *mp++;
+	u8 termClass = *mp++;
+	u8 status = *mp++;
 	// ReSharper disable once CppEntityNeverUsed
 	u8 lastResp = *mp++;
-	codeSet = *mp++;
+	u8 codeSet = *mp++;
 
 	/*
 	**  Verify minimum length;
 	*/
-	len -= (int)(mp - bp->data);
+	len -= static_cast<int>(mp - bp->data);
 	if (len < 0)
 	{
 		npuLogMessage("Short Terminal Configuration response with length %d", bp->numBytes);
-		return(FALSE);
+		return(false);
 	}
 
 	/*
@@ -739,9 +730,9 @@ static bool npuSvmProcessTerminalConfig(Tcb *tp, NpuBuffer *bp)
 	/*
 	**  Reset user break 2 status.
 	*/
-	tp->breakPending = FALSE;
+	tp->breakPending = false;
 
-	return(TRUE);
+	return(true);
 }
 
 /*--------------------------------------------------------------------------
@@ -755,19 +746,16 @@ static bool npuSvmProcessTerminalConfig(Tcb *tp, NpuBuffer *bp)
 **------------------------------------------------------------------------*/
 static bool npuSvmRequestTerminalConnection(Tcb *tp, u8 mfrId)
 {
-	NpuBuffer *bp;
-	u8 *mp;
-
-	bp = npuBipBufGet();
-	if (bp == NULL)
+	NpuBuffer *bp = npuBipBufGet();
+	if (bp == nullptr)
 	{
-		return(FALSE);
+		return(false);
 	}
 
 	/*
 	**  Assemble connect request.
 	*/
-	mp = bp->data;
+	u8 *mp = bp->data;
 
 	*mp++ = AddrHost;               // DN
 	*mp++ = AddrNpu;                // SN
@@ -808,14 +796,14 @@ static bool npuSvmRequestTerminalConnection(Tcb *tp, u8 mfrId)
 	*mp++ = 0;                      // VTP ???
 	*mp++ = 0;                      // DTE address length
 
-	bp->numBytes = (u16)(mp - bp->data);
+	bp->numBytes = static_cast<u16>(mp - bp->data);
 
 	/*
 	**  Send the request.
 	*/
 	npuBipRequestUplineTransfer(bp, mfrId);
 
-	return(TRUE);
+	return(true);
 }
 
 /*---------------------------  End Of File  ------------------------------*/

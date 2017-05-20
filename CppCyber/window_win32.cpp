@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: window_win32.c
+**  Name: window_win32.cpp
 **
 **  Description:
 **      Simulate CDC 6612 or CC545 console display on MS Windows.
@@ -134,17 +134,17 @@ static i16 currentY = -1;
 static DispList display[ListSize];
 static u32 listEnd;
 static HWND hWnd;
-static HFONT hSmallFont = 0;
-static HFONT hMediumFont = 0;
-static HFONT hLargeFont = 0;
-static HPEN hPen = 0;
-static HINSTANCE hInstance = 0;
-static char *lpClipToKeyboard = NULL;
-static char *lpClipToKeyboardPtr = NULL;
+static HFONT hSmallFont = nullptr;
+static HFONT hMediumFont = nullptr;
+static HFONT hLargeFont = nullptr;
+static HPEN hPen = nullptr;
+static HINSTANCE hInstance = nullptr;
+static char *lpClipToKeyboard = nullptr;
+static char *lpClipToKeyboardPtr = nullptr;
 static u8 clipToKeyboardDelay = 0;
 static DisplayMode displayMode = ModeCenter;
-static bool displayModeNeedsErase = FALSE;
-static BOOL shifted = FALSE;
+static bool displayModeNeedsErase = false;
+static BOOL shifted = false;
 
 #if MaxMainFrames == 2
 // for mainframe 1
@@ -155,17 +155,17 @@ static i16 currentY1 = -1;
 static DispList display1[ListSize];
 static u32 listEnd1;
 static HWND hWnd1;
-static HFONT hSmallFont1 = 0;
-static HFONT hMediumFont1 = 0;
-static HFONT hLargeFont1 = 0;
-static HPEN hPen1 = 0;
-static HINSTANCE hInstance1 = 0;
-static char *lpClipToKeyboard1 = NULL;
-static char *lpClipToKeyboardPtr1 = NULL;
+static HFONT hSmallFont1 = nullptr;
+static HFONT hMediumFont1 = nullptr;
+static HFONT hLargeFont1 = nullptr;
+static HPEN hPen1 = nullptr;
+static HINSTANCE hInstance1 = nullptr;
+static char *lpClipToKeyboard1 = nullptr;
+static char *lpClipToKeyboardPtr1 = nullptr;
 static u8 clipToKeyboardDelay1 = 0;
 static DisplayMode displayMode1 = ModeCenter;
-static bool displayModeNeedsErase1 = FALSE;
-static BOOL shifted1 = FALSE;
+static bool displayModeNeedsErase1 = false;
+static BOOL shifted1 = false;
 #endif
 
 /*--------------------------------------------------------------------------
@@ -195,13 +195,13 @@ void windowInit(u8 mfrID)
 		/*
 		**  Get our instance
 		*/
-		hInstance = GetModuleHandle(NULL);
+		hInstance = GetModuleHandle(nullptr);
 
 		hThread = CreateThread(
-			NULL,                                       // no security attribute 
+			nullptr,                                       // no security attribute 
 			0,                                          // default stack size 
-			(LPTHREAD_START_ROUTINE)windowThread,
-			(LPVOID)mfrID,                              // thread parameter 
+			reinterpret_cast<LPTHREAD_START_ROUTINE>(windowThread),
+			reinterpret_cast<LPVOID>(mfrID),                              // thread parameter 
 			0,                                          // not suspended 
 			&dwThreadId);                               // returns thread ID 
 	}
@@ -216,22 +216,22 @@ void windowInit(u8 mfrID)
 		/*
 		**  Get our instance
 		*/
-		hInstance1 = GetModuleHandle(NULL);
+		hInstance1 = GetModuleHandle(nullptr);
 
 		hThread = CreateThread(
-			NULL,                                       // no security attribute 
+			nullptr,                                       // no security attribute 
 			0,                                          // default stack size 
-			(LPTHREAD_START_ROUTINE)windowThread1,
-			(LPVOID)mfrID,                              // thread parameter 
+			reinterpret_cast<LPTHREAD_START_ROUTINE>(windowThread1),
+			reinterpret_cast<LPVOID>(mfrID),                              // thread parameter 
 			0,                                          // not suspended 
 			&dwThreadId);                               // returns thread ID 
 
 	}
 #endif
 	// ReSharper disable once CppDeclaratorMightNotBeInitialized
-	if (hThread == NULL)
+	if (hThread == nullptr)
 	{
-		MessageBox(NULL, "thread creation failed", "Error", MB_OK);
+		MessageBox(nullptr, "thread creation failed", "Error", MB_OK);
 		exit(1);
 	}
 }
@@ -306,8 +306,6 @@ void windowSetY1(u16 y)
 
 void windowQueue(u8 ch)
 {
-	DispList *elem;
-
 	if (listEnd >= ListSize
 		|| currentX == -1
 		|| currentY == -1)
@@ -317,7 +315,7 @@ void windowQueue(u8 ch)
 
 	if (ch != 0)
 	{
-		elem = display + listEnd++;
+		DispList *elem = display + listEnd++;
 		elem->ch = ch;
 		elem->fontSize = currentFont;
 		elem->xPos = currentX;
@@ -329,8 +327,6 @@ void windowQueue(u8 ch)
 #if MaxMainFrames == 2
 void windowQueue1(u8 ch)
 {
-	DispList *elem;
-
 	if (listEnd1 >= ListSize
 		|| currentX1 == -1
 		|| currentY1 == -1)
@@ -340,7 +336,7 @@ void windowQueue1(u8 ch)
 
 	if (ch != 0)
 	{
-		elem = display1 + listEnd1++;
+		DispList *elem = display1 + listEnd1++;
 		elem->ch = ch;
 		elem->fontSize = currentFont1;
 		elem->xPos = currentX1;
@@ -359,11 +355,11 @@ void windowQueue1(u8 ch)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void windowUpdate(void)
+void windowUpdate()
 {
 }
 #if MaxMainFrames == 2
-void windowUpdate1(void)
+void windowUpdate1()
 {
 }
 #endif
@@ -375,11 +371,11 @@ void windowUpdate1(void)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-void windowGetChar(void)
+void windowGetChar()
 {
 }
 #if MaxMainFrames == 2
-void windowGetChar1(void)
+void windowGetChar1()
 {
 }
 #endif
@@ -391,13 +387,13 @@ void windowGetChar1(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void windowTerminate(void)
+void windowTerminate()
 {
 	SendMessage(hWnd, WM_DESTROY, 0, 0);
 	Sleep(100);
 }
 #if MaxMainFrames == 2
-void windowTerminate1(void)
+void windowTerminate1()
 {
 	SendMessage(hWnd1, WM_DESTROY, 0, 0);
 	Sleep(100);
@@ -422,7 +418,7 @@ void windowTerminate1(void)
 static void windowThread(LPVOID param)
 {
 	// ReSharper disable once CppEntityNeverUsed
-	u8 mfrID = (u8)param;
+	u8 mfrID = reinterpret_cast<u8>(param);
 	MSG msg;
 
 	/*
@@ -436,14 +432,14 @@ static void windowThread(LPVOID param)
 
 	if (!windowCreate())
 	{
-		MessageBox(NULL, "window creation failed", "Error", MB_OK);
+		MessageBox(nullptr, "window creation failed", "Error", MB_OK);
 		return;
 	}
 
 	/*
 	**  Main message loop.
 	*/
-	while (GetMessage(&msg, NULL, 0, 0) > 0)
+	while (GetMessage(&msg, nullptr, 0, 0) > 0)
 	{
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
@@ -466,7 +462,7 @@ static void windowThread1(LPVOID param)
 
 	if (!windowCreate1())
 	{
-		MessageBox(NULL, "window creation failed", "Error", MB_OK);
+		MessageBox(nullptr, "window creation failed", "Error", MB_OK);
 		return;
 	}
 
@@ -474,7 +470,7 @@ static void windowThread1(LPVOID param)
 	/*
 	**  Main message loop.
 	*/
-	while (GetMessage(&msg, NULL, 0, 0) > 0)
+	while (GetMessage(&msg, nullptr, 0, 0) > 0)
 	{
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
@@ -497,16 +493,16 @@ ATOM windowRegisterClass(HINSTANCE hInstance)
 	wcex.cbSize = sizeof(WNDCLASSEX);
 
 	wcex.style = CS_HREDRAW | CS_VREDRAW | CS_NOCLOSE | CS_BYTEALIGNCLIENT;
-	wcex.lpfnWndProc = (WNDPROC)windowProcedure;
+	wcex.lpfnWndProc = static_cast<WNDPROC>(windowProcedure);
 	wcex.cbClsExtra = 0;
 	wcex.cbWndExtra = 0;
 	wcex.hInstance = hInstance;
-	wcex.hIcon = LoadIcon(hInstance, (LPCTSTR)IDI_CONSOLE);
-	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	wcex.hIcon = LoadIcon(hInstance, reinterpret_cast<LPCTSTR>(IDI_CONSOLE));
+	wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
+	wcex.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
 	wcex.lpszMenuName = MAKEINTRESOURCE(IDC_CONSOLE);
 	wcex.lpszClassName = "CONSOLE";
-	wcex.hIconSm = LoadIcon(hInstance, (LPCTSTR)IDI_SMALL);
+	wcex.hIconSm = LoadIcon(hInstance, reinterpret_cast<LPCTSTR>(IDI_SMALL));
 
 	return RegisterClassEx(&wcex);
 }
@@ -518,16 +514,16 @@ ATOM windowRegisterClass1(HINSTANCE hInstance1)
 	wcex.cbSize = sizeof(WNDCLASSEX);
 
 	wcex.style = CS_HREDRAW | CS_VREDRAW | CS_NOCLOSE | CS_BYTEALIGNCLIENT;
-	wcex.lpfnWndProc = (WNDPROC)windowProcedure1;
+	wcex.lpfnWndProc = static_cast<WNDPROC>(windowProcedure1);
 	wcex.cbClsExtra = 0;
 	wcex.cbWndExtra = 0;
 	wcex.hInstance = hInstance1;
-	wcex.hIcon = LoadIcon(hInstance1, (LPCTSTR)IDI_CONSOLE);
-	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	wcex.hIcon = LoadIcon(hInstance1, reinterpret_cast<LPCTSTR>(IDI_CONSOLE));
+	wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
+	wcex.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
 	wcex.lpszMenuName = MAKEINTRESOURCE(IDC_CONSOLE);
 	wcex.lpszClassName = "CONSOLE1";
-	wcex.hIconSm = LoadIcon(hInstance1, (LPCTSTR)IDI_SMALL);
+	wcex.hIconSm = LoadIcon(hInstance1, reinterpret_cast<LPCTSTR>(IDI_SMALL));
 
 	return RegisterClassEx(&wcex);
 }
@@ -555,10 +551,10 @@ static BOOL windowCreate()
 		0,                      // vertical position of window
 		1280,                   // window width
 		1024,                   // window height
-		NULL,                   // handle to parent or owner window
-		NULL,                   // menu handle or child identifier
-		0,                      // handle to application instance
-		NULL);                  // window-creation data
+		nullptr,                   // handle to parent or owner window
+		nullptr,                   // menu handle or child identifier
+		nullptr,                      // handle to application instance
+		nullptr);                  // window-creation data
 #else
 	hWnd = CreateWindow(
 		"CONSOLE",              // Registered class name
@@ -571,10 +567,10 @@ static BOOL windowCreate()
 		CW_USEDEFAULT,          // vertical position of window
 		1080,                   // window width
 		600,                    // window height
-		NULL,                   // handle to parent or owner window
-		NULL,                   // menu handle or child identifier
-		0,                      // handle to application instance
-		NULL);                  // window-creation data
+		nullptr,                   // handle to parent or owner window
+		nullptr,                   // menu handle or child identifier
+		nullptr,                      // handle to application instance
+		nullptr);                  // window-creation data
 #endif
 
 	if (!hWnd)
@@ -585,7 +581,7 @@ static BOOL windowCreate()
 	ShowWindow(hWnd, SW_SHOW);
 	UpdateWindow(hWnd);
 
-	SetTimer(hWnd, TIMER_ID, TIMER_RATE, NULL);
+	SetTimer(hWnd, TIMER_ID, TIMER_RATE, nullptr);
 
 	return TRUE;
 }
@@ -605,10 +601,10 @@ static BOOL windowCreate1()
 		0,                      // vertical position of window
 		1280,                   // window width
 		1024,                   // window height
-		NULL,                   // handle to parent or owner window
-		NULL,                   // menu handle or child identifier
-		0,                      // handle to application instance
-		NULL);                  // window-creation data
+		nullptr,                   // handle to parent or owner window
+		nullptr,                   // menu handle or child identifier
+		nullptr,                      // handle to application instance
+		nullptr);                  // window-creation data
 #else
 	hWnd1 = CreateWindow(
 		"CONSOLE",              // Registered class name
@@ -621,10 +617,10 @@ static BOOL windowCreate1()
 		CW_USEDEFAULT,          // vertical position of window
 		1080,                   // window width
 		600,                    // window height
-		NULL,                   // handle to parent or owner window
-		NULL,                   // menu handle or child identifier
-		0,                      // handle to application instance
-		NULL);                  // window-creation data
+		nullptr,                   // handle to parent or owner window
+		nullptr,                   // menu handle or child identifier
+		nullptr,                      // handle to application instance
+		nullptr);                  // window-creation data
 #endif
 
 	if (!hWnd1)
@@ -635,7 +631,7 @@ static BOOL windowCreate1()
 	ShowWindow(hWnd1, SW_SHOW);
 	UpdateWindow(hWnd1);
 
-	SetTimer(hWnd1, TIMER_ID, TIMER_RATE, NULL);
+	SetTimer(hWnd1, TIMER_ID, TIMER_RATE, nullptr);
 
 	return TRUE;
 }
@@ -651,26 +647,23 @@ static BOOL windowCreate1()
 **------------------------------------------------------------------------*/
 static void windowClipboard(HWND hWnd)
 {
-	HANDLE hClipMemory;
-	char *lpClipMemory;
-
 	if (!IsClipboardFormatAvailable(CF_TEXT)
 		|| !OpenClipboard(hWnd))
 	{
 		return;
 	}
 
-	hClipMemory = GetClipboardData(CF_TEXT);
-	if (hClipMemory == NULL)
+	HANDLE hClipMemory = GetClipboardData(CF_TEXT);
+	if (hClipMemory == nullptr)
 	{
 		CloseClipboard();
 		return;
 	}
 
-	lpClipToKeyboard = (char*)malloc(GlobalSize(hClipMemory));
-	if (lpClipToKeyboard != NULL)
+	lpClipToKeyboard = static_cast<char*>(malloc(GlobalSize(hClipMemory)));
+	if (lpClipToKeyboard != nullptr)
 	{
-		lpClipMemory = (char*)GlobalLock(hClipMemory);
+		char *lpClipMemory = static_cast<char*>(GlobalLock(hClipMemory));
 		strcpy(lpClipToKeyboard, lpClipMemory);
 		GlobalUnlock(hClipMemory);
 		lpClipToKeyboardPtr = lpClipToKeyboard;
@@ -681,26 +674,23 @@ static void windowClipboard(HWND hWnd)
 #if MaxMainFrames == 2
 static void windowClipboard1(HWND hWnd)
 {
-	HANDLE hClipMemory;
-	char *lpClipMemory;
-
 	if (!IsClipboardFormatAvailable(CF_TEXT)
 		|| !OpenClipboard(hWnd))
 	{
 		return;
 	}
 
-	hClipMemory = GetClipboardData(CF_TEXT);
-	if (hClipMemory == NULL)
+	HANDLE hClipMemory = GetClipboardData(CF_TEXT);
+	if (hClipMemory == nullptr)
 	{
 		CloseClipboard();
 		return;
 	}
 
-	lpClipToKeyboard1 = (char*)malloc(GlobalSize(hClipMemory));
-	if (lpClipToKeyboard1 != NULL)
+	lpClipToKeyboard1 = static_cast<char*>(malloc(GlobalSize(hClipMemory)));
+	if (lpClipToKeyboard1 != nullptr)
 	{
-		lpClipMemory = (char*)GlobalLock(hClipMemory);
+		char *lpClipMemory = static_cast<char*>(GlobalLock(hClipMemory));
 		strcpy(lpClipToKeyboard1, lpClipMemory);
 		GlobalUnlock(hClipMemory);
 		lpClipToKeyboardPtr = lpClipToKeyboard1;
@@ -723,7 +713,9 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 
 	// ReSharper disable once CppEntityAssignedButNoRead
 	// ReSharper disable once CppJoinDeclarationAndAssignment
-	int wmId, wmEvent;
+	int wmEvent;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	int wmId;;
 	LOGFONT lfTmp;
 	RECT rt;
 
@@ -733,6 +725,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 		**  Process the application menu.
 		*/
 	case WM_COMMAND:
+		// ReSharper disable once CppJoinDeclarationAndAssignment
 		wmId = LOWORD(wParam);
 		// ReSharper disable once CppJoinDeclarationAndAssignment
 		// ReSharper disable once CppAssignedValueIsNeverUsed
@@ -830,7 +823,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 		break;
 
 	case WM_TIMER:
-		if (lpClipToKeyboard != NULL)
+		if (lpClipToKeyboard != nullptr)
 		{
 			if (clipToKeyboardDelay == 0)
 			{
@@ -838,8 +831,8 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 				if (BigIron->chasis[0]->ppKeyIn == 0)
 				{
 					free(lpClipToKeyboard);
-					lpClipToKeyboard = NULL;
-					lpClipToKeyboardPtr = NULL;
+					lpClipToKeyboard = nullptr;
+					lpClipToKeyboardPtr = nullptr;
 				}
 				else if (BigIron->chasis[0]->ppKeyIn == '\r')
 				{
@@ -913,7 +906,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 		case '7':
 		case '8':
 		case '9':
-			mfr->traceMask ^= (1 << ((u32)wParam - '0' + (shifted ? 10 : 0)));
+			mfr->traceMask ^= (1 << (static_cast<u32>(wParam) - '0' + (shifted ? 10 : 0)));
 			break;
 
 		case 'C':
@@ -935,7 +928,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 		case 'x':
 			if (mfr->traceMask == 0)
 			{
-				mfr->traceMask = (u32)~0L;
+				mfr->traceMask = static_cast<u32>(~0L);
 			}
 			else
 			{
@@ -952,14 +945,14 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 		case 'l':
 		case '[':
 			displayMode = ModeLeft;
-			displayModeNeedsErase = TRUE;
+			displayModeNeedsErase = true;
 			break;
 
 		case 'R':
 		case 'r':
 		case ']':
 			displayMode = ModeRight;
-			displayModeNeedsErase = TRUE;
+			displayModeNeedsErase = true;
 			break;
 
 		case 'M':
@@ -980,7 +973,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 		break;
 
 	case WM_CHAR:
-		BigIron->chasis[0]->ppKeyIn = (char)wParam;
+		BigIron->chasis[0]->ppKeyIn = static_cast<char>(wParam);
 		break;
 
 
@@ -993,6 +986,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 #if MaxMainFrames == 2
 static LRESULT CALLBACK windowProcedure1(HWND hWnd1, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	int wmId;
 	LOGFONT lfTmp;
 	RECT rt;
@@ -1006,6 +1000,7 @@ static LRESULT CALLBACK windowProcedure1(HWND hWnd1, UINT message, WPARAM wParam
 		**  Process the application menu.
 		*/
 	case WM_COMMAND:
+		// ReSharper disable once CppJoinDeclarationAndAssignment
 		wmId = LOWORD(wParam);
 		// ReSharper disable once CppEntityNeverUsed
 
@@ -1101,7 +1096,7 @@ static LRESULT CALLBACK windowProcedure1(HWND hWnd1, UINT message, WPARAM wParam
 		break;
 
 	case WM_TIMER:
-		if (lpClipToKeyboard != NULL)
+		if (lpClipToKeyboard != nullptr)
 		{
 			if (clipToKeyboardDelay1 == 0)
 			{
@@ -1109,8 +1104,8 @@ static LRESULT CALLBACK windowProcedure1(HWND hWnd1, UINT message, WPARAM wParam
 				if (BigIron->chasis[1]->ppKeyIn == 0)
 				{
 					free(lpClipToKeyboard);
-					lpClipToKeyboard = NULL;
-					lpClipToKeyboardPtr = NULL;
+					lpClipToKeyboard = nullptr;
+					lpClipToKeyboardPtr = nullptr;
 				}
 				else if (BigIron->chasis[1]->ppKeyIn == '\r')
 				{
@@ -1184,7 +1179,7 @@ static LRESULT CALLBACK windowProcedure1(HWND hWnd1, UINT message, WPARAM wParam
 		case '7':
 		case '8':
 		case '9':
-			mfr->traceMask ^= (1 << ((u32)wParam - '0' + (shifted ? 10 : 0)));
+			mfr->traceMask ^= (1 << (static_cast<u32>(wParam) - '0' + (shifted ? 10 : 0)));
 			break;
 
 		case 'C':
@@ -1206,7 +1201,7 @@ static LRESULT CALLBACK windowProcedure1(HWND hWnd1, UINT message, WPARAM wParam
 		case 'x':
 			if (mfr->traceMask == 0)
 			{
-				mfr->traceMask = (u32)~0L;
+				mfr->traceMask = static_cast<u32>(~0L);
 			}
 			else
 			{
@@ -1223,14 +1218,14 @@ static LRESULT CALLBACK windowProcedure1(HWND hWnd1, UINT message, WPARAM wParam
 		case 'l':
 		case '[':
 			displayMode = ModeLeft;
-			displayModeNeedsErase = TRUE;
+			displayModeNeedsErase = true;
 			break;
 
 		case 'R':
 		case 'r':
 		case ']':
 			displayMode = ModeRight;
-			displayModeNeedsErase = TRUE;
+			displayModeNeedsErase = true;
 			break;
 
 		case 'M':
@@ -1251,7 +1246,7 @@ static LRESULT CALLBACK windowProcedure1(HWND hWnd1, UINT message, WPARAM wParam
 		break;
 
 	case WM_CHAR:
-		BigIron->chasis[1]->ppKeyIn = (char)wParam;
+		BigIron->chasis[1]->ppKeyIn = static_cast<char>(wParam);
 		break;
 
 
@@ -1309,7 +1304,7 @@ void windowDisplay(HWND hWnd)
 	FillRect(hdcMem, &rect, hBrush);
 	if (displayModeNeedsErase)
 	{
-		displayModeNeedsErase = FALSE;
+		displayModeNeedsErase = false;
 		FillRect(ps.hdc, &rect, hBrush);
 	}
 	DeleteObject(hBrush);
@@ -1415,7 +1410,7 @@ void windowDisplay(HWND hWnd)
 		static char opMessage[] = "Emulation paused";
 		hfntOld = SelectObject(hdcMem, hLargeFont);
 		oldFont = FontLarge;
-		TextOut(hdcMem, (0 * ScaleX) / 10, (256 * ScaleY) / 10, opMessage, (int)strlen(opMessage));
+		TextOut(hdcMem, (0 * ScaleX) / 10, (256 * ScaleY) / 10, opMessage, static_cast<int>(strlen(opMessage)));
 	}
 
 	SelectObject(hdcMem, hPen);
@@ -1517,15 +1512,23 @@ void windowDisplay1(HWND hWnd)
 	// ReSharper disable once CppEntityNeverUsed
 	static int refreshCount = 0;
 	char str[2] = " ";
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	DispList *end;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	u8 oldFont;
 
 	RECT rect;
 	PAINTSTRUCT ps;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	HBRUSH hBrush;
 
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	HDC hdcMem;
-	HGDIOBJ hbmMem, hbmOld;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	HGDIOBJ hbmMem;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	HGDIOBJ hbmOld;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	HGDIOBJ hfntOld;
 
 	// ReSharper disable once CppEntityNeverUsed
@@ -1537,11 +1540,13 @@ void windowDisplay1(HWND hWnd)
 	**  Create a compatible DC.
 	*/
 
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	hdcMem = CreateCompatibleDC(ps.hdc);
 
 	/*
 	**  Create a bitmap big enough for our client rect.
 	*/
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	hbmMem = CreateCompatibleBitmap(ps.hdc,
 		rect.right - rect.left,
 		rect.bottom - rect.top);
@@ -1549,13 +1554,15 @@ void windowDisplay1(HWND hWnd)
 	/*
 	**  Select the bitmap into the off-screen dc.
 	*/
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	hbmOld = SelectObject(hdcMem, hbmMem);
 
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	hBrush = CreateSolidBrush(RGB(0, 0, 0));
 	FillRect(hdcMem, &rect, hBrush);
 	if (displayModeNeedsErase1)
 	{
-		displayModeNeedsErase1 = FALSE;
+		displayModeNeedsErase1 = false;
 		FillRect(ps.hdc, &rect, hBrush);
 	}
 	DeleteObject(hBrush);
@@ -1564,7 +1571,9 @@ void windowDisplay1(HWND hWnd)
 	SetBkColor(hdcMem, RGB(0, 0, 0));
 	SetTextColor(hdcMem, RGB(0, 255, 0));
 
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	hfntOld = SelectObject(hdcMem, hSmallFont1);
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	oldFont = FontSmall;
 
 #if CcCycleTime
@@ -1661,13 +1670,14 @@ void windowDisplay1(HWND hWnd)
 		static char opMessage[] = "Emulation paused";
 		hfntOld = SelectObject(hdcMem, hLargeFont1);
 		oldFont = FontLarge;
-		TextOut(hdcMem, (0 * ScaleX) / 10, (256 * ScaleY) / 10, opMessage, (int)strlen(opMessage));
+		TextOut(hdcMem, (0 * ScaleX) / 10, (256 * ScaleY) / 10, opMessage, static_cast<int>(strlen(opMessage)));
 	}
 
 	SelectObject(hdcMem, hPen1);
 
 	// ReSharper disable once CppInitializedValueIsAlwaysRewritten
 	DispList *curr = display1;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	end = display1 + listEnd1;
 	for (curr = display1; curr < end; curr++)
 	{

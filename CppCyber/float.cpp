@@ -2,7 +2,7 @@
 **
 **  Copyright (c) 2003-2011, Steve Peltz, Tom Hunter
 **
-**  Name: float.c
+**  Name: float.cpp
 **
 **  Description:
 **      Perform CDC 6600 floating point unit functions.
@@ -109,9 +109,9 @@
 **  with a comment "line triggers Visual C++ OPTIMIZER BUG". To avoid the problem
 **  optimization is turned off for the whole file.
 */
-#if defined(_WIN32)
-#pragma optimize("", off)
-#endif
+//#if defined(_WIN32)
+//#pragma optimize("", off)
+//#endif
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Floating point addition.
@@ -149,8 +149,8 @@ CpWord floatAdd(CpWord v1, CpWord v2, bool doRound, bool doDouble)
 	v1 ^= sign1;
 	v2 ^= sign2;
 
-	exponent1 = (int)(v1 >> 48);
-	exponent2 = (int)(v2 >> 48);
+	exponent1 = static_cast<int>(v1 >> 48);
+	exponent2 = static_cast<int>(v2 >> 48);
 
 	if (!IR(exponent1))
 	{
@@ -334,7 +334,7 @@ CpWord floatAdd(CpWord v1, CpWord v2, bool doRound, bool doDouble)
 
 		exponent1 -= 48;
 		exponent1 += 02000 + (exponent1 >> 11);
-		result = ((((CpWord)exponent1) << 48) | (lower & Mask48)) ^ sign1;
+		result = ((static_cast<CpWord>(exponent1) << 48) | (lower & Mask48)) ^ sign1;
 	}
 	else
 	{
@@ -349,7 +349,7 @@ CpWord floatAdd(CpWord v1, CpWord v2, bool doRound, bool doDouble)
 
 		exponent1 += 02000 + (exponent1 >> 11);
 
-		result = ((((CpWord)exponent1) << 48) | upper) ^ sign1;
+		result = ((static_cast<CpWord>(exponent1) << 48) | upper) ^ sign1;
 	}
 
 	return(result);
@@ -382,16 +382,11 @@ CpWord floatAdd(CpWord v1, CpWord v2, bool doRound, bool doDouble)
 CpWord floatMultiply(CpWord v1, CpWord v2, bool doRound, bool doDouble)
 {
 	CpWord  sign1;
-	CpWord  sign2;
 	int exponent1;
 	int exponent2;
-	int norm;           /* flag for post-normalize */
-	CpWord  upper;      /* upper 48 bits of product */
-	CpWord  middle;     /* middle cross-product */
-	CpWord  lower;      /* lower 48 bits of product */
 
 	sign1 = SignX(v1, 60);
-	sign2 = SignX(v2, 60);
+	CpWord sign2 = SignX(v2, 60);
 
 	v1 ^= sign1;
 	v2 ^= sign2;
@@ -400,8 +395,8 @@ CpWord floatMultiply(CpWord v1, CpWord v2, bool doRound, bool doDouble)
 	*/
 	sign1 ^= sign2;
 
-	exponent1 = (int)(v1 >> 48);
-	exponent2 = (int)(v2 >> 48);
+	exponent1 = static_cast<int>(v1 >> 48);
+	exponent2 = static_cast<int>(v2 >> 48);
 
 	if (!IR(exponent1))
 	{
@@ -429,25 +424,25 @@ CpWord floatMultiply(CpWord v1, CpWord v2, bool doRound, bool doDouble)
 	/*
 	**  get the post-normalize flag
 	*/
-	norm = (int)((v1 & v2) >> 47);
+	int norm = static_cast<int>((v1 & v2) >> 47);
 
 	/*
 	**  form middle cross-product, upper and lower product, and add them
 	**  all together, with a carry from lower to upper.
 	*/
-	middle = (v1 & Mask24) * (v2 >> 24);
+	CpWord middle = (v1 & Mask24) * (v2 >> 24);
 	if (doRound)
 	{
 		/*
 		**  rounding bit (46) is bit 22 in the middle cross-product.
 		*/
-		middle += ((CpWord)1 << 22);
+		middle += (static_cast<CpWord>(1) << 22);
 	}
 
 	middle += (v1 >> 24) * (v2 & Mask24);
-	lower = (v1 & Mask24) * (v2 & Mask24);
+	CpWord lower = (v1 & Mask24) * (v2 & Mask24);
 	lower += (middle & Mask24) << 24;
-	upper = (v1 >> 24) * (v2 >> 24);
+	CpWord upper = (v1 >> 24) * (v2 >> 24);
 	upper += (middle >> 24) + (lower >> 48);
 
 	/*
@@ -515,7 +510,7 @@ CpWord floatMultiply(CpWord v1, CpWord v2, bool doRound, bool doDouble)
 			return 0;
 		}
 
-		return ((((CpWord)exponent1) << 48) | (lower & Mask48)) ^ sign1;
+		return ((static_cast<CpWord>(exponent1) << 48) | (lower & Mask48)) ^ sign1;
 	}
 
 
@@ -579,7 +574,7 @@ CpWord floatMultiply(CpWord v1, CpWord v2, bool doRound, bool doDouble)
 		return 0;
 	}
 
-	return ((((CpWord)exponent1) << 48) | upper) ^ sign1;
+	return ((static_cast<CpWord>(exponent1) << 48) | upper) ^ sign1;
 }
 
 /*--------------------------------------------------------------------------
@@ -601,19 +596,18 @@ CpWord floatMultiply(CpWord v1, CpWord v2, bool doRound, bool doDouble)
 CpWord floatDivide(CpWord v1, CpWord v2, bool doRound)
 {
 	CpWord  sign1;
-	CpWord  sign2;
 	int round = 0;
 	int exponent1;
 	int exponent2;
 
 	sign1 = SignX(v1, 60);
-	sign2 = SignX(v2, 60);
+	CpWord sign2 = SignX(v2, 60);
 
 	v1 ^= sign1;
 	v2 ^= sign2;
 
-	exponent1 = (int)(v1 >> 48);
-	exponent2 = (int)(v2 >> 48);
+	exponent1 = static_cast<int>(v1 >> 48);
+	exponent2 = static_cast<int>(v2 >> 48);
 
 	sign1 ^= sign2;
 
@@ -741,7 +735,7 @@ CpWord floatDivide(CpWord v1, CpWord v2, bool doRound)
 		}
 	}
 
-	return ((((CpWord)exponent1) << 48) | sign2) ^ sign1;
+	return ((static_cast<CpWord>(exponent1) << 48) | sign2) ^ sign1;
 }
 
 /*

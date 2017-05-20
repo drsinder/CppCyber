@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter and Gerard van der Grinten
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: dd8xx.c
+**  Name: dd8xx.cpp
 **
 **  Description:
 **      Perform emulation of CDC 844 and 885 disk drives.
@@ -374,15 +374,10 @@ void dd885Init_1(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 static void dd8xxInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, DiskSize *size, u8 diskType)
 {
-	DevSlot *ds;
-	FILE *fcb;
 	char fname[80];
-	DiskParam *dp;
 	time_t mTime;
-	struct tm *lTime;
-	u8 yy, mm, dd;
 	u8 containerType;
-	char *opt = NULL;
+	char *opt = nullptr;
 
 	(void)eqNo;
 
@@ -404,7 +399,7 @@ static void dd8xxInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceNa
 	/*
 	**  Setup channel functions.
 	*/
-	ds = channelAttach(channelNo, eqNo, DtDd8xx, mfrID);
+	DevSlot *ds = channelAttach(channelNo, eqNo, DtDd8xx, mfrID);
 	mfr->activeDevice = ds;
 	ds->activate = dd8xxActivate;
 	ds->disconnect = dd8xxDisconnect;
@@ -415,8 +410,8 @@ static void dd8xxInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceNa
 	**  Save disk parameters.
 	*/
 	ds->selectedUnit = -1;
-	dp = (DiskParam *)calloc(1, sizeof(DiskParam));
-	if (dp == NULL)
+	DiskParam *dp = static_cast<DiskParam *>(calloc(1, sizeof(DiskParam)));
+	if (dp == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate dd8xx context block\n");
 		exit(1);
@@ -430,12 +425,12 @@ static void dd8xxInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceNa
 	/*
 	**  Determine if any options have been specified.
 	*/
-	if (deviceName != NULL)
+	if (deviceName != nullptr)
 	{
 		opt = strchr(deviceName, ',');
 	}
 
-	if (opt != NULL)
+	if (opt != nullptr)
 	{
 		/*
 		**  Process options.
@@ -557,7 +552,7 @@ static void dd8xxInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceNa
 	/*
 	**  Open or create disk image.
 	*/
-	if (deviceName == NULL)
+	if (deviceName == nullptr)
 	{
 		/*
 		**  Construct a name.
@@ -582,14 +577,14 @@ static void dd8xxInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceNa
 	/*
 	**  Try to open existing disk image.
 	*/
-	fcb = fopen(fname, "r+b");
-	if (fcb == NULL)
+	FILE *fcb = fopen(fname, "r+b");
+	if (fcb == nullptr)
 	{
 		/*
 		**  Disk does not yet exist - manufacture one.
 		*/
 		fcb = fopen(fname, "w+b");
-		if (fcb == NULL)
+		if (fcb == nullptr)
 		{
 			fprintf(stderr, "Failed to open %s\n", fname);
 			exit(1);
@@ -645,10 +640,10 @@ static void dd8xxInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceNa
 		mySector[1] |= (diskType & 007) << (0 - 0);
 
 		time(&mTime);
-		lTime = localtime(&mTime);
-		yy = lTime->tm_year % 100;
-		mm = lTime->tm_mon + 1;
-		dd = lTime->tm_mday;
+		struct tm *lTime = localtime(&mTime);
+		u8 yy = lTime->tm_year % 100;
+		u8 mm = lTime->tm_mon + 1;
+		u8 dd = lTime->tm_mday;
 
 		mySector[2] = (dd / 10) << 8 | (dd % 10) << 4 | mm / 10;
 		mySector[3] = (mm % 10) << 8 | (yy / 10) << 4 | yy % 10;
@@ -688,22 +683,21 @@ static void dd8xxInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceNa
 **------------------------------------------------------------------------*/
 static FcStatus dd8xxFunc(PpWord funcCode, u8 mfrId)
 {
-	i8 unitNo;
 	FILE *fcb;
 	DiskParam *dp;
 
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	unitNo = mfr->activeDevice->selectedUnit;
+	i8 unitNo = mfr->activeDevice->selectedUnit;
 	if (unitNo != -1)
 	{
-		dp = (DiskParam *)mfr->activeDevice->context[unitNo];
+		dp = static_cast<DiskParam *>(mfr->activeDevice->context[unitNo]);
 		fcb = mfr->activeDevice->fcb[unitNo];
 	}
 	else
 	{
-		dp = NULL;
-		fcb = NULL;
+		dp = nullptr;
+		fcb = nullptr;
 	}
 
 	/*
@@ -715,7 +709,7 @@ static FcStatus dd8xxFunc(PpWord funcCode, u8 mfrId)
 		mfr->activeDevice->selectedUnit = funcCode & 07;
 		unitNo = mfr->activeDevice->selectedUnit;
 		fcb = mfr->activeDevice->fcb[unitNo];
-		dp = (DiskParam *)mfr->activeDevice->context[unitNo];
+		dp = static_cast<DiskParam *>(mfr->activeDevice->context[unitNo]);
 	}
 
 #if DEBUG
@@ -972,23 +966,22 @@ static FcStatus dd8xxFunc(PpWord funcCode, u8 mfrId)
 **------------------------------------------------------------------------*/
 static void dd8xxIo(u8 mfrId)
 {
-	i8 unitNo;
 	FILE *fcb;
 	DiskParam *dp;
 	i32 pos;
 
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	unitNo = mfr->activeDevice->selectedUnit;
+	i8 unitNo = mfr->activeDevice->selectedUnit;
 	if (unitNo != -1)
 	{
-		dp = (DiskParam *)mfr->activeDevice->context[unitNo];
+		dp = static_cast<DiskParam *>(mfr->activeDevice->context[unitNo]);
 		fcb = mfr->activeDevice->fcb[unitNo];
 	}
 	else
 	{
-		dp = NULL;
-		fcb = NULL;
+		dp = nullptr;
+		fcb = nullptr;
 	}
 
 	switch (mfr->activeDevice->fcode)
@@ -999,16 +992,16 @@ static void dd8xxIo(u8 mfrId)
 			unitNo = mfr->activeChannel->data & 07;
 			if (unitNo != mfr->activeDevice->selectedUnit)
 			{
-				if (mfr->activeDevice->fcb[unitNo] != NULL)
+				if (mfr->activeDevice->fcb[unitNo] != nullptr)
 				{
 					mfr->activeDevice->selectedUnit = unitNo;
-					dp = (DiskParam *)mfr->activeDevice->context[unitNo];
+					dp = static_cast<DiskParam *>(mfr->activeDevice->context[unitNo]);
 					dp->detailedStatus[12] &= ~01000;
 				}
 				else
 				{
 					mfr->activeDevice->selectedUnit = -1;
-					logError(LogErrorLocation, "channel %02o - invalid connect: %4.4o", mfr->activeChannel->id, (u32)mfr->activeDevice->fcode);
+					logError(LogErrorLocation, "channel %02o - invalid connect: %4.4o", mfr->activeChannel->id, static_cast<u32>(mfr->activeDevice->fcode));
 				}
 			}
 			else
@@ -1016,7 +1009,7 @@ static void dd8xxIo(u8 mfrId)
 				dp->detailedStatus[12] |= 01000;
 			}
 
-			mfr->activeChannel->full = FALSE;
+			mfr->activeChannel->full = false;
 		}
 		break;
 
@@ -1030,16 +1023,16 @@ static void dd8xxIo(u8 mfrId)
 				unitNo = mfr->activeChannel->data & 07;
 				if (unitNo != mfr->activeDevice->selectedUnit)
 				{
-					if (mfr->activeDevice->fcb[unitNo] != NULL)
+					if (mfr->activeDevice->fcb[unitNo] != nullptr)
 					{
 						mfr->activeDevice->selectedUnit = unitNo;
-						dp = (DiskParam *)mfr->activeDevice->context[unitNo];
+						dp = static_cast<DiskParam *>(mfr->activeDevice->context[unitNo]);
 						dp->detailedStatus[12] &= ~01000;
 
 					}
 					else
 					{
-						logError(LogErrorLocation, "channel %02o - invalid select: %4.4o", mfr->activeChannel->id, (u32)mfr->activeDevice->fcode);
+						logError(LogErrorLocation, "channel %02o - invalid select: %4.4o", mfr->activeChannel->id, static_cast<u32>(mfr->activeDevice->fcode));
 						mfr->activeDevice->selectedUnit = -1;
 					}
 				}
@@ -1050,21 +1043,21 @@ static void dd8xxIo(u8 mfrId)
 				break;
 
 			case 3:
-				if (dp != NULL)
+				if (dp != nullptr)
 				{
 					dp->cylinder = mfr->activeChannel->data;
 				}
 				break;
 
 			case 2:
-				if (dp != NULL)
+				if (dp != nullptr)
 				{
 					dp->track = mfr->activeChannel->data;
 				}
 				break;
 
 			case 1:
-				if (dp != NULL)
+				if (dp != nullptr)
 				{
 					if (mfr->activeDevice->fcode == Fc8xxSeekFull)
 					{
@@ -1077,7 +1070,7 @@ static void dd8xxIo(u8 mfrId)
 
 					dp->sector = mfr->activeChannel->data;
 					pos = dd8xxSeek(dp, mfrId);
-					if (pos >= 0 && fcb != NULL)
+					if (pos >= 0 && fcb != nullptr)
 					{
 						fseek(fcb, pos, SEEK_SET);
 					}
@@ -1097,7 +1090,7 @@ static void dd8xxIo(u8 mfrId)
 			fprintf(dd8xxLog, " %04o[%d]", activeChannel->data, activeChannel->data);
 #endif
 
-			mfr->activeChannel->full = FALSE;
+			mfr->activeChannel->full = false;
 		}
 		break;
 
@@ -1122,11 +1115,11 @@ static void dd8xxIo(u8 mfrId)
 				mfr->activeChannel->data = dp->read(dp, fcb);
 			}
 
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 
 			if (--mfr->activeDevice->recordLength == 0)
 			{
-				mfr->activeChannel->discAfterInput = TRUE;
+				mfr->activeChannel->discAfterInput = true;
 				pos = dd8xxSeekNextSector(dp, mfrId);
 				if (pos >= 0)
 				{
@@ -1142,14 +1135,14 @@ static void dd8xxIo(u8 mfrId)
 		if (!mfr->activeChannel->full)
 		{
 			mfr->activeChannel->data = dp->read(dp, fcb);
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 #if DEBUG
 			dd8xxLogByte(activeChannel->data);
 #endif
 
 			if (--mfr->activeDevice->recordLength == 0)
 			{
-				mfr->activeChannel->discAfterInput = TRUE;
+				mfr->activeChannel->discAfterInput = true;
 				pos = dd8xxSeekNextSector(dp, mfrId);
 				if (mfr->activeDevice->fcode == Fc8xxGapRead && pos >= 0)
 				{
@@ -1170,7 +1163,7 @@ static void dd8xxIo(u8 mfrId)
 		if (mfr->activeChannel->full)
 		{
 			dp->write(dp, fcb, mfr->activeChannel->data);
-			mfr->activeChannel->full = FALSE;
+			mfr->activeChannel->full = false;
 
 #if DEBUG
 			dd8xxLogByte(activeChannel->data);
@@ -1190,7 +1183,7 @@ static void dd8xxIo(u8 mfrId)
 		if (!mfr->activeChannel->full)
 		{
 			mfr->activeChannel->data = mfr->activeDevice->status;
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 
 #if DEBUG
 			fprintf(dd8xxLog, " %04o[%d]", activeChannel->data, activeChannel->data);
@@ -1198,7 +1191,7 @@ static void dd8xxIo(u8 mfrId)
 
 			if (--mfr->activeDevice->recordLength == 0)
 			{
-				mfr->activeChannel->discAfterInput = TRUE;
+				mfr->activeChannel->discAfterInput = true;
 			}
 		}
 		break;
@@ -1207,11 +1200,11 @@ static void dd8xxIo(u8 mfrId)
 		if (!mfr->activeChannel->full)
 		{
 			mfr->activeChannel->data = 0;
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 
 			if (--mfr->activeDevice->recordLength == 0)
 			{
-				mfr->activeChannel->discAfterInput = TRUE;
+				mfr->activeChannel->discAfterInput = true;
 			}
 		}
 		break;
@@ -1219,7 +1212,7 @@ static void dd8xxIo(u8 mfrId)
 		if (!mfr->activeChannel->full)
 		{
 			mfr->activeChannel->data = dp->detailedStatus[12 - mfr->activeDevice->recordLength];
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 
 #if DEBUG
 			fprintf(dd8xxLog, " %04o[%d]", activeChannel->data, activeChannel->data);
@@ -1227,7 +1220,7 @@ static void dd8xxIo(u8 mfrId)
 
 			if (--mfr->activeDevice->recordLength == 0)
 			{
-				mfr->activeChannel->discAfterInput = TRUE;
+				mfr->activeChannel->discAfterInput = true;
 			}
 		}
 		break;
@@ -1236,14 +1229,14 @@ static void dd8xxIo(u8 mfrId)
 		if (!mfr->activeChannel->full)
 		{
 			mfr->activeChannel->data = dp->detailedStatus[20 - mfr->activeDevice->recordLength];
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 #if DEBUG
 			fprintf(dd8xxLog, " %04o[%d]", activeChannel->data, activeChannel->data);
 #endif
 
 			if (--mfr->activeDevice->recordLength == 0)
 			{
-				mfr->activeChannel->discAfterInput = TRUE;
+				mfr->activeChannel->discAfterInput = true;
 			}
 		}
 		break;
@@ -1253,7 +1246,7 @@ static void dd8xxIo(u8 mfrId)
 		if (!mfr->activeChannel->full)
 		{
 			mfr->activeChannel->data = dp->read(dp, fcb);
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 
 #if DEBUG
 			fprintf(dd8xxLog, " %04o[%d]", activeChannel->data, activeChannel->data);
@@ -1261,7 +1254,7 @@ static void dd8xxIo(u8 mfrId)
 
 			if (--mfr->activeDevice->recordLength == 0)
 			{
-				mfr->activeChannel->discAfterInput = TRUE;
+				mfr->activeChannel->discAfterInput = true;
 			}
 		}
 		break;
@@ -1273,14 +1266,14 @@ static void dd8xxIo(u8 mfrId)
 			fprintf(dd8xxLog, " %04o[%d]", activeChannel->data, activeChannel->data);
 #endif
 			dd844SetClearFlaw(dp, mfr->activeChannel->data, mfrId);
-			mfr->activeChannel->full = FALSE;
+			mfr->activeChannel->full = false;
 		}
 		break;
 
 	case Fc8xxStartMemLoad:
 		if (mfr->activeChannel->full)
 		{
-			mfr->activeChannel->full = FALSE;
+			mfr->activeChannel->full = false;
 #if DEBUG
 			fprintf(dd8xxLog, " %04o[%d]", activeChannel->data, activeChannel->data);
 #endif
@@ -1301,7 +1294,7 @@ static void dd8xxIo(u8 mfrId)
 	case Fc8xxGapWriteVerify:
 	case Fc8xxGapReadCheckword:
 	default:
-		mfr->activeChannel->full = FALSE;
+		mfr->activeChannel->full = false;
 		break;
 	}
 }
@@ -1341,7 +1334,7 @@ static void dd8xxDisconnect(u8 mfrId)
 	*/
 
 	MMainFrame *mfr = BigIron->chasis[mfrId];
-	mfr->activeChannel->discAfterInput = FALSE;
+	mfr->activeChannel->discAfterInput = false;
 
 #if DEBUG
 	fprintf(dd8xxLog, "\n%06d PP:%02o CH:%02o Disconnect",
@@ -1365,10 +1358,9 @@ static void dd8xxDisconnect(u8 mfrId)
 **------------------------------------------------------------------------*/
 static i32 dd8xxSeek(DiskParam *dp, u8 mfrId)
 {
-	i32 result;
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	dp->bufPtr = NULL;
+	dp->bufPtr = nullptr;
 
 	mfr->activeDevice->status = 0;
 
@@ -1402,7 +1394,7 @@ static i32 dd8xxSeek(DiskParam *dp, u8 mfrId)
 		return(-1);
 	}
 
-	result = dp->cylinder * dp->size.maxTracks * dp->size.maxSectors;
+	i32 result = dp->cylinder * dp->size.maxTracks * dp->size.maxSectors;
 	result += dp->track * dp->size.maxSectors;
 	result += dp->sector;
 	result *= dp->sectorSize;
@@ -1490,7 +1482,7 @@ static PpWord dd8xxReadClassic(DiskParam *dp, FILE *fcb)
 	/*
 	**  Read an entire sector if the current buffer is empty.
 	*/
-	if (dp->bufPtr == NULL)
+	if (dp->bufPtr == nullptr)
 	{
 		dp->bufPtr = dp->buffer;
 		fread(dp->buffer, 1, dp->sectorSize, fcb);
@@ -1531,7 +1523,7 @@ static void dd8xxWriteClassic(DiskParam *dp, FILE *fcb, PpWord data)
 	/*
 	**  Reset pointer if the current buffer is empty.
 	*/
-	if (dp->bufPtr == NULL)
+	if (dp->bufPtr == nullptr)
 	{
 		dp->bufPtr = dp->buffer;
 	}
@@ -1559,15 +1551,12 @@ static void dd8xxWriteClassic(DiskParam *dp, FILE *fcb, PpWord data)
 **------------------------------------------------------------------------*/
 static PpWord dd8xxReadPacked(DiskParam *dp, FILE *fcb)
 {
-	u16 byteCount;
 	static u8 sector[512];
-	u8 *sp;
-	PpWord *pp;
 
 	/*
 	**  Read an entire sector if the current buffer is empty.
 	*/
-	if (dp->bufPtr == NULL)
+	if (dp->bufPtr == nullptr)
 	{
 		dp->bufPtr = dp->buffer;
 		fread(sector, 1, dp->sectorSize, fcb);
@@ -1575,9 +1564,9 @@ static PpWord dd8xxReadPacked(DiskParam *dp, FILE *fcb)
 		/*
 		**  Unpack the sector into the buffer.
 		*/
-		sp = sector;
-		pp = dp->buffer;
-		for (byteCount = SectorSize; byteCount > 0; byteCount -= 2)
+		u8 *sp = sector;
+		PpWord *pp = dp->buffer;
+		for (u16 byteCount = SectorSize; byteCount > 0; byteCount -= 2)
 		{
 			*pp++ = (sp[0] << 4) + (sp[1] >> 4);
 			*pp++ = (sp[1] << 8) + (sp[2] >> 0);
@@ -1612,10 +1601,7 @@ static PpWord dd8xxReadPacked(DiskParam *dp, FILE *fcb)
 **------------------------------------------------------------------------*/
 static void dd8xxWritePacked(DiskParam *dp, FILE *fcb, PpWord data)
 {
-	u16 byteCount;
 	static u8 sector[512];
-	u8 *sp;
-	PpWord *pp;
 
 	/*
 	**  Fail gracefully if we write too much data.
@@ -1628,7 +1614,7 @@ static void dd8xxWritePacked(DiskParam *dp, FILE *fcb, PpWord data)
 	/*
 	**  Reset pointer if the current buffer is empty.
 	*/
-	if (dp->bufPtr == NULL)
+	if (dp->bufPtr == nullptr)
 	{
 		dp->bufPtr = dp->buffer;
 	}
@@ -1643,14 +1629,14 @@ static void dd8xxWritePacked(DiskParam *dp, FILE *fcb, PpWord data)
 		/*
 		**  Pack the buffer into a sector.
 		*/
-		sp = sector;
-		pp = dp->buffer;
-		for (byteCount = SectorSize; byteCount > 0; byteCount -= 2)
+		u8 *sp = sector;
+		PpWord *pp = dp->buffer;
+		for (u16 byteCount = SectorSize; byteCount > 0; byteCount -= 2)
 		{
-			*sp++ = (u8)(pp[0] >> 4);
-			*sp = (u8)(pp[0] << 4);
-			*sp++ |= (u8)(pp[1] >> 8);
-			*sp++ = (u8)(pp[1] >> 0);
+			*sp++ = static_cast<u8>(pp[0] >> 4);
+			*sp = static_cast<u8>(pp[0] << 4);
+			*sp++ |= static_cast<u8>(pp[1] >> 8);
+			*sp++ = static_cast<u8>(pp[1] >> 0);
 			pp += 2;
 		}
 
@@ -1674,9 +1660,7 @@ static void dd8xxWritePacked(DiskParam *dp, FILE *fcb, PpWord data)
 **------------------------------------------------------------------------*/
 static void dd8xxSectorRead(DiskParam *dp, FILE *fcb, PpWord *sector)
 {
-	u16 byteCount;
-
-	for (byteCount = SectorSize; byteCount > 0; byteCount--)
+	for (u16 byteCount = SectorSize; byteCount > 0; byteCount--)
 	{
 		*sector++ = dp->read(dp, fcb);
 	}
@@ -1695,9 +1679,7 @@ static void dd8xxSectorRead(DiskParam *dp, FILE *fcb, PpWord *sector)
 **------------------------------------------------------------------------*/
 static void dd8xxSectorWrite(DiskParam *dp, FILE *fcb, PpWord *sector)
 {
-	u16 byteCount;
-
-	for (byteCount = SectorSize; byteCount > 0; byteCount--)
+	for (u16 byteCount = SectorSize; byteCount > 0; byteCount--)
 	{
 		dp->write(dp, fcb, *sector++);
 	}
@@ -1715,19 +1697,14 @@ static void dd8xxSectorWrite(DiskParam *dp, FILE *fcb, PpWord *sector)
 **------------------------------------------------------------------------*/
 static void dd844SetClearFlaw(DiskParam *dp, PpWord flawState, u8 mfrId)
 {
-	u8 unitNo;
-	FILE *fcb;
 	int index;
-	PpWord flawWord0;
-	PpWord flawWord1;
 	PpWord sectorFlaw;
 	PpWord trackFlaw;
-	bool setFlaw;
 
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	unitNo = mfr->activeDevice->selectedUnit;
-	fcb = mfr->activeDevice->fcb[unitNo];
+	u8 unitNo = mfr->activeDevice->selectedUnit;
+	FILE *fcb = mfr->activeDevice->fcb[unitNo];
 
 	/*
 	**  Assemble flaw words.
@@ -1743,10 +1720,10 @@ static void dd844SetClearFlaw(DiskParam *dp, PpWord flawState, u8 mfrId)
 		sectorFlaw = 1;
 	}
 
-	setFlaw = (flawState & 2) != 0;
+	bool setFlaw = (flawState & 2) != 0;
 
-	flawWord0 = (PpWord)((sectorFlaw << 11) | (trackFlaw << 10) | (dp->cylinder & Mask10));
-	flawWord1 = (PpWord)(((dp->track & Mask6) << 6) | (dp->sector & Mask6));
+	PpWord flawWord0 = static_cast<PpWord>((sectorFlaw << 11) | (trackFlaw << 10) | (dp->cylinder & Mask10));
+	PpWord flawWord1 = static_cast<PpWord>(((dp->track & Mask6) << 6) | (dp->sector & Mask6));
 
 	/*
 	**  Read the 844 utility map sector.

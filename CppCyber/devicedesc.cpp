@@ -2,7 +2,7 @@
 **
 **  Copyright (c) 2003-2011, Tom Hunter
 **
-**  Name: device.c
+**  Name: device.cpp
 **
 **  Description:
 **      Device support for CDC 6600.

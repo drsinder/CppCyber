@@ -405,9 +405,9 @@ void npuLogMessage(char *format, ...);
 /*
 **  npu_bip.c
 */
-void npuBipInit(void);
-void npuBipReset(void);
-NpuBuffer *npuBipBufGet(void);
+void npuBipInit();
+void npuBipReset();
+NpuBuffer *npuBipBufGet();
 void npuBipBufRelease(NpuBuffer *bp);
 void npuBipQueueAppend(NpuBuffer *bp, NpuQueue *queue);
 void npuBipQueuePrepend(NpuBuffer *bp, NpuQueue *queue);
@@ -426,14 +426,14 @@ void npuBipNotifyUplineSent(u8 mfrId);
 /*
 **  npu_svm.c
 */
-void npuSvmInit(void);
-void npuSvmReset(void);
+void npuSvmInit();
+void npuSvmReset();
 void npuSvmNotifyHostRegulation(u8 regLevel, u8 mfrId);
 void npuSvmProcessBuffer(NpuBuffer *bp, u8 mfrId);
 bool npuSvmConnectTerminal(Tcb *tp, u8 mfrId);
 void npuSvmDiscRequestTerminal(Tcb *tp, u8 mfrId);
 void npuSvmDiscReplyTerminal(Tcb *tp, u8 mfrId);
-bool npuSvmIsReady(void);
+bool npuSvmIsReady();
 
 /*
 **  npu_tip.c

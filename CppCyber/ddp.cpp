@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Paul Koning, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: ddp.c
+**  Name: ddp.cpp
 **
 **  Description:
 **      Perform emulation of CDC Distributive Data Path
@@ -138,9 +138,6 @@ static FILE *ddpLog = NULL;
 **------------------------------------------------------------------------*/
 void ddpInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 {
-	DevSlot *dp;
-	DdpContext *dc;
-
 	(void)eqNo;
 	(void)unitNo;
 	(void)deviceName;
@@ -158,15 +155,15 @@ void ddpInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	}
 #endif
 
-	dp = channelAttach(channelNo, eqNo, DtDdp, mfrID);
+	DevSlot *dp = channelAttach(channelNo, eqNo, DtDdp, mfrID);
 
 	dp->activate = ddpActivate;
 	dp->disconnect = ddpDisconnect;
 	dp->func = ddpFunc;
 	dp->io = ddpIo;
 
-	dc = (DdpContext*)calloc(1, sizeof(DdpContext));
-	if (dc == NULL)
+	DdpContext *dc = static_cast<DdpContext*>(calloc(1, sizeof(DdpContext)));
+	if (dc == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate DDP context block\n");
 		exit(1);
@@ -192,10 +189,9 @@ void ddpInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 static FcStatus ddpFunc(PpWord funcCode, u8 mfrId)
 {
-	DdpContext *dc;
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	dc = (DdpContext *)(mfr->activeDevice->context[0]);
+	DdpContext *dc = static_cast<DdpContext *>(mfr->activeDevice->context[0]);
 
 #if DEBUG
 	fprintf(ddpLog, "\n%06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
@@ -256,7 +252,7 @@ bool DdpTransfer(u32 ecsAddress, CpWord *data, bool writeToEcs)
 		/*
 		**  Abort.
 		*/
-		return(FALSE);
+		return(false);
 	}
 
 	/*
@@ -274,7 +270,7 @@ bool DdpTransfer(u32 ecsAddress, CpWord *data, bool writeToEcs)
 	/*
 	**  Normal accept.
 	*/
-	return(TRUE);
+	return(true);
 }
 
 /*--------------------------------------------------------------------------
@@ -287,11 +283,9 @@ bool DdpTransfer(u32 ecsAddress, CpWord *data, bool writeToEcs)
 **------------------------------------------------------------------------*/
 static void ddpIo(u8 mfrId)
 {
-	DdpContext *dc;
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-
-	dc = (DdpContext *)(mfr->activeDevice->context[0]);
+	DdpContext *dc = static_cast<DdpContext *>(mfr->activeDevice->context[0]);
 
 	switch (mfr->activeDevice->fcode)
 	{
@@ -302,7 +296,7 @@ static void ddpIo(u8 mfrId)
 		if (!mfr->activeChannel->full)
 		{
 			mfr->activeChannel->data = dc->stat;
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 			mfr->activeDevice->fcode = 0;
 			// ? activeChannel->discAfterInput = TRUE;
 #if DEBUG
@@ -323,7 +317,7 @@ static void ddpIo(u8 mfrId)
 				dc->addr <<= 12;
 				dc->addr += mfr->activeChannel->data;
 				dc->abyte++;
-				mfr->activeChannel->full = FALSE;
+				mfr->activeChannel->full = false;
 			}
 
 			if (dc->abyte == 2)
@@ -351,7 +345,7 @@ static void ddpIo(u8 mfrId)
 						}
 						else
 						{
-							mfr->activeChannel->discAfterInput = TRUE;
+							mfr->activeChannel->discAfterInput = true;
 							dc->stat = StDdpAbort;
 						}
 
@@ -377,13 +371,13 @@ static void ddpIo(u8 mfrId)
 					/*
 					**  Fetch next 60 bits from ECS.
 					*/
-					if (DdpTransfer(dc->addr, &dc->curword, FALSE))    //DRS??
+					if (DdpTransfer(dc->addr, &dc->curword, false))    //DRS??
 					{
 						dc->stat = StDdpAccept;
 					}
 					else
 					{
-						mfr->activeChannel->discAfterInput = TRUE;
+						mfr->activeChannel->discAfterInput = true;
 						dc->stat = StDdpAbort;
 					}
 
@@ -393,8 +387,8 @@ static void ddpIo(u8 mfrId)
 				/*
 				**  Return next byte to PPU.
 				*/
-				mfr->activeChannel->data = (PpWord)((dc->curword >> 48) & Mask12);
-				mfr->activeChannel->full = TRUE;
+				mfr->activeChannel->data = static_cast<PpWord>((dc->curword >> 48) & Mask12);
+				mfr->activeChannel->full = true;
 
 #if DEBUG
 				fprintf(ddpLog, " %04o", activeChannel->data);
@@ -408,7 +402,7 @@ static void ddpIo(u8 mfrId)
 				{
 					if (dc->addr & (DdpAddrReadOne | DdpAddrFlagReg))
 					{
-						mfr->activeChannel->discAfterInput = TRUE;
+						mfr->activeChannel->discAfterInput = true;
 					}
 
 					dc->dbyte = -1;
@@ -421,7 +415,7 @@ static void ddpIo(u8 mfrId)
 			dc->stat = StDdpAccept;
 			dc->curword <<= 12;
 			dc->curword += mfr->activeChannel->data;
-			mfr->activeChannel->full = FALSE;
+			mfr->activeChannel->full = false;
 
 #if DEBUG
 			fprintf(ddpLog, " %04o", activeChannel->data);
@@ -432,9 +426,9 @@ static void ddpIo(u8 mfrId)
 				/*
 				**  Write next 60 bit to ECS.
 				*/
-				if (!DdpTransfer(dc->addr, &dc->curword, TRUE))   //DRS??
+				if (!DdpTransfer(dc->addr, &dc->curword, true))   //DRS??
 				{
-					mfr->activeChannel->active = FALSE;
+					mfr->activeChannel->active = false;
 					dc->stat = StDdpAbort;
 					return;
 				}
@@ -475,10 +469,9 @@ static void ddpActivate(u8 mfrId)
 **------------------------------------------------------------------------*/
 static void ddpDisconnect(u8 mfrId)
 {
-	DdpContext *dc;
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	dc = (DdpContext *)(mfr->activeDevice->context[0]);
+	DdpContext *dc = static_cast<DdpContext *>(mfr->activeDevice->context[0]);
 
 #if DEBUG
 	fprintf(ddpLog, "\n%06d PP:%02o CH:%02o Disconnect",
@@ -493,9 +486,9 @@ static void ddpDisconnect(u8 mfrId)
 		**  Write final 60 bit to ECS padded with zeros.
 		*/
 		dc->curword <<= 5 - dc->dbyte;
-		if (!DdpTransfer(dc->addr, &dc->curword, TRUE))	//DRS??
+		if (!DdpTransfer(dc->addr, &dc->curword, true))	//DRS??
 		{
-			mfr->activeChannel->active = FALSE;
+			mfr->activeChannel->active = false;
 			dc->stat = StDdpAbort;
 			return;
 		}
@@ -508,7 +501,7 @@ static void ddpDisconnect(u8 mfrId)
 	/*
 	**  Abort pending device disconnects - the PP is doing the disconnect.
 	*/
-	mfr->activeChannel->discAfterInput = FALSE;
+	mfr->activeChannel->discAfterInput = false;
 }
 
 /*--------------------------------------------------------------------------

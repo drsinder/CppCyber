@@ -2,7 +2,7 @@
 **
 **  Copyright (c) 2003-2011, Tom Hunter
 **
-**  Name: shift.c
+**  Name: shift.cpp
 **
 **  Description:
 **      Perform shift unit functions.
@@ -218,7 +218,7 @@ CpWord shiftPack(CpWord coeff, u32 expo)
 	coeff ^= sign;
 	expo ^= 02000;
 
-	return((((CpWord)(expo & Mask11)) << 48) | (coeff & Mask48)) ^ sign;
+	return((static_cast<CpWord>(expo & Mask11) << 48) | (coeff & Mask48)) ^ sign;
 }
 
 /*--------------------------------------------------------------------------
@@ -246,9 +246,9 @@ CpWord shiftUnpack(CpWord number, u32 *expo)
 
 	number ^= sign;
 
-	if (expo != NULL)
+	if (expo != nullptr)
 	{
-		*expo = ((u32)(((number >> 48) - 02000)) & Mask18);
+		*expo = (static_cast<u32>(((number >> 48) - 02000)) & Mask18);
 	}
 
 	return((number & Mask48) ^ sign);
@@ -268,24 +268,20 @@ CpWord shiftUnpack(CpWord number, u32 *expo)
 **------------------------------------------------------------------------*/
 CpWord shiftNormalize(CpWord number, u32 *shift, bool round)
 {
-	u16 count;
-	CpWord sign;
 	CpWord result;
-	CpWord coeff;
-	i16 expo;
 
 	number &= Mask60;
-	sign = SignX(number, 60);
+	CpWord sign = SignX(number, 60);
 	number ^= sign;
-	coeff = number & MaskCoeff;
-	expo = (i16)((number >> 48) & Mask12);
+	CpWord coeff = number & MaskCoeff;
+	i16 expo = static_cast<i16>((number >> 48) & Mask12);
 
 	/*
 	**  Handle infinite and indefinite cases.
 	*/
 	if ((expo & 01777) == 01777)
 	{
-		if (shift != NULL)
+		if (shift != nullptr)
 		{
 			*shift = 0;
 		}
@@ -301,7 +297,7 @@ CpWord shiftNormalize(CpWord number, u32 *shift, bool round)
 		/*
 		**  Plus or minus zero coeff results in 0 and a shift count of 48.
 		*/
-		if (shift != NULL)
+		if (shift != nullptr)
 		{
 			*shift = 48;
 		}
@@ -312,7 +308,7 @@ CpWord shiftNormalize(CpWord number, u32 *shift, bool round)
 	/*
 	**  Shift into place with optional rounding.
 	*/
-	count = 0;
+	u16 count = 0;
 	while (count < 48)
 	{
 		if ((coeff & MaskNormalize) != 0)
@@ -349,10 +345,10 @@ CpWord shiftNormalize(CpWord number, u32 *shift, bool round)
 	}
 	else
 	{
-		result = ((((CpWord)expo << 48) & MaskExp) | (coeff & MaskCoeff)) ^ sign;
+		result = (((static_cast<CpWord>(expo) << 48) & MaskExp) | (coeff & MaskCoeff)) ^ sign;
 	}
 
-	if (shift != NULL)
+	if (shift != nullptr)
 	{
 		*shift = count;
 	}

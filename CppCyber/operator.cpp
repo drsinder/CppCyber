@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: operator.c
+**  Name: operator.cpp
 **
 **  Description:
 **      Provide operator interface for CDC 6600 emulation. This is required
@@ -71,7 +71,7 @@ typedef struct opCmd
 **  Private Function Prototypes
 **  ---------------------------
 */
-static void opCreateThread(void);
+static void opCreateThread();
 #if defined(_WIN32)
 static void opThread(void *param);
 #else
@@ -81,36 +81,36 @@ static void *opThread(void *param);
 static char *opGetString(char *inStr, char *outStr, int outSize);
 
 static void opCmdHelp(bool help, char *cmdParams);
-static void opHelpHelp(void);
+static void opHelpHelp();
 
 static void opCmdLoadCards(bool help, char *cmdParams);
-static void opHelpLoadCards(void);
+static void opHelpLoadCards();
 
 static void opCmdLoadTape(bool help, char *cmdParams);
-static void opHelpLoadTape(void);
+static void opHelpLoadTape();
 
 static void opCmdShowTape(bool help, char *cmdParams);
-static void opHelpShowTape(void);
+static void opHelpShowTape();
 
 static void opCmdUnloadTape(bool help, char *cmdParams);
-static void opHelpUnloadTape(void);
+static void opHelpUnloadTape();
 
 static void opCmdRemoveCards(bool help, char *cmdParams);
-static void opHelpRemoveCards(void);
+static void opHelpRemoveCards();
 
 static void opCmdRemovePaper(bool help, char *cmdParams);
-static void opHelpRemovePaper(void);
+static void opHelpRemovePaper();
 
 static void opCmdShutdown(bool help, char *cmdParams);
-static void opHelpShutdown(void);
+static void opHelpShutdown();
 
 static void opCmdPause(bool help, char *cmdParams);
-static void opHelpPause(void);
+static void opHelpPause();
 
 // ReSharper disable once CppFunctionIsNotImplemented
 static void opCmdDumpDisk(bool help, char *cmdParams);	// DRS
 // ReSharper disable once CppFunctionIsNotImplemented
-static void opHelpDumpDisk(void);
+static void opHelpDumpDisk();
 
 /*
 **  ----------------
@@ -145,12 +145,12 @@ static OpCmd decode[] =
 #if CcDumpDisk == 1
 	"dump_disk",				opCmdDumpDisk,		// DRS
 #endif
-	NULL,                       NULL
+	nullptr,                       nullptr
 };
 
 static void(*opCmdFunction)(bool help, char *cmdParams);
 static char opCmdParams[256];
-static volatile bool opPaused = FALSE;
+static volatile bool opPaused = false;
 
 /*
 **--------------------------------------------------------------------------
@@ -168,7 +168,7 @@ static volatile bool opPaused = FALSE;
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void opInit(void)
+void opInit()
 {
 	/*
 	**  Create the operator thread which accepts command input.
@@ -185,12 +185,12 @@ void opInit(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void opRequest(void)
+void opRequest()
 {
 	if (opActive)
 	{
-		opCmdFunction(FALSE, opCmdParams);
-		opActive = FALSE;
+		opCmdFunction(false, opCmdParams);
+		opActive = false;
 
 		if (BigIron->emulationActive)
 		{
@@ -217,24 +217,23 @@ void opRequest(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void opCreateThread(void)
+static void opCreateThread()
 {
 #if defined(_WIN32)
 	DWORD dwThreadId;
-	HANDLE hThread;
 
 	/*
 	**  Create operator thread.
 	*/
-	hThread = CreateThread(
-		NULL,                                       // no security attribute 
+	HANDLE hThread = CreateThread(
+		nullptr,                                       // no security attribute 
 		0,                                          // default stack size 
-		(LPTHREAD_START_ROUTINE)opThread,
-		(LPVOID)NULL,                               // thread parameter 
+		reinterpret_cast<LPTHREAD_START_ROUTINE>(opThread),
+		static_cast<LPVOID>(nullptr),                               // thread parameter 
 		0,                                          // not suspended 
 		&dwThreadId);                               // returns thread ID 
 
-	if (hThread == NULL)
+	if (hThread == nullptr)
 	{
 		fprintf(stderr, "Failed to create operator thread\n");
 		exit(1);
@@ -276,8 +275,6 @@ static void *opThread(void *param)
 	OpCmd *cp;
 	char cmd[256];
 	char name[80];
-	char *params;
-	char *pos;
 
 	printf("\n%s.", DtCyberVersion " - " DtCyberCopyright);
 	printf("\n%s.", DtCyberLicense);
@@ -301,7 +298,7 @@ static void *opThread(void *param)
 		/*
 		**  Wait for command input.
 		*/
-		if (fgets(cmd, sizeof(cmd), stdin) == NULL || strlen(cmd) == 0)
+		if (fgets(cmd, sizeof(cmd), stdin) == nullptr || strlen(cmd) == 0)
 		{
 			continue;
 		}
@@ -311,7 +308,7 @@ static void *opThread(void *param)
 			/*
 			**  Unblock main emulation thread.
 			*/
-			opPaused = FALSE;
+			opPaused = false;
 			continue;
 		}
 
@@ -327,8 +324,8 @@ static void *opThread(void *param)
 		/*
 		**  Replace newline by zero terminator.
 		*/
-		pos = strchr(cmd, '\n');
-		if (pos != NULL)
+		char *pos = strchr(cmd, '\n');
+		if (pos != nullptr)
 		{
 			*pos = 0;
 		}
@@ -336,7 +333,7 @@ static void *opThread(void *param)
 		/*
 		**  Extract the command name.
 		*/
-		params = opGetString(cmd, name, sizeof(name));
+		char *params = opGetString(cmd, name, sizeof(name));
 		if (*name == 0)
 		{
 			printf("\nOperator> ");
@@ -346,7 +343,7 @@ static void *opThread(void *param)
 		/*
 		**  Find the command handler.
 		*/
-		for (cp = decode; cp->name != NULL; cp++)
+		for (cp = decode; cp->name != nullptr; cp++)
 		{
 			if (strcmp(cp->name, name) == 0)
 			{
@@ -355,12 +352,12 @@ static void *opThread(void *param)
 				*/
 				strcpy(opCmdParams, params);
 				opCmdFunction = cp->handler;
-				opActive = TRUE;
+				opActive = true;
 				break;
 			}
 		}
 
-		if (cp->name == NULL)
+		if (cp->name == nullptr)
 		{
 			/*
 			**  Try to help user.
@@ -421,7 +418,7 @@ static char *opGetString(char *inStr, char *outStr, int outSize)
 	{
 		if (len >= outSize - 1)
 		{
-			return(NULL);
+			return(nullptr);
 		}
 
 		outStr[len++] = inStr[pos++];
@@ -479,7 +476,7 @@ static void opCmdPause(bool help, char *cmdParams)
 	/*
 	**  Wait for Enter key.
 	*/
-	opPaused = TRUE;
+	opPaused = true;
 	while (opPaused)
 	{
 		/* wait for operator thread to clear the flag */
@@ -491,7 +488,7 @@ static void opCmdPause(bool help, char *cmdParams)
 	}
 }
 
-static void opHelpPause(void)
+static void opHelpPause()
 {
 	printf("'pause' suspends emulation to reduce CPU load.\n");
 }
@@ -530,13 +527,13 @@ static void opCmdShutdown(bool help, char *cmdParams)
 	/*
 	**  Process command.
 	*/
-	opActive = FALSE;
-	BigIron->emulationActive = FALSE;
+	opActive = false;
+	BigIron->emulationActive = false;
 
 	printf("\nThanks for using %s\nGoodbye for now.\n\n", DtCyberVersion);
 }
 
-static void opHelpShutdown(void)
+static void opHelpShutdown()
 {
 	printf("'shutdown' terminates emulation.\n");
 }
@@ -573,7 +570,7 @@ static void opCmdHelp(bool help, char *cmdParams)
 		**  List all available commands.
 		*/
 		printf("\nList of available commands:\n\n");
-		for (cp = decode; cp->name != NULL; cp++)
+		for (cp = decode; cp->name != nullptr; cp++)
 		{
 			printf("%s\n", cp->name);
 		}
@@ -586,12 +583,12 @@ static void opCmdHelp(bool help, char *cmdParams)
 		/*
 		**  Provide help for specified command.
 		*/
-		for (cp = decode; cp->name != NULL; cp++)
+		for (cp = decode; cp->name != nullptr; cp++)
 		{
 			if (strcmp(cp->name, cmdParams) == 0)
 			{
 				printf("\n");
-				cp->handler(TRUE, NULL);
+				cp->handler(true, nullptr);
 				return;
 			}
 		}
@@ -600,7 +597,7 @@ static void opCmdHelp(bool help, char *cmdParams)
 	}
 }
 
-static void opHelpHelp(void)
+static void opHelpHelp()
 {
 	printf("'help'       list all available commands.\n");
 	printf("'help <cmd>' provide help for <cmd>.\n");
@@ -641,7 +638,7 @@ static void opCmdLoadCards(bool help, char *cmdParams)
 	cr3447LoadCards(cmdParams);
 }
 
-static void opHelpLoadCards(void)
+static void opHelpLoadCards()
 {
 	printf("'load_cards <mainframe>,<channel>,<equipment>,<filename>' load specified card stack file.\n");
 }
@@ -682,7 +679,7 @@ static void opCmdLoadTape(bool help, char *cmdParams)
 	mt362xLoadTape(cmdParams);
 }
 
-static void opHelpLoadTape(void)
+static void opHelpLoadTape()
 {
 	printf("'load_tape <mainframe>,<channel>,<equipment>,<unit>,<r|w>,<filename>' load specified tape.\n");
 }
@@ -723,7 +720,7 @@ static void opCmdUnloadTape(bool help, char *cmdParams)
 	mt362xUnloadTape(cmdParams);
 }
 
-static void opHelpUnloadTape(void)
+static void opHelpUnloadTape()
 {
 	printf("'unload_tape <mainframe>,<channel>,<equipment>,<unit>' unload specified tape unit.\n");
 }
@@ -764,7 +761,7 @@ static void opCmdShowTape(bool help, char *cmdParams)
 	mt362xShowTapeStatus();
 }
 
-static void opHelpShowTape(void)
+static void opHelpShowTape()
 {
 	printf("'show_tape' show status of all tape units.\n");
 }
@@ -804,7 +801,7 @@ static void opCmdRemovePaper(bool help, char *cmdParams)
 	lp3000RemovePaper(cmdParams);
 }
 
-static void opHelpRemovePaper(void)
+static void opHelpRemovePaper()
 {
 	printf("'remove_paper <mainframe>,<channel>,<equipment>' remover paper from printer.\n");
 }
@@ -843,7 +840,7 @@ static void opCmdRemoveCards(bool help, char *cmdParams)
 	cp3446RemoveCards(cmdParams);
 }
 
-static void opHelpRemoveCards(void)
+static void opHelpRemoveCards()
 {
 	printf("'remove_cards <mainframe>,<channel>,<equipment>' remover cards from card puncher.\n");
 }

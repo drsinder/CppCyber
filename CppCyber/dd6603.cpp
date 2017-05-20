@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: dd6603.c
+**  Name: dd6603.cpp
 **
 **  Description:
 **      Perform emulation of CDC 6603 disk drives.
@@ -222,8 +222,6 @@ static void dd6603LogByte(int b)
 **------------------------------------------------------------------------*/
 void dd6603Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 {
-	DevSlot *dp;
-	FILE *fcb;
 	char fname[80];
 
 	(void)eqNo;
@@ -237,7 +235,7 @@ void dd6603Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	}
 #endif
 
-	dp = channelAttach(channelNo, eqNo, DtDd6603, mfrID);
+	DevSlot *dp = channelAttach(channelNo, eqNo, DtDd6603, mfrID);
 
 	dp->activate = dd6603Activate;
 	dp->disconnect = dd6603Disconnect;
@@ -246,18 +244,18 @@ void dd6603Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	dp->selectedUnit = unitNo;
 
 	dp->context[unitNo] = calloc(1, sizeof(DiskParam));
-	if (dp->context[unitNo] == NULL)
+	if (dp->context[unitNo] == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate dd6603 context block\n");
 		exit(1);
 	}
 
 	sprintf(fname, "DD6603_C%02oU%1o", channelNo, unitNo);
-	fcb = fopen(fname, "r+b");
-	if (fcb == NULL)
+	FILE *fcb = fopen(fname, "r+b");
+	if (fcb == nullptr)
 	{
 		fcb = fopen(fname, "w+b");
-		if (fcb == NULL)
+		if (fcb == nullptr)
 		{
 			fprintf(stderr, "Failed to open %s\n", fname);
 			exit(1);
@@ -285,7 +283,7 @@ static FcStatus dd6603Func(PpWord funcCode, u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 	FILE *fcb = mfr->activeDevice->fcb[mfr->activeDevice->selectedUnit];
-	DiskParam *dp = (DiskParam *)mfr->activeDevice->context[mfr->activeDevice->selectedUnit];
+	DiskParam *dp = static_cast<DiskParam *>(mfr->activeDevice->context[mfr->activeDevice->selectedUnit]);
 	i32 pos;
 
 #if DEBUG
@@ -335,7 +333,7 @@ static FcStatus dd6603Func(PpWord funcCode, u8 mfrId)
 		if (funcCode == Fc6603StatusReq)
 		{
 			mfr->activeDevice->fcode = funcCode;
-			mfr->activeChannel->status = (u16)dp->sector;
+			mfr->activeChannel->status = static_cast<u16>(dp->sector);
 
 			/*
 			**  Simulate the moving disk - seems strange but is required.
@@ -374,7 +372,7 @@ static void dd6603Io(u8 mfrId)
 	switch (mfr->activeDevice->fcode & Fc6603CodeMask)
 	{
 	default:
-		logError(LogErrorLocation, "channel %02o - invalid function code: %4.4o", mfr->activeChannel->id, (u32)mfr->activeDevice->fcode);
+		logError(LogErrorLocation, "channel %02o - invalid function code: %4.4o", mfr->activeChannel->id, static_cast<u32>(mfr->activeDevice->fcode));
 		break;
 
 	case 0:
@@ -384,7 +382,7 @@ static void dd6603Io(u8 mfrId)
 		if (!mfr->activeChannel->full)
 		{
 			fread(&mfr->activeChannel->data, 2, 1, fcb);
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 
 #if DEBUG
 			dd6603LogByte(activeChannel->data);
@@ -396,7 +394,7 @@ static void dd6603Io(u8 mfrId)
 		if (mfr->activeChannel->full)
 		{
 			fwrite(&mfr->activeChannel->data, 2, 1, fcb);
-			mfr->activeChannel->full = FALSE;
+			mfr->activeChannel->full = false;
 
 #if DEBUG
 			dd6603LogByte(activeChannel->data);
@@ -411,7 +409,7 @@ static void dd6603Io(u8 mfrId)
 		if (mfr->activeDevice->fcode == Fc6603StatusReq)
 		{
 			mfr->activeChannel->data = mfr->activeChannel->status;
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 
 #if 0
 			activeChannel->status = (u16)dp->sector;
@@ -467,7 +465,6 @@ static void dd6603Disconnect(u8 mfrId)
 **------------------------------------------------------------------------*/
 static i32 dd6603Seek(i32 track, i32 head, i32 sector, u8 mfrId)
 {
-	i32 result;
 	i32 sectorsPerTrack = MaxOuterSectors;
 
 	MMainFrame *mfr = BigIron->chasis[mfrId];
@@ -490,7 +487,7 @@ static i32 dd6603Seek(i32 track, i32 head, i32 sector, u8 mfrId)
 		return(-1);
 	}
 
-	result = track * MaxHeads * sectorsPerTrack;
+	i32 result = track * MaxHeads * sectorsPerTrack;
 	result += head * sectorsPerTrack;
 	result += sector;
 	result *= SectorSize * 2;

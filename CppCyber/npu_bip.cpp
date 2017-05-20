@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: npu_bip.c
+**  Name: npu_bip.cpp
 **
 **  Description:
 **      Perform emulation of the Block Interface Protocol (BIP) in an NPU
@@ -69,13 +69,13 @@
 **  Private Variables
 **  -----------------
 */
-static NpuBuffer *bufPool = NULL;
+static NpuBuffer *bufPool = nullptr;
 static int bufCount = 0;
 
-static NpuBuffer *bipUplineBuffer = NULL;
+static NpuBuffer *bipUplineBuffer = nullptr;
 static NpuQueue *bipUplineQueue;
 
-static NpuBuffer *bipDownlineBuffer = NULL;
+static NpuBuffer *bipDownlineBuffer = nullptr;
 
 typedef enum
 {
@@ -103,18 +103,14 @@ static BipState bipState = BipIdle;
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuBipInit(void)
+void npuBipInit()
 {
-	NpuBuffer *bp;
-	NpuBuffer *np;
-	int count;
-
 	/*
 	**  Allocate data buffer pool.
 	*/
 	bufCount = NumBuffs;
-	bufPool = (NpuBuffer*)calloc(NumBuffs, sizeof(NpuBuffer));
-	if (bufPool == NULL)
+	bufPool = static_cast<NpuBuffer*>(calloc(NumBuffs, sizeof(NpuBuffer)));
+	if (bufPool == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate NPU data buffer pool\n");
 		exit(1);
@@ -123,24 +119,24 @@ void npuBipInit(void)
 	/*
 	**  Link buffers into pool and link in data.
 	*/
-	bp = bufPool;
-	for (count = NumBuffs - 1; count > 0; count--)
+	NpuBuffer *bp = bufPool;
+	for (int count = NumBuffs - 1; count > 0; count--)
 	{
 		/*
 		**  Link to next buffer.
 		*/
-		np = bp + 1;
+		NpuBuffer *np = bp + 1;
 		bp->next = np;
 		bp = np;
 	}
 
-	bp->next = NULL;
+	bp->next = nullptr;
 
 	/*
 	**  Allocate upline buffer queue.
 	*/
-	bipUplineQueue = (NpuQueue*)calloc(1, sizeof(NpuQueue));
-	if (bipUplineQueue == NULL)
+	bipUplineQueue = static_cast<NpuQueue*>(calloc(1, sizeof(NpuQueue)));
+	if (bipUplineQueue == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate NPU buffer queue\n");
 		exit(1);
@@ -155,24 +151,24 @@ void npuBipInit(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuBipReset(void)
+void npuBipReset()
 {
-	if (bipUplineBuffer != NULL)
+	if (bipUplineBuffer != nullptr)
 	{
 		npuBipBufRelease(bipUplineBuffer);
 	}
 
-	while ((bipUplineBuffer = npuBipQueueExtract(bipUplineQueue)) != NULL)
+	while ((bipUplineBuffer = npuBipQueueExtract(bipUplineQueue)) != nullptr)
 	{
 		npuBipBufRelease(bipUplineBuffer);
 	}
 
-	bipUplineBuffer = NULL;
+	bipUplineBuffer = nullptr;
 
-	if (bipDownlineBuffer != NULL)
+	if (bipDownlineBuffer != nullptr)
 	{
 		npuBipBufRelease(bipDownlineBuffer);
-		bipDownlineBuffer = NULL;
+		bipDownlineBuffer = nullptr;
 	}
 
 	bipState = BipIdle;
@@ -186,7 +182,7 @@ void npuBipReset(void)
 **  Returns:        Current buffer count.
 **
 **------------------------------------------------------------------------*/
-int npuBipBufCount(void)
+int npuBipBufCount()
 {
 	return (bufCount);
 }
@@ -196,19 +192,17 @@ int npuBipBufCount(void)
 **
 **  Parameters:     Name        Description.
 **
-**  Returns:        Pointer to newly allocated buffer or NULL if pool
+**  Returns:        Pointer to newly allocated buffer or nullptr if pool
 **                  is empty.
 **
 **------------------------------------------------------------------------*/
-NpuBuffer *npuBipBufGet(void)
+NpuBuffer *npuBipBufGet()
 {
-	NpuBuffer *bp;
-
 	/*
 	**  Allocate buffer from pool.
 	*/
-	bp = bufPool;
-	if (bp != NULL)
+	NpuBuffer *bp = bufPool;
+	if (bp != nullptr)
 	{
 		/*
 		**  Unlink allocated buffer.
@@ -219,7 +213,7 @@ NpuBuffer *npuBipBufGet(void)
 		/*
 		**  Initialise buffer.
 		*/
-		bp->next = NULL;
+		bp->next = nullptr;
 		bp->offset = 0;
 		bp->numBytes = 0;
 		bp->blockSeqNo = 0;
@@ -245,7 +239,7 @@ NpuBuffer *npuBipBufGet(void)
 **------------------------------------------------------------------------*/
 void npuBipBufRelease(NpuBuffer *bp)
 {
-	if (bp != NULL)
+	if (bp != nullptr)
 	{
 		/*
 		**  Link buffer back into the pool.
@@ -268,9 +262,9 @@ void npuBipBufRelease(NpuBuffer *bp)
 **------------------------------------------------------------------------*/
 void npuBipQueueAppend(NpuBuffer *bp, NpuQueue *queue)
 {
-	if (bp != NULL)
+	if (bp != nullptr)
 	{
-		if (queue->first == NULL)
+		if (queue->first == nullptr)
 		{
 			queue->first = bp;
 		}
@@ -280,7 +274,7 @@ void npuBipQueueAppend(NpuBuffer *bp, NpuQueue *queue)
 		}
 
 		queue->last = bp;
-		bp->next = NULL;
+		bp->next = nullptr;
 	}
 }
 
@@ -296,9 +290,9 @@ void npuBipQueueAppend(NpuBuffer *bp, NpuQueue *queue)
 **------------------------------------------------------------------------*/
 void npuBipQueuePrepend(NpuBuffer *bp, NpuQueue *queue)
 {
-	if (bp != NULL)
+	if (bp != nullptr)
 	{
-		if (queue->first == NULL)
+		if (queue->first == nullptr)
 		{
 			queue->last = bp;
 		}
@@ -314,19 +308,19 @@ void npuBipQueuePrepend(NpuBuffer *bp, NpuQueue *queue)
 **  Parameters:     Name        Description.
 **                  queue       Pointer to queue.
 **
-**  Returns:        Pointer to a buffer or NULL if queue is empty.
+**  Returns:        Pointer to a buffer or nullptr if queue is empty.
 **
 **------------------------------------------------------------------------*/
 NpuBuffer *npuBipQueueExtract(NpuQueue *queue)
 {
 	NpuBuffer *bp = queue->first;
 
-	if (bp != NULL)
+	if (bp != nullptr)
 	{
 		queue->first = bp->next;
-		if (queue->first == NULL)
+		if (queue->first == nullptr)
 		{
-			queue->last = NULL;
+			queue->last = nullptr;
 		}
 	}
 
@@ -340,7 +334,7 @@ NpuBuffer *npuBipQueueExtract(NpuQueue *queue)
 **  Parameters:     Name        Description.
 **                  queue       Pointer to queue.
 **
-**  Returns:        Pointer to a buffer or NULL if queue is empty.
+**  Returns:        Pointer to a buffer or nullptr if queue is empty.
 **
 **------------------------------------------------------------------------*/
 NpuBuffer *npuBipQueueGetLast(NpuQueue *queue)
@@ -360,7 +354,7 @@ NpuBuffer *npuBipQueueGetLast(NpuQueue *queue)
 **------------------------------------------------------------------------*/
 bool npuBipQueueNotEmpty(NpuQueue *queue)
 {
-	return(queue->first != NULL);
+	return(queue->first != nullptr);
 }
 
 /*--------------------------------------------------------------------------
@@ -381,7 +375,7 @@ void npuBipNotifyServiceMessage(u8 mfrId)
 	else
 	{
 		npuBipBufRelease(bipDownlineBuffer);
-		bipDownlineBuffer = NULL;
+		bipDownlineBuffer = nullptr;
 	}
 }
 
@@ -399,12 +393,12 @@ void npuBipNotifyData(int priority, u8 mfrId)
 	bipDownlineBuffer = npuBipBufGet();
 	if (npuHipDownlineBlock(bipDownlineBuffer, mfrId))
 	{
-		bipState = (BipState)(BipDownDataLow + priority);
+		bipState = static_cast<BipState>(BipDownDataLow + priority);
 	}
 	else
 	{
 		npuBipBufRelease(bipDownlineBuffer);
-		bipDownlineBuffer = NULL;
+		bipDownlineBuffer = nullptr;
 	}
 }
 
@@ -421,7 +415,7 @@ void npuBipRetryInput(u8 mfrId)
 	/*
 	**  Check if any more upline buffer is pending and send if necessary.
 	*/
-	if (bipUplineBuffer != NULL)
+	if (bipUplineBuffer != nullptr)
 	{
 		npuHipUplineBlock(bipUplineBuffer, mfrId);
 	}
@@ -442,7 +436,7 @@ void npuBipNotifyDownlineReceived(u8 mfrId)
 	/*
 	**  BIP loses ownership of the downline buffer.
 	*/
-	bipDownlineBuffer = NULL;
+	bipDownlineBuffer = nullptr;
 
 	/*
 	**  Hand over the buffer to SVM or TIP.
@@ -469,7 +463,7 @@ void npuBipNotifyDownlineReceived(u8 mfrId)
 	/*
 	**  Check if any more upline buffer is pending and send if necessary.
 	*/
-	if (bipUplineBuffer != NULL)
+	if (bipUplineBuffer != nullptr)
 	{
 		npuHipUplineBlock(bipUplineBuffer, mfrId);
 	}
@@ -489,13 +483,13 @@ void npuBipAbortDownlineReceived(u8 mfrId)
 	**  Free buffer and reset state.
 	*/
 	npuBipBufRelease(bipDownlineBuffer);
-	bipDownlineBuffer = NULL;
+	bipDownlineBuffer = nullptr;
 	bipState = BipIdle;
 
 	/*
 	**  Check if any more upline buffer is pending and send if necessary.
 	*/
-	if (bipUplineBuffer != NULL)
+	if (bipUplineBuffer != nullptr)
 	{
 		npuHipUplineBlock(bipUplineBuffer, mfrId);
 	}
@@ -512,7 +506,7 @@ void npuBipAbortDownlineReceived(u8 mfrId)
 **------------------------------------------------------------------------*/
 void npuBipRequestUplineTransfer(NpuBuffer *bp, u8 mfrId)
 {
-	if (bipUplineBuffer != NULL)
+	if (bipUplineBuffer != nullptr)
 	{
 		/*
 		**  Upline buffer pending, so queue this one for later.
@@ -545,7 +539,7 @@ void npuBipRequestUplineTransfer(NpuBuffer *bp, u8 mfrId)
 void npuBipRequestUplineCanned(u8 *msg, int msgSize, u8 mfrId)
 {
 	NpuBuffer *bp = npuBipBufGet();
-	if (bp == NULL)
+	if (bp == nullptr)
 	{
 		return;
 	}
@@ -574,7 +568,7 @@ void npuBipNotifyUplineSent(u8 mfrId)
 	**  Check if any more upline queued and send if necessary.
 	*/
 	bipUplineBuffer = npuBipQueueExtract(bipUplineQueue);
-	if (bipUplineBuffer != NULL)
+	if (bipUplineBuffer != nullptr)
 	{
 		npuHipUplineBlock(bipUplineBuffer, mfrId);
 	}

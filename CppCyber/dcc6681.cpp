@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: dcc6681.c
+**  Name: dcc6681.cpp
 **
 **  Description:
 **      Perform emulation of CDC 6681 or 6684 data channel converter.
@@ -102,11 +102,10 @@ static void dcc6681Disconnect(u8 mfrId);
 **------------------------------------------------------------------------*/
 DevSlot *dcc6681Attach(u8 channelNo, u8 eqNo, u8 unitNo, u8 devType, u8 mfrID)
 {
-	DevSlot *dp;
 	DccControl *cp;
 	DevSlot *device;
 
-	dp = channelAttach(channelNo, 0, DtDcc6681, mfrID);
+	DevSlot *dp = channelAttach(channelNo, 0, DtDcc6681, mfrID);
 
 	dp->activate = dcc6681Activate;
 	dp->disconnect = dcc6681Disconnect;
@@ -116,31 +115,31 @@ DevSlot *dcc6681Attach(u8 channelNo, u8 eqNo, u8 unitNo, u8 devType, u8 mfrID)
 	/*
 	**  Allocate converter context when first created.
 	*/
-	if (dp->context[0] == NULL)
+	if (dp->context[0] == nullptr)
 	{
-		cp = (DccControl *)calloc(1, sizeof(DccControl));
-		if (cp == NULL)
+		cp = static_cast<DccControl *>(calloc(1, sizeof(DccControl)));
+		if (cp == nullptr)
 		{
 			fprintf(stderr, "Failed to allocate dcc6681 context block\n");
 			exit(1);
 		}
 
-		cp->selected = TRUE;
+		cp->selected = true;
 		cp->connectedEquipment = -1;
-		dp->context[0] = (void *)cp;
+		dp->context[0] = static_cast<void *>(cp);
 	}
 	else
 	{
-		cp = (DccControl *)dp->context[0];
+		cp = static_cast<DccControl *>(dp->context[0]);
 	}
 
 	/*
 	**  Allocate 3000 series device control block.
 	*/
-	if (cp->device3000[eqNo] == NULL)
+	if (cp->device3000[eqNo] == nullptr)
 	{
-		device = (DevSlot*)calloc(1, sizeof(DevSlot));
-		if (device == NULL)
+		device = static_cast<DevSlot*>(calloc(1, sizeof(DevSlot)));
+		if (device == nullptr)
 		{
 			fprintf(stderr, "Failed to allocate device control block for converter on channel %d\n", channelNo);
 			exit(1);
@@ -153,7 +152,7 @@ DevSlot *dcc6681Attach(u8 channelNo, u8 eqNo, u8 unitNo, u8 devType, u8 mfrID)
 	}
 	else
 	{
-		device = (DevSlot *)cp->device3000[eqNo];
+		device = static_cast<DevSlot *>(cp->device3000[eqNo]);
 	}
 
 	/*
@@ -178,19 +177,17 @@ DevSlot *dcc6681Attach(u8 channelNo, u8 eqNo, u8 unitNo, u8 devType, u8 mfrID)
 **------------------------------------------------------------------------*/
 void dcc6681Terminate(DevSlot *dp)
 {
-	u8 i, j;
+	DccControl *cp = static_cast<DccControl*>(dp->context[0]);
 
-	DccControl *cp = (DccControl*)dp->context[0];
-
-	if (cp != NULL)
+	if (cp != nullptr)
 	{
-		for (i = 0; i < MaxEquipment; i++)
+		for (u8 i = 0; i < MaxEquipment; i++)
 		{
-			if (cp->device3000[i] != NULL)
+			if (cp->device3000[i] != nullptr)
 			{
-				for (j = 0; j < MaxEquipment; j++)
+				for (u8 j = 0; j < MaxEquipment; j++)
 				{
-					if (cp->device3000[i]->context[j] != NULL)
+					if (cp->device3000[i]->context[j] != nullptr)
 					{
 						free(cp->device3000[i]->context[j]);
 					}
@@ -215,34 +212,31 @@ void dcc6681Terminate(DevSlot *dp)
 **------------------------------------------------------------------------*/
 DevSlot *dcc6681FindDevice(u8 mfrID, u8 channelNo, u8 equipmentNo, u8 devType)
 {
-	DevSlot *dp;
-	DccControl *cp;
-
 	/*
 	**  First find the channel converter.
 	*/
-	dp = channelFindDevice(channelNo, DtDcc6681, mfrID);
-	if (dp == NULL)
+	DevSlot *dp = channelFindDevice(channelNo, DtDcc6681, mfrID);
+	if (dp == nullptr)
 	{
-		return(NULL);
+		return(nullptr);
 	}
 
 	/*
 	**  Locate channel converter context.
 	*/
-	cp = (DccControl *)dp->context[0];
-	if (cp == NULL)
+	DccControl *cp = static_cast<DccControl *>(dp->context[0]);
+	if (cp == nullptr)
 	{
-		return(NULL);
+		return(nullptr);
 	}
 
 	/*
 	**  Lookup and verify equipment.
 	*/
 	dp = cp->device3000[equipmentNo];
-	if (dp == NULL || dp->devType != devType)
+	if (dp == nullptr || dp->devType != devType)
 	{
-		return(NULL);
+		return(nullptr);
 	}
 
 	/*
@@ -263,7 +257,7 @@ DevSlot *dcc6681FindDevice(u8 mfrID, u8 channelNo, u8 equipmentNo, u8 devType)
 void dcc6681Interrupt(bool status, u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
-	DccControl *mp = (DccControl *)mfr->activeDevice->context[0];
+	DccControl *mp = static_cast<DccControl *>(mfr->activeDevice->context[0]);
 	if (mp->connectedEquipment >= 0)
 	{
 		mp->interrupting[mp->connectedEquipment] = status;
@@ -282,10 +276,11 @@ void dcc6681Interrupt(bool status, u8 mfrId)
 static FcStatus dcc6681Func(PpWord funcCode, u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
-	DccControl *mp = (DccControl *)mfr->activeDevice->context[0];
-	DevSlot *device;
-	PpWord rc;
+	DccControl *mp = static_cast<DccControl *>(mfr->activeDevice->context[0]);
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	i8 u;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	DevSlot *device;
 	i8 e;
 
 	/*
@@ -305,12 +300,12 @@ static FcStatus dcc6681Func(PpWord funcCode, u8 mfrId)
 	switch (funcCode)
 	{
 	case Fc6681Select:
-		mp->selected = TRUE;
+		mp->selected = true;
 		mp->status = StFc6681Ready;
 		return(FcProcessed);
 
 	case Fc6681DeSelect:
-		mp->selected = FALSE;
+		mp->selected = false;
 		mp->status = StFc6681Ready;
 		return(FcProcessed);
 
@@ -324,9 +319,9 @@ static FcStatus dcc6681Func(PpWord funcCode, u8 mfrId)
 		mp->status = StFc6681Ready;
 		for (e = 0; e < MaxEquipment; e++)
 		{
-			mp->interrupting[e] = FALSE;
+			mp->interrupting[e] = false;
 			mfr->active3000Device = mp->device3000[e];
-			if (mfr->active3000Device != NULL)
+			if (mfr->active3000Device != nullptr)
 			{
 				mfr->active3000Device->selectedUnit = -1;
 				(mfr->active3000Device->func)(funcCode, mfrId);
@@ -380,9 +375,11 @@ static FcStatus dcc6681Func(PpWord funcCode, u8 mfrId)
 	case Fc6681Connect6Mode1:
 	case Fc6681Connect7Mode1:
 		e = (funcCode & Fc6681ConnectEquipmentMask) >> 9;
+		// ReSharper disable once CppJoinDeclarationAndAssignment
 		u = funcCode & Fc6681ConnectUnitMask;
+		// ReSharper disable once CppJoinDeclarationAndAssignment
 		device = mp->device3000[e];
-		if (device == NULL || device->context[u] == NULL)
+		if (device == nullptr || device->context[u] == nullptr)
 		{
 			mp->connectedEquipment = -1;
 			mp->status = StFc6681IntReject;
@@ -405,7 +402,7 @@ static FcStatus dcc6681Func(PpWord funcCode, u8 mfrId)
 		mfr->active3000Device = mp->device3000[e];
 		funcCode &= Fc6681ConnectFuncMask;
 		mp->status = StFc6681Ready;
-		rc = (mfr->active3000Device->func)(funcCode, mfrId);
+		PpWord rc = (mfr->active3000Device->func)(funcCode, mfrId);
 		if (rc == FcDeclined)
 		{
 			mp->status = StFc6681IntReject;
@@ -415,7 +412,7 @@ static FcStatus dcc6681Func(PpWord funcCode, u8 mfrId)
 			mp->status = StFc6681Ready;
 		}
 
-		return((FcStatus)rc);
+		return static_cast<FcStatus>(rc);
 	}
 
 	mp->status = StFc6681IntReject;
@@ -433,11 +430,8 @@ static FcStatus dcc6681Func(PpWord funcCode, u8 mfrId)
 static void dcc6681Io(u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
-	DccControl *mp = (DccControl *)mfr->activeDevice->context[0];
-	DevSlot *device;
-	i8 u;
+	DccControl *mp = static_cast<DccControl *>(mfr->activeDevice->context[0]);
 	i8 e;
-	PpWord stat;
 
 	switch (mfr->activeDevice->fcode)
 	{
@@ -457,12 +451,12 @@ static void dcc6681Io(u8 mfrId)
 	case Fc6681ConnectMode2:
 		if (mfr->activeChannel->full)
 		{
-			mfr->activeChannel->full = FALSE;
+			mfr->activeChannel->full = false;
 			mfr->activeDevice->fcode = 0;
 			e = (mfr->activeChannel->data & Fc6681ConnectEquipmentMask) >> 9;
-			u = mfr->activeChannel->data & Fc6681ConnectUnitMask;
-			device = mp->device3000[e];
-			if (device == NULL || device->context[u] == NULL)
+			i8 u = mfr->activeChannel->data & Fc6681ConnectUnitMask;
+			DevSlot *device = mp->device3000[e];
+			if (device == nullptr || device->context[u] == nullptr)
 			{
 				mp->connectedEquipment = -1;
 				mp->status = StFc6681IntReject;
@@ -489,7 +483,7 @@ static void dcc6681Io(u8 mfrId)
 				mp->status = StFc6681Ready;
 			}
 
-			mfr->activeChannel->full = FALSE;
+			mfr->activeChannel->full = false;
 			mfr->activeDevice->fcode = 0;
 		}
 		break;
@@ -505,14 +499,14 @@ static void dcc6681Io(u8 mfrId)
 	case Fc6681DccStatusReq:
 		if (!mfr->activeChannel->full)
 		{
-			stat = mp->status;
+			PpWord stat = mp->status;
 
 			/*
 			**  Assemble interrupt status.
 			*/
 			for (e = 0; e < MaxEquipment; e++)
 			{
-				if (mp->device3000[e] != NULL
+				if (mp->device3000[e] != nullptr
 					&& mp->interrupting[e])
 				{
 					stat |= (010 << e);
@@ -523,7 +517,7 @@ static void dcc6681Io(u8 mfrId)
 			**  Return status.
 			*/
 			mfr->activeChannel->data = stat;
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 
 			/*
 			**  Clear function code and status.
@@ -548,17 +542,16 @@ static void dcc6681Activate(u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	DccControl *mp = (DccControl *)mfr->activeDevice->context[0];
-	i8 e;
+	DccControl *mp = static_cast<DccControl *>(mfr->activeDevice->context[0]);
 
-	e = mp->connectedEquipment;
+	i8 e = mp->connectedEquipment;
 	if (e < 0)
 	{
 		return;
 	}
 
 	mfr->active3000Device = mp->device3000[e];
-	if (mfr->active3000Device == NULL)
+	if (mfr->active3000Device == nullptr)
 	{
 		return;
 	}
@@ -578,17 +571,16 @@ static void dcc6681Disconnect(u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	DccControl *mp = (DccControl *)mfr->activeDevice->context[0];
-	i8 e;
+	DccControl *mp = static_cast<DccControl *>(mfr->activeDevice->context[0]);
 
-	e = mp->connectedEquipment;
+	i8 e = mp->connectedEquipment;
 	if (e < 0)
 	{
 		return;
 	}
 
 	mfr->active3000Device = mp->device3000[e];
-	if (mfr->active3000Device == NULL)
+	if (mfr->active3000Device == nullptr)
 	{
 		return;
 	}

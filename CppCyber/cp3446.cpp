@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Paul Koning, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: cp3446.c
+**  Name: cp3446.cpp
 **
 **  Description:
 **      Perform emulation of CDC 3446 card punch controller.
@@ -158,12 +158,7 @@ static FILE *cp3446Log = NULL;
 **------------------------------------------------------------------------*/
 void cp3446Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 {
-	DevSlot *up;
 	char fname[80];
-	CpContext *cc;
-	const PpWord *charset;
-	PpWord hol;
-	int i;
 
 #if DEBUG
 	if (cp3446Log == NULL)
@@ -172,7 +167,7 @@ void cp3446Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	}
 #endif
 
-	up = dcc6681Attach(channelNo, eqNo, 0, DtCp3446, mfrID);
+	DevSlot *up = dcc6681Attach(channelNo, eqNo, 0, DtCp3446, mfrID);
 
 	up->activate = cp3446Activate;
 	up->disconnect = cp3446Disconnect;
@@ -182,20 +177,20 @@ void cp3446Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	/*
 	**  Only one card punch unit is possible per equipment.
 	*/
-	if (up->context[0] != NULL)
+	if (up->context[0] != nullptr)
 	{
 		fprintf(stderr, "Only one CP3446 unit is possible per equipment\n");
 		exit(1);
 	}
 
-	cc = (CpContext*)calloc(1, sizeof(CpContext));
-	if (cc == NULL)
+	CpContext *cc = static_cast<CpContext*>(calloc(1, sizeof(CpContext)));
+	if (cc == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate CP3446 context block\n");
 		exit(1);
 	}
 
-	up->context[0] = (void *)cc;
+	up->context[0] = static_cast<void *>(cc);
 	cc->lastnbcol = -1;
 	cc->col = 0;
 	cc->status = StCp3446Ready;
@@ -205,7 +200,7 @@ void cp3446Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	*/
 	sprintf(fname, "CP3446_C%02o_E%o", channelNo, eqNo);
 	up->fcb[0] = fopen(fname, "w");
-	if (up->fcb[0] == NULL)
+	if (up->fcb[0] == nullptr)
 	{
 		fprintf(stderr, "Failed to open %s\n", fname);
 		exit(1);
@@ -214,8 +209,8 @@ void cp3446Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	/*
 	**  Setup character set translation table.
 	*/
-	charset = asciiTo026;     // default translation table
-	if (deviceName != NULL)
+	const PpWord *charset = asciiTo026;     // default translation table
+	if (deviceName != nullptr)
 	{
 		if (strcmp(deviceName, "029") == 0)
 		{
@@ -229,9 +224,9 @@ void cp3446Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	}
 
 	memset(cc->convtable, ' ', sizeof(cc->convtable));
-	for (i = 040; i < 0177; i++)
+	for (int i = 040; i < 0177; i++)
 	{
-		hol = charset[i] & Mask12;
+		PpWord hol = charset[i] & Mask12;
 		if (hol != 0)
 		{
 			cc->convtable[hol] = i;
@@ -254,22 +249,17 @@ void cp3446Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 void cp3446RemoveCards(char *params)
 {
-	CpContext *cc;
-	DevSlot *dp;
-	int numParam;
 	int channelNo;
 	int equipmentNo;
 	int mfrID;
 	time_t currentTime;
-	struct tm t;
 	char fname[80];
 	char fnameNew[80];
-	//static char msgBuf[80];
 
 	/*
 	**  Operator wants to remove cards.
 	*/
-	numParam = sscanf(params, "%o,%o,%o", &mfrID, &channelNo, &equipmentNo);
+	int numParam = sscanf(params, "%o,%o,%o", &mfrID, &channelNo, &equipmentNo);
 
 	/*
 	**  Check parameters.
@@ -295,8 +285,8 @@ void cp3446RemoveCards(char *params)
 	/*
 	**  Locate the device control block.
 	*/
-	dp = dcc6681FindDevice((u8)mfrID, (u8)channelNo, (u8)equipmentNo, DtCp3446);
-	if (dp == NULL)
+	DevSlot *dp = dcc6681FindDevice(static_cast<u8>(mfrID), static_cast<u8>(channelNo), static_cast<u8>(equipmentNo), DtCp3446);
+	if (dp == nullptr)
 	{
 		printf("No card punch on channel %o and equipment %o\n", channelNo, equipmentNo);
 		return;
@@ -305,11 +295,11 @@ void cp3446RemoveCards(char *params)
 	/*
 	**  Close the old device file.
 	*/
-	cc = (CpContext *)(dp->context[0]);
+	CpContext *cc = static_cast<CpContext *>(dp->context[0]);
 	cp3446FlushCard(dp, cc);
 	fflush(dp->fcb[0]);
 	fclose(dp->fcb[0]);
-	dp->fcb[0] = NULL;
+	dp->fcb[0] = nullptr;
 
 	/*
 	**  Rename the device file to the format "CP3446_yyyymmdd_hhmmss".
@@ -317,7 +307,7 @@ void cp3446RemoveCards(char *params)
 	sprintf(fname, "CP3446_C%02o_E%o", channelNo, equipmentNo);
 
 	time(&currentTime);
-	t = *localtime(&currentTime);
+	struct tm t = *localtime(&currentTime);
 	sprintf(fnameNew, "CP3446_%04d%02d%02d_%02d%02d%02d",
 		t.tm_year + 1900,
 		t.tm_mon + 1,
@@ -340,7 +330,7 @@ void cp3446RemoveCards(char *params)
 	/*
 	**  Check if the open succeeded.
 	*/
-	if (dp->fcb[0] == NULL)
+	if (dp->fcb[0] == nullptr)
 	{
 		printf("Failed to open %s\n", fname);
 		return;
@@ -368,7 +358,6 @@ void cp3446RemoveCards(char *params)
 **------------------------------------------------------------------------*/
 static FcStatus cp3446Func(PpWord funcCode, u8 mfrId)
 {
-	CpContext *cc;
 	FcStatus st;
 
 	MMainFrame *mfr = BigIron->chasis[mfrId];
@@ -382,7 +371,7 @@ static FcStatus cp3446Func(PpWord funcCode, u8 mfrId)
 		cp3446Func2String(funcCode));
 #endif
 
-	cc = (CpContext *)mfr->active3000Device->context[0];
+	CpContext *cc = static_cast<CpContext *>(mfr->active3000Device->context[0]);
 
 	switch (funcCode)
 	{
@@ -411,19 +400,19 @@ static FcStatus cp3446Func(PpWord funcCode, u8 mfrId)
 		break;
 
 	case FcCp3446Binary:
-		cc->binary = TRUE;
+		cc->binary = true;
 		st = FcProcessed;
 		break;
 
 	case FcCp3446Deselect:
 	case FcCp3446Clear:
 		cc->intmask = 0;
-		cc->binary = FALSE;
+		cc->binary = false;
 		st = FcProcessed;
 		break;
 
 	case FcCp3446BCD:
-		cc->binary = FALSE;
+		cc->binary = false;
 		st = FcProcessed;
 		break;
 
@@ -478,13 +467,11 @@ static FcStatus cp3446Func(PpWord funcCode, u8 mfrId)
 **------------------------------------------------------------------------*/
 static void cp3446Io(u8 mfrId)
 {
-	CpContext *cc;
 	char c;
-	PpWord p;
 
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	cc = (CpContext *)mfr->active3000Device->context[0];
+	CpContext *cc = static_cast<CpContext *>(mfr->active3000Device->context[0]);
 
 	switch (mfr->active3000Device->fcode)
 	{
@@ -499,7 +486,7 @@ static void cp3446Io(u8 mfrId)
 		if (!mfr->activeChannel->full)
 		{
 			mfr->activeChannel->data = (cc->status & (cc->intmask | StCp3446NonIntStatus));
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 #if DEBUG
 			fprintf(cp3446Log, " %04o", activeChannel->data);
 #endif
@@ -528,8 +515,8 @@ static void cp3446Io(u8 mfrId)
 		}
 		else
 		{
-			p = mfr->activeChannel->data & Mask12;
-			mfr->activeChannel->full = FALSE;
+			PpWord p = mfr->activeChannel->data & Mask12;
+			mfr->activeChannel->full = false;
 
 #if DEBUG
 			fprintf(cp3446Log, " %04o", activeChannel->data);
@@ -542,11 +529,11 @@ static void cp3446Io(u8 mfrId)
 			{
 				if (cc->binary && (p & Mask5) == 00005)
 				{
-					cc->rawcard = TRUE;
+					cc->rawcard = true;
 				}
 				else
 				{
-					cc->rawcard = FALSE;
+					cc->rawcard = false;
 				}
 			}
 
@@ -627,8 +614,6 @@ static void cp3446Activate(u8 mfrId)
 **------------------------------------------------------------------------*/
 static void cp3446Disconnect(u8 mfrId)
 {
-	CpContext *cc;
-
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 #if DEBUG
@@ -638,12 +623,12 @@ static void cp3446Disconnect(u8 mfrId)
 		activeDevice->channel->id);
 #endif
 
-	cc = (CpContext *)mfr->active3000Device->context[0];
-	if (cc != NULL)
+	CpContext *cc = static_cast<CpContext *>(mfr->active3000Device->context[0]);
+	if (cc != nullptr)
 	{
 		cc->status |= StCp3446EoiInt;
 		dcc6681Interrupt((cc->status & cc->intmask) != 0, mfrId);
-		if (mfr->active3000Device->fcb[0] != NULL && cc->col != 0)
+		if (mfr->active3000Device->fcb[0] != nullptr && cc->col != 0)
 		{
 			cp3446FlushCard(mfr->active3000Device, cc);
 		}

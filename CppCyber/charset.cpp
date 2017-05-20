@@ -2,7 +2,7 @@
 **
 **  Copyright (c) 2003-2011, Tom Hunter
 **
-**  Name: console.c
+**  Name: console.cpp
 **
 **  Description:
 **      CDC 6600 character set conversions.

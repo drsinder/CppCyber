@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: mt362x.c
+**  Name: mt362x.cpp
 **
 **  Description:
 **      Perform emulation of CDC 607 7-track tape drives attached to a
@@ -204,12 +204,12 @@ static char *mt362xFunc2String(PpWord funcCode);
 **  Private Variables
 **  -----------------
 */
-static TapeParam *firstTape = NULL;
-static TapeParam *lastTape = NULL;
+static TapeParam *firstTape = nullptr;
+static TapeParam *lastTape = nullptr;
 static u8 rawBuffer[MaxByteBuf];
 
 #if DEBUG
-static FILE *mt362xLog = NULL;
+static FILE *mt362xLog = nullptr;
 
 #define OctalColumn(x) (5 * (x) + 1 + 5)
 #define AsciiColumn(x) (OctalColumn(5) + 2 + (2 * x))
@@ -312,12 +312,8 @@ void mt362xInit_9(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 static void mt362xInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName, u8 tracks)
 {
-	DevSlot *dp;
-	FILE *fcb;
-	TapeParam *tp;
-
 #if DEBUG
-	if (mt362xLog == NULL)
+	if (mt362xLog == nullptr)
 	{
 		mt362xLog = fopen("mt362xlog.txt", "wt");
 	}
@@ -326,7 +322,7 @@ static void mt362xInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceN
 	/*
 	** Attach 362x controller to converter (create if necessary).
 	*/
-	dp = dcc6681Attach(channelNo, eqNo, unitNo, DtMt362x, mfrID);
+	DevSlot *dp = dcc6681Attach(channelNo, eqNo, unitNo, DtMt362x, mfrID);
 	dp->activate = mt362xActivate;
 	dp->disconnect = mt362xDisconnect;
 	dp->func = mt362xFunc;
@@ -335,7 +331,7 @@ static void mt362xInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceN
 	/*
 	**  Check if unit has already been configured.
 	*/
-	if (unitNo >= MaxUnits2 || dp->context[unitNo] != NULL)
+	if (unitNo >= MaxUnits2 || dp->context[unitNo] != nullptr)
 	{
 		fprintf(stderr, "Invalid or duplicate MT372x unit number\n");
 		exit(1);
@@ -344,8 +340,8 @@ static void mt362xInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceN
 	/*
 	**  Setup tape unit parameter block.
 	*/
-	tp = (TapeParam*)calloc(1, sizeof(TapeParam));
-	if (tp == NULL)
+	TapeParam *tp = static_cast<TapeParam*>(calloc(1, sizeof(TapeParam)));
+	if (tp == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate MT362x tape unit context block\n");
 		exit(1);
@@ -357,7 +353,7 @@ static void mt362xInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceN
 	/*
 	**  Link into list of tape units.
 	*/
-	if (lastTape == NULL)
+	if (lastTape == nullptr)
 	{
 		firstTape = tp;
 	}
@@ -371,11 +367,11 @@ static void mt362xInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceN
 	/*
 	**  Open TAP container if file name was specified.
 	*/
-	if (deviceName != NULL)
+	if (deviceName != nullptr)
 	{
 		strncpy(tp->fileName, deviceName, _MAX_PATH);
-		fcb = fopen(deviceName, "rb");
-		if (fcb == NULL)
+		FILE *fcb = fopen(deviceName, "rb");
+		if (fcb == nullptr)
 		{
 			fprintf(stderr, "Failed to open %s\n", deviceName);
 			exit(1);
@@ -384,13 +380,13 @@ static void mt362xInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceN
 		dp->fcb[unitNo] = fcb;
 
 		tp->blockNo = 0;
-		tp->unitReady = TRUE;
+		tp->unitReady = true;
 		tp->status = St362xReady | St362xLoadPoint;
 	}
 	else
 	{
-		dp->fcb[unitNo] = NULL;
-		tp->unitReady = FALSE;
+		dp->fcb[unitNo] = nullptr;
+		tp->unitReady = false;
 		tp->status = 0;
 	}
 
@@ -404,7 +400,7 @@ static void mt362xInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceN
 	/*
 	**  All initially mounted tapes are read only.
 	*/
-	tp->ringIn = FALSE;
+	tp->ringIn = false;
 
 	/*
 	**  Print a friendly message.
@@ -424,20 +420,17 @@ static void mt362xInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceN
 void mt362xLoadTape(char *params)
 {
 	static char str[200];
-	DevSlot *dp;
-	int numParam;
 	int channelNo;
 	int equipmentNo;
 	int unitNo;
 	int mfrID;
-	TapeParam *tp;
 	FILE *fcb;
 	u8 unitMode;
 
 	/*
 	**  Operator inserted a new tape.
 	*/
-	numParam = sscanf(params, "%o,%o,%o,%o,%c,%s", &mfrID, &channelNo, &equipmentNo, &unitNo, &unitMode, str);
+	int numParam = sscanf(params, "%o,%o,%o,%o,%c,%s", &mfrID, &channelNo, &equipmentNo, &unitNo, &unitMode, str);
 
 	/*
 	**  Check parameters.
@@ -475,8 +468,8 @@ void mt362xLoadTape(char *params)
 	/*
 	**  Locate the device control block.
 	*/
-	dp = dcc6681FindDevice((u8)mfrID, (u8)channelNo, (u8)equipmentNo, DtMt362x);
-	if (dp == NULL)
+	DevSlot *dp = dcc6681FindDevice(static_cast<u8>(mfrID), static_cast<u8>(channelNo), static_cast<u8>(equipmentNo), DtMt362x);
+	if (dp == nullptr)
 	{
 		return;
 	}
@@ -484,8 +477,8 @@ void mt362xLoadTape(char *params)
 	/*
 	**  Check if the unit is even configured.
 	*/
-	tp = (TapeParam *)dp->context[unitNo];
-	if (tp == NULL)
+	TapeParam *tp = static_cast<TapeParam *>(dp->context[unitNo]);
+	if (tp == nullptr)
 	{
 		printf("Unit %d not allocated\n", unitNo);
 		return;
@@ -494,7 +487,7 @@ void mt362xLoadTape(char *params)
 	/*
 	**  Check if the unit has been unloaded.
 	*/
-	if (dp->fcb[unitNo] != NULL)
+	if (dp->fcb[unitNo] != nullptr)
 	{
 		printf("Unit %d not unloaded\n", unitNo);
 		return;
@@ -506,7 +499,7 @@ void mt362xLoadTape(char *params)
 	if (unitMode == 'w')
 	{
 		fcb = fopen(str, "r+b");
-		if (fcb == NULL)
+		if (fcb == nullptr)
 		{
 			fcb = fopen(str, "w+b");
 		}
@@ -521,7 +514,7 @@ void mt362xLoadTape(char *params)
 	/*
 	**  Check if the open succeeded.
 	*/
-	if (fcb == NULL)
+	if (fcb == nullptr)
 	{
 		printf("Failed to open %s\n", str);
 		return;
@@ -536,7 +529,7 @@ void mt362xLoadTape(char *params)
 	**  Setup status.
 	*/
 	mt362xInitStatus(tp);
-	tp->unitReady = TRUE;
+	tp->unitReady = true;
 	tp->ringIn = unitMode == 'w';
 
 	printf("Successfully loaded %s\n", str);
@@ -553,18 +546,15 @@ void mt362xLoadTape(char *params)
 **------------------------------------------------------------------------*/
 void mt362xUnloadTape(char *params)
 {
-	DevSlot *dp;
-	int numParam;
 	int channelNo;
 	int equipmentNo;
 	int unitNo;
 	int mfrID;
-	TapeParam *tp;
 
 	/*
 	**  Operator inserted a new tape.
 	*/
-	numParam = sscanf(params, "%o,%o,%o,%o", &mfrID, &channelNo, &equipmentNo, &unitNo);
+	int numParam = sscanf(params, "%o,%o,%o,%o", &mfrID, &channelNo, &equipmentNo, &unitNo);
 
 	/*
 	**  Check parameters.
@@ -590,8 +580,8 @@ void mt362xUnloadTape(char *params)
 	/*
 	**  Locate the device control block.
 	*/
-	dp = dcc6681FindDevice((u8)mfrID, (u8)channelNo, (u8)equipmentNo, DtMt362x);
-	if (dp == NULL)
+	DevSlot *dp = dcc6681FindDevice(static_cast<u8>(mfrID), static_cast<u8>(channelNo), static_cast<u8>(equipmentNo), DtMt362x);
+	if (dp == nullptr)
 	{
 		return;
 	}
@@ -599,8 +589,8 @@ void mt362xUnloadTape(char *params)
 	/*
 	**  Check if the unit is even configured.
 	*/
-	tp = (TapeParam *)dp->context[unitNo];
-	if (tp == NULL)
+	TapeParam *tp = static_cast<TapeParam *>(dp->context[unitNo]);
+	if (tp == nullptr)
 	{
 		printf("Unit %d not allocated\n", unitNo);
 		return;
@@ -609,7 +599,7 @@ void mt362xUnloadTape(char *params)
 	/*
 	**  Check if the unit has been unloaded.
 	*/
-	if (dp->fcb[unitNo] == NULL)
+	if (dp->fcb[unitNo] == nullptr)
 	{
 		printf("Unit %d not loaded\n", unitNo);
 		return;
@@ -619,7 +609,7 @@ void mt362xUnloadTape(char *params)
 	**  Close the file.
 	*/
 	fclose(dp->fcb[unitNo]);
-	dp->fcb[unitNo] = NULL;
+	dp->fcb[unitNo] = nullptr;
 
 	/*
 	**  Clear show_tape path name.
@@ -643,7 +633,7 @@ void mt362xUnloadTape(char *params)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void mt362xShowTapeStatus(void)
+void mt362xShowTapeStatus()
 {
 	TapeParam *tp = firstTape;
 
@@ -674,24 +664,24 @@ void mt362xShowTapeStatus(void)
 **------------------------------------------------------------------------*/
 static void mt362xInitStatus(TapeParam *tp)
 {
-	tp->bcdMode = FALSE;
-	tp->reverseRead = FALSE;
-	tp->writing = FALSE;
+	tp->bcdMode = false;
+	tp->reverseRead = false;
+	tp->writing = false;
 
-	tp->unitReady = FALSE;
-	tp->busy = FALSE;
-	tp->ringIn = FALSE;
-	tp->fileMark = FALSE;
+	tp->unitReady = false;
+	tp->busy = false;
+	tp->ringIn = false;
+	tp->fileMark = false;
 	tp->blockNo = 0;
-	tp->endOfTape = FALSE;
+	tp->endOfTape = false;
 	tp->density = 800;
-	tp->lostData = FALSE;
-	tp->endOfOperation = FALSE;
-	tp->parityError = FALSE;
-	tp->reserved = FALSE;
+	tp->lostData = false;
+	tp->endOfOperation = false;
+	tp->parityError = false;
+	tp->reserved = false;
 
-	tp->rewinding = FALSE;
-	tp->rewindStart = FALSE;
+	tp->rewinding = false;
+	tp->rewindStart = false;
 }
 
 /*--------------------------------------------------------------------------
@@ -705,13 +695,13 @@ static void mt362xInitStatus(TapeParam *tp)
 **------------------------------------------------------------------------*/
 static void mt362xResetStatus(TapeParam *tp)
 {
-	tp->busy = FALSE;
-	tp->fileMark = FALSE;
-	tp->endOfTape = FALSE;
-	tp->lostData = FALSE;
-	tp->endOfOperation = FALSE;
-	tp->parityError = FALSE;
-	tp->reserved = FALSE;
+	tp->busy = false;
+	tp->fileMark = false;
+	tp->endOfTape = false;
+	tp->lostData = false;
+	tp->endOfOperation = false;
+	tp->parityError = false;
+	tp->reserved = false;
 }
 
 /*--------------------------------------------------------------------------
@@ -732,14 +722,14 @@ static void mt362xSetupStatus(TapeParam *tp, u8 mfrId)
 	{
 		if (labs(mfr->active3000Device->mfr->cycles - tp->rewindStart) > 1000)
 		{
-			tp->rewinding = FALSE;
+			tp->rewinding = false;
 			tp->blockNo = 0;
-			tp->endOfOperation = TRUE;
+			tp->endOfOperation = true;
 			tp->intStatus |= Int362xEndOfOp;
 		}
 		else
 		{
-			tp->busy = TRUE;
+			tp->busy = true;
 		}
 	}
 	else
@@ -750,7 +740,7 @@ static void mt362xSetupStatus(TapeParam *tp, u8 mfrId)
 			{
 				if (ftell(mfr->active3000Device->fcb[mfr->active3000Device->selectedUnit]) > MaxTapeSize)
 				{
-					tp->endOfTape = TRUE;
+					tp->endOfTape = true;
 				}
 			}
 		}
@@ -834,24 +824,22 @@ static void mt362xSetupStatus(TapeParam *tp, u8 mfrId)
 **------------------------------------------------------------------------*/
 static FcStatus mt362xFunc(PpWord funcCode, u8 mfrId)
 {
-	u32 recLen1;
-	i8 unitNo;
 	TapeParam *tp;
 	FcStatus st;
 
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	unitNo = mfr->active3000Device->selectedUnit;
+	i8 unitNo = mfr->active3000Device->selectedUnit;
 	if (unitNo != -1 && unitNo < MaxUnits2)
 	{
-		tp = (TapeParam *)mfr->active3000Device->context[unitNo];
+		tp = static_cast<TapeParam *>(mfr->active3000Device->context[unitNo]);
 	}
 	else
 	{
-		tp = NULL;
+		tp = nullptr;
 	}
 
-	if (tp == NULL)
+	if (tp == nullptr)
 	{
 		return(FcDeclined);
 	}
@@ -876,12 +864,12 @@ static FcStatus mt362xFunc(PpWord funcCode, u8 mfrId)
 		break;
 
 	case Fc362xSelectBinary:
-		tp->bcdMode = FALSE;
+		tp->bcdMode = false;
 		st = FcProcessed;
 		break;
 
 	case Fc362xSelectCoded:
-		tp->bcdMode = TRUE;
+		tp->bcdMode = true;
 		st = FcProcessed;
 		break;
 
@@ -914,12 +902,12 @@ static FcStatus mt362xFunc(PpWord funcCode, u8 mfrId)
 			{
 				if (!tp->rewinding)
 				{
-					tp->rewinding = TRUE;
+					tp->rewinding = true;
 					tp->rewindStart = mfr->active3000Device->mfr->cycles;
 				}
 			}
 
-			tp->busy = TRUE;
+			tp->busy = true;
 		}
 
 		st = FcProcessed;
@@ -930,11 +918,11 @@ static FcStatus mt362xFunc(PpWord funcCode, u8 mfrId)
 		{
 			mt362xResetStatus(tp);
 			tp->blockNo = 0;
-			tp->unitReady = FALSE;
-			tp->ringIn = FALSE;
+			tp->unitReady = false;
+			tp->ringIn = false;
 			fclose(mfr->active3000Device->fcb[unitNo]);
-			mfr->active3000Device->fcb[unitNo] = NULL;
-			tp->endOfOperation = TRUE;
+			mfr->active3000Device->fcb[unitNo] = nullptr;
+			tp->endOfOperation = true;
 			tp->intStatus |= Int362xEndOfOp;
 		}
 
@@ -949,7 +937,7 @@ static FcStatus mt362xFunc(PpWord funcCode, u8 mfrId)
 			else
 				mt362xFuncBackspace(mfrId);
 
-			tp->endOfOperation = TRUE;
+			tp->endOfOperation = true;
 			tp->intStatus |= Int362xEndOfOp;
 		}
 
@@ -965,7 +953,7 @@ static FcStatus mt362xFunc(PpWord funcCode, u8 mfrId)
 				mt362xFuncForespace(mfrId);
 			} while (!tp->fileMark && !tp->endOfTape && !tp->parityError);
 
-			tp->endOfOperation = TRUE;
+			tp->endOfOperation = true;
 			tp->intStatus |= Int362xEndOfOp;
 		}
 
@@ -986,7 +974,7 @@ static FcStatus mt362xFunc(PpWord funcCode, u8 mfrId)
 				mt362xUnload(tp, mfrId);
 			}
 
-			tp->endOfOperation = TRUE;
+			tp->endOfOperation = true;
 			tp->intStatus |= Int362xEndOfOp;
 		}
 
@@ -1007,16 +995,16 @@ static FcStatus mt362xFunc(PpWord funcCode, u8 mfrId)
 			/*
 			**  Write a TAP tape mark.
 			*/
-			recLen1 = 0;
+			u32 recLen1 = 0;
 			fwrite(&recLen1, sizeof(recLen1), 1, mfr->active3000Device->fcb[unitNo]);
-			tp->fileMark = TRUE;
+			tp->fileMark = true;
 
 			/*
 			**  The following fseek prepares for any subsequent fread.
 			*/
 			fseek(mfr->active3000Device->fcb[unitNo], 0, SEEK_CUR);
 
-			tp->endOfOperation = TRUE;
+			tp->endOfOperation = true;
 			tp->intStatus |= Int362xEndOfOp;
 		}
 
@@ -1027,7 +1015,7 @@ static FcStatus mt362xFunc(PpWord funcCode, u8 mfrId)
 		if (tp->unitReady && tp->ringIn)
 		{
 			mt362xResetStatus(tp);
-			tp->endOfOperation = TRUE;
+			tp->endOfOperation = true;
 			tp->intStatus |= Int362xEndOfOp;
 		}
 
@@ -1071,17 +1059,17 @@ static FcStatus mt362xFunc(PpWord funcCode, u8 mfrId)
 		break;
 
 	case Fc362xClearReverseRead:
-		tp->reverseRead = FALSE;
+		tp->reverseRead = false;
 		st = FcProcessed;
 		break;
 
 	case Fc362xSetReverseRead:
-		tp->reverseRead = TRUE;
+		tp->reverseRead = true;
 		st = FcProcessed;
 		break;
 
 	case Fc6681DevStatusReq:
-		tp->busy = TRUE;
+		tp->busy = true;
 		st = FcAccepted;
 		break;
 
@@ -1099,7 +1087,7 @@ static FcStatus mt362xFunc(PpWord funcCode, u8 mfrId)
 				mt362xFuncRead(mfrId);
 			}
 
-			tp->busy = TRUE;
+			tp->busy = true;
 			st = FcAccepted;
 		}
 		else
@@ -1113,9 +1101,9 @@ static FcStatus mt362xFunc(PpWord funcCode, u8 mfrId)
 			mt362xResetStatus(tp);
 			tp->bp = tp->ioBuffer;
 			mfr->active3000Device->recordLength = 0;
-			tp->writing = TRUE;
+			tp->writing = true;
 			tp->blockNo += 1;
-			tp->busy = TRUE;
+			tp->busy = true;
 			st = FcAccepted;
 		}
 		else
@@ -1124,13 +1112,13 @@ static FcStatus mt362xFunc(PpWord funcCode, u8 mfrId)
 
 	case Fc6681MasterClear:
 		mfr->active3000Device->selectedUnit = -1;
-		tp->bcdMode = FALSE;
+		tp->bcdMode = false;
 		tp->intMask = 0;
 		tp->intStatus = 0;
 		for (unitNo = 0; unitNo < 16; unitNo++)
 		{
-			tp = (TapeParam *)mfr->active3000Device->context[unitNo];
-			if (tp != NULL)
+			tp = static_cast<TapeParam *>(mfr->active3000Device->context[unitNo]);
+			if (tp != nullptr)
 			{
 				mt362xResetStatus(tp);
 			}
@@ -1172,7 +1160,6 @@ static FcStatus mt362xFunc(PpWord funcCode, u8 mfrId)
 **------------------------------------------------------------------------*/
 static void mt362xIo(u8 mfrId)
 {
-	i8 unitNo;
 	TapeParam *tp;
 
 	MMainFrame *mfr = BigIron->chasis[mfrId];
@@ -1192,17 +1179,17 @@ static void mt362xIo(u8 mfrId)
 	/*
 	**  Setup selected unit context.
 	*/
-	unitNo = mfr->active3000Device->selectedUnit;
+	i8 unitNo = mfr->active3000Device->selectedUnit;
 	if (unitNo != -1 && unitNo < MaxUnits2)
 	{
-		tp = (TapeParam *)mfr->active3000Device->context[unitNo];
+		tp = static_cast<TapeParam *>(mfr->active3000Device->context[unitNo]);
 	}
 	else
 	{
-		tp = NULL;
+		tp = nullptr;
 	}
 
-	if (tp == NULL)
+	if (tp == nullptr)
 	{
 		return;
 	}
@@ -1214,8 +1201,8 @@ static void mt362xIo(u8 mfrId)
 		{
 			tp->status &= St362xClearBusy;
 			mfr->activeChannel->data = tp->status;
-			mfr->activeChannel->full = TRUE;
-			tp->endOfOperation = TRUE;
+			mfr->activeChannel->full = true;
+			tp->endOfOperation = true;
 			tp->intStatus |= Int362xEndOfOp;
 #if DEBUG
 			fprintf(mt362xLog, " %04o", activeChannel->data);
@@ -1232,8 +1219,8 @@ static void mt362xIo(u8 mfrId)
 
 		if (tp->recordLength == 0)
 		{
-			mfr->activeChannel->active = FALSE;
-			tp->busy = FALSE;
+			mfr->activeChannel->active = false;
+			tp->busy = false;
 			tp->intStatus |= Int362xEndOfOp;
 			break;
 		}
@@ -1253,7 +1240,7 @@ static void mt362xIo(u8 mfrId)
 			mt362xLogByte(activeChannel->data);
 #endif
 
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 			tp->recordLength -= 1;
 			if (tp->recordLength == 0)
 			{
@@ -1261,8 +1248,8 @@ static void mt362xIo(u8 mfrId)
 				**  Last word deactivates function.
 				*/
 				mfr->activeDevice->fcode = 0;
-				mfr->activeChannel->discAfterInput = TRUE;
-				tp->busy = FALSE;
+				mfr->activeChannel->discAfterInput = true;
+				tp->busy = false;
 				tp->intStatus |= Int362xEndOfOp;
 			}
 		}
@@ -1273,7 +1260,7 @@ static void mt362xIo(u8 mfrId)
 		if (mfr->activeChannel->full && mfr->active3000Device->recordLength < MaxPpBuf)
 		{
 			*tp->bp++ = mfr->activeChannel->data;
-			mfr->activeChannel->full = FALSE;
+			mfr->activeChannel->full = false;
 			mfr->active3000Device->recordLength += 1;
 #if DEBUG
 			mt362xLogByte(activeChannel->data);
@@ -1319,56 +1306,51 @@ static void mt362xActivate(u8 mfrId)
 **------------------------------------------------------------------------*/
 static void mt362xDisconnect(u8 mfrId)
 {
-	FILE *fcb;
 	TapeParam *tp;
-	i8 unitNo;
 	u32 i;
 	u64 recLen1;
-	u64 recLen2;
-	PpWord *ip;
-	u8 *rp;
 
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	unitNo = mfr->active3000Device->selectedUnit;
+	i8 unitNo = mfr->active3000Device->selectedUnit;
 	if (unitNo != -1 && unitNo < MaxUnits2)
 	{
-		tp = (TapeParam *)mfr->active3000Device->context[unitNo];
+		tp = static_cast<TapeParam *>(mfr->active3000Device->context[unitNo]);
 	}
 	else
 	{
-		tp = NULL;
+		tp = nullptr;
 	}
 
 	/*
 	**  Abort pending device disconnects - the PP is doing the disconnect.
 	*/
 	mfr->activeChannel->delayDisconnect = 0;
-	mfr->activeChannel->discAfterInput = FALSE;
+	mfr->activeChannel->discAfterInput = false;
 
 	/*
 	**  Nothing more to do unless we are writing.
 	*/
-	if (tp != NULL && tp->writing)
+	if (tp != nullptr && tp->writing)
 	{
 		/*
 		**  Flush written TAP record to disk.
 		*/
 		unitNo = mfr->active3000Device->selectedUnit;
-		tp = (TapeParam *)mfr->active3000Device->context[unitNo];
+		tp = static_cast<TapeParam *>(mfr->active3000Device->context[unitNo]);
 
 		if (unitNo == -1 || !tp->unitReady)
 		{
 			return;
 		}
 
-		fcb = mfr->active3000Device->fcb[unitNo];
+		FILE *fcb = mfr->active3000Device->fcb[unitNo];
 		tp->bp = tp->ioBuffer;
 		// ReSharper disable once CppInitializedValueIsAlwaysRewritten
 		u64 recLen0 = 0;
-		recLen2 = mfr->active3000Device->recordLength;
-		ip = tp->ioBuffer;
-		rp = rawBuffer;
+		u64 recLen2 = mfr->active3000Device->recordLength;
+		PpWord *ip = tp->ioBuffer;
+		u8 *rp = rawBuffer;
 
 		if (tp->tracks == 9)
 		{
@@ -1448,7 +1430,7 @@ static void mt362xDisconnect(u8 mfrId)
 		*/
 		if (BigIron->bigEndian)
 		{
-			recLen1 = MSystem::ConvertEndian((u32)recLen0);
+			recLen1 = MSystem::ConvertEndian(static_cast<u32>(recLen0));
 		}
 		else
 		{
@@ -1475,11 +1457,11 @@ static void mt362xDisconnect(u8 mfrId)
 		/*
 		**  Writing completed.
 		*/
-		tp->writing = FALSE;
+		tp->writing = false;
 	}
 
-	tp->busy = FALSE;
-	tp->endOfOperation = TRUE;
+	tp->busy = false;
+	tp->endOfOperation = true;
 	tp->intStatus |= Int362xEndOfOp;
 
 	mt362xSetupStatus(tp, mfrId);
@@ -1498,17 +1480,14 @@ static void mt362xDisconnect(u8 mfrId)
 **------------------------------------------------------------------------*/
 static void mt362xFuncRead(u8 mfrId)
 {
-	u32 len;
 	u32 recLen0;
 	u32 recLen1;
 	u32 recLen2;
-	i8 unitNo;
-	TapeParam *tp;
 
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	unitNo = mfr->active3000Device->selectedUnit;
-	tp = (TapeParam *)mfr->active3000Device->context[unitNo];
+	i8 unitNo = mfr->active3000Device->selectedUnit;
+	TapeParam *tp = static_cast<TapeParam *>(mfr->active3000Device->context[unitNo]);
 
 	mfr->active3000Device->recordLength = 0;
 	tp->recordLength = 0;
@@ -1523,13 +1502,13 @@ static void mt362xFuncRead(u8 mfrId)
 	/*
 	**  Read and verify TAP record length header.
 	*/
-	len = (u32)fread(&recLen0, sizeof(recLen0), 1, mfr->active3000Device->fcb[unitNo]);
+	u32 len = static_cast<u32>(fread(&recLen0, sizeof(recLen0), 1, mfr->active3000Device->fcb[unitNo]));
 
 	if (len != 1)
 	{
 		tp->intStatus |= Int362xEndOfOp;
-		tp->endOfOperation = TRUE;
-		tp->fileMark = TRUE;
+		tp->endOfOperation = true;
+		tp->fileMark = true;
 
 #if DEBUG
 		fprintf(mt362xLog, "TAP is at EOF (simulate tape mark)\n");
@@ -1557,8 +1536,8 @@ static void mt362xFuncRead(u8 mfrId)
 	{
 		logError(LogErrorLocation, "channel %02o - tape record too long: %d", mfr->activeChannel->id, recLen1);
 		tp->intStatus |= Int362xError | Int362xEndOfOp;
-		tp->parityError = TRUE;
-		tp->endOfOperation = TRUE;
+		tp->parityError = true;
+		tp->endOfOperation = true;
 		return;
 	}
 
@@ -1568,8 +1547,8 @@ static void mt362xFuncRead(u8 mfrId)
 		**  Report a tape mark and return.
 		*/
 		tp->intStatus |= Int362xEndOfOp;
-		tp->fileMark = TRUE;
-		tp->endOfOperation = TRUE;
+		tp->fileMark = true;
+		tp->endOfOperation = true;
 		tp->blockNo += 1;
 
 #if DEBUG
@@ -1581,28 +1560,28 @@ static void mt362xFuncRead(u8 mfrId)
 	/*
 	**  Read and verify the actual raw data.
 	*/
-	len = (u32)fread(rawBuffer, 1, recLen1, mfr->active3000Device->fcb[unitNo]);
+	len = static_cast<u32>(fread(rawBuffer, 1, recLen1, mfr->active3000Device->fcb[unitNo]));
 
-	if (recLen1 != (u32)len)
+	if (recLen1 != static_cast<u32>(len))
 	{
 		logError(LogErrorLocation, "channel %02o - short tape record read: %d", mfr->activeChannel->id, len);
 		tp->intStatus |= Int362xError | Int362xEndOfOp;
-		tp->parityError = TRUE;
-		tp->endOfOperation = TRUE;
+		tp->parityError = true;
+		tp->endOfOperation = true;
 		return;
 	}
 
 	/*
 	**  Read and verify the TAP record length trailer.
 	*/
-	len = (u32)fread(&recLen2, sizeof(recLen2), 1, mfr->active3000Device->fcb[unitNo]);
+	len = static_cast<u32>(fread(&recLen2, sizeof(recLen2), 1, mfr->active3000Device->fcb[unitNo]));
 
 	if (len != 1)
 	{
 		logError(LogErrorLocation, "channel %02o - missing tape record trailer", mfr->activeChannel->id);
 		tp->intStatus |= Int362xError | Int362xEndOfOp;
-		tp->parityError = TRUE;
-		tp->endOfOperation = TRUE;
+		tp->parityError = true;
+		tp->endOfOperation = true;
 		return;
 	}
 
@@ -1629,8 +1608,8 @@ static void mt362xFuncRead(u8 mfrId)
 		{
 			logError(LogErrorLocation, "channel %02o - invalid tape record trailer: %d", mfr->activeChannel->id, recLen2);
 			tp->intStatus |= Int362xError | Int362xEndOfOp;
-			tp->parityError = TRUE;
-			tp->endOfOperation = TRUE;
+			tp->parityError = true;
+			tp->endOfOperation = true;
 			return;
 		}
 	}
@@ -1662,18 +1641,14 @@ static void mt362xFuncRead(u8 mfrId)
 **------------------------------------------------------------------------*/
 static void mt362xFuncReadBkw(u8 mfrId)
 {
-	u32 len;
 	u32 recLen0;
 	u32 recLen1;
 	u32 recLen2;
-	i8 unitNo;
-	TapeParam *tp;
-	i32 position;
 
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	unitNo = mfr->active3000Device->selectedUnit;
-	tp = (TapeParam *)mfr->active3000Device->context[unitNo];
+	i8 unitNo = mfr->active3000Device->selectedUnit;
+	TapeParam *tp = static_cast<TapeParam *>(mfr->active3000Device->context[unitNo]);
 
 	mfr->active3000Device->recordLength = 0;
 	tp->recordLength = 0;
@@ -1681,12 +1656,12 @@ static void mt362xFuncReadBkw(u8 mfrId)
 	/*
 	**  Check if we are already at the beginning of the tape.
 	*/
-	position = ftell(mfr->active3000Device->fcb[unitNo]);
+	i32 position = ftell(mfr->active3000Device->fcb[unitNo]);
 	if (position == 0)
 	{
 		tp->blockNo = 0;
 		tp->intStatus |= Int362xEndOfOp;
-		tp->endOfOperation = TRUE;
+		tp->endOfOperation = true;
 		return;
 	}
 
@@ -1696,15 +1671,15 @@ static void mt362xFuncReadBkw(u8 mfrId)
 	**  record trailer).
 	*/
 	fseek(mfr->active3000Device->fcb[unitNo], -4, SEEK_CUR);
-	len = (u32)fread(&recLen0, sizeof(recLen0), 1, mfr->active3000Device->fcb[unitNo]);
+	u32 len = static_cast<u32>(fread(&recLen0, sizeof(recLen0), 1, mfr->active3000Device->fcb[unitNo]));
 	fseek(mfr->active3000Device->fcb[unitNo], -4, SEEK_CUR);
 
 	if (len != 1)
 	{
 		logError(LogErrorLocation, "channel %02o - missing tape record trailer", mfr->activeChannel->id);
 		tp->intStatus |= Int362xError | Int362xEndOfOp;
-		tp->parityError = TRUE;
-		tp->endOfOperation = TRUE;
+		tp->parityError = true;
+		tp->endOfOperation = true;
 		return;
 	}
 
@@ -1727,8 +1702,8 @@ static void mt362xFuncReadBkw(u8 mfrId)
 	{
 		logError(LogErrorLocation, "channel %02o - tape record too long: %d", mfr->activeChannel->id, recLen1);
 		tp->intStatus |= Int362xError | Int362xEndOfOp;
-		tp->parityError = TRUE;
-		tp->endOfOperation = TRUE;
+		tp->parityError = true;
+		tp->endOfOperation = true;
 		return;
 	}
 
@@ -1744,14 +1719,14 @@ static void mt362xFuncReadBkw(u8 mfrId)
 		/*
 		**  Read and verify the TAP record header.
 		*/
-		len = (u32)fread(&recLen2, sizeof(recLen2), 1, mfr->active3000Device->fcb[unitNo]);
+		len = static_cast<u32>(fread(&recLen2, sizeof(recLen2), 1, mfr->active3000Device->fcb[unitNo]));
 
 		if (len != 1)
 		{
 			logError(LogErrorLocation, "channel %02o - missing TAP record header", mfr->activeChannel->id);
 			tp->intStatus |= Int362xError | Int362xEndOfOp;
-			tp->parityError = TRUE;
-			tp->endOfOperation = TRUE;
+			tp->parityError = true;
+			tp->endOfOperation = true;
 			return;
 		}
 
@@ -1762,14 +1737,14 @@ static void mt362xFuncReadBkw(u8 mfrId)
 			*/
 			position -= 1;
 			fseek(mfr->active3000Device->fcb[unitNo], position, SEEK_SET);
-			len = (u32)fread(&recLen2, sizeof(recLen2), 1, mfr->active3000Device->fcb[unitNo]);
+			len = static_cast<u32>(fread(&recLen2, sizeof(recLen2), 1, mfr->active3000Device->fcb[unitNo]));
 
 			if (len != 1 || recLen0 != recLen2)
 			{
 				logError(LogErrorLocation, "channel %02o - invalid record length2: %d %08X != %08X", mfr->activeChannel->id, len, recLen0, recLen2);
 				tp->intStatus |= Int362xError | Int362xEndOfOp;
-				tp->parityError = TRUE;
-				tp->endOfOperation = TRUE;
+				tp->parityError = true;
+				tp->endOfOperation = true;
 				return;
 			}
 		}
@@ -1777,14 +1752,14 @@ static void mt362xFuncReadBkw(u8 mfrId)
 		/*
 		**  Read and verify the actual raw data.
 		*/
-		len = (u32)fread(rawBuffer, 1, recLen1, mfr->active3000Device->fcb[unitNo]);
+		len = static_cast<u32>(fread(rawBuffer, 1, recLen1, mfr->active3000Device->fcb[unitNo]));
 
-		if (recLen1 != (u32)len)
+		if (recLen1 != static_cast<u32>(len))
 		{
 			logError(LogErrorLocation, "channel %02o - short tape record read: %d", mfr->activeChannel->id, len);
 			tp->intStatus |= Int362xError | Int362xEndOfOp;
-			tp->parityError = TRUE;
-			tp->endOfOperation = TRUE;
+			tp->parityError = true;
+			tp->endOfOperation = true;
 			return;
 		}
 
@@ -1814,8 +1789,8 @@ static void mt362xFuncReadBkw(u8 mfrId)
 		**  A tape mark consists of only a single TAP record header of zero.
 		*/
 		tp->intStatus |= Int362xEndOfOp;
-		tp->fileMark = TRUE;
-		tp->endOfOperation = TRUE;
+		tp->fileMark = true;
+		tp->endOfOperation = true;
 
 #if DEBUG
 		fprintf(mt362xLog, "Tape mark\n");
@@ -1845,17 +1820,14 @@ static void mt362xFuncReadBkw(u8 mfrId)
 **------------------------------------------------------------------------*/
 static void mt362xFuncForespace(u8 mfrId)
 {
-	u32 len;
 	u32 recLen0;
 	u32 recLen1;
 	u32 recLen2;
-	i8 unitNo;
-	TapeParam *tp;
 
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	unitNo = mfr->active3000Device->selectedUnit;
-	tp = (TapeParam *)mfr->active3000Device->context[unitNo];
+	i8 unitNo = mfr->active3000Device->selectedUnit;
+	TapeParam *tp = static_cast<TapeParam *>(mfr->active3000Device->context[unitNo]);
 
 	/*
 	**  Determine if the tape is at the load point.
@@ -1866,13 +1838,13 @@ static void mt362xFuncForespace(u8 mfrId)
 	/*
 	**  Read and verify TAP record length header.
 	*/
-	len = (u32)fread(&recLen0, sizeof(recLen0), 1, mfr->active3000Device->fcb[unitNo]);
+	u32 len = static_cast<u32>(fread(&recLen0, sizeof(recLen0), 1, mfr->active3000Device->fcb[unitNo]));
 
 	if (len != 1)
 	{
 		tp->intStatus |= Int362xEndOfOp;
-		tp->endOfOperation = TRUE;
-		tp->fileMark = TRUE;
+		tp->endOfOperation = true;
+		tp->fileMark = true;
 #if DEBUG
 		fprintf(mt362xLog, "TAP is at EOF (simulate tape mark)\n");
 #endif
@@ -1897,8 +1869,8 @@ static void mt362xFuncForespace(u8 mfrId)
 	if (recLen1 > MaxByteBuf)
 	{
 		logError(LogErrorLocation, "channel %02o - tape record too long: %d", mfr->activeChannel->id, recLen1);
-		tp->parityError = TRUE;
-		tp->endOfOperation = TRUE;
+		tp->parityError = true;
+		tp->endOfOperation = true;
 		return;
 	}
 
@@ -1907,10 +1879,10 @@ static void mt362xFuncForespace(u8 mfrId)
 		/*
 		**  Report a tape mark and return.
 		*/
-		tp->fileMark = TRUE;
+		tp->fileMark = true;
 		tp->blockNo += 1;
 		tp->intStatus |= Int362xEndOfOp;
-		tp->endOfOperation = TRUE;
+		tp->endOfOperation = true;
 
 #if DEBUG
 		fprintf(mt362xLog, "Tape mark\n");
@@ -1925,22 +1897,22 @@ static void mt362xFuncForespace(u8 mfrId)
 	{
 		logError(LogErrorLocation, "channel %02o - short tape record read: %d", mfr->activeChannel->id, len);
 		tp->intStatus |= Int362xError | Int362xEndOfOp;
-		tp->parityError = TRUE;
-		tp->endOfOperation = TRUE;
+		tp->parityError = true;
+		tp->endOfOperation = true;
 		return;
 	}
 
 	/*
 	**  Read and verify the TAP record length trailer.
 	*/
-	len = (u32)fread(&recLen2, sizeof(recLen2), 1, mfr->active3000Device->fcb[unitNo]);
+	len = static_cast<u32>(fread(&recLen2, sizeof(recLen2), 1, mfr->active3000Device->fcb[unitNo]));
 
 	if (len != 1)
 	{
 		logError(LogErrorLocation, "channel %02o - missing tape record trailer", mfr->activeChannel->id);
 		tp->intStatus |= Int362xError | Int362xEndOfOp;
-		tp->parityError = TRUE;
-		tp->endOfOperation = TRUE;
+		tp->parityError = true;
+		tp->endOfOperation = true;
 		return;
 	}
 
@@ -1967,8 +1939,8 @@ static void mt362xFuncForespace(u8 mfrId)
 		{
 			logError(LogErrorLocation, "channel %02o - invalid tape record trailer: %d", mfr->activeChannel->id, recLen2);
 			tp->intStatus |= Int362xError | Int362xEndOfOp;
-			tp->parityError = TRUE;
-			tp->endOfOperation = TRUE;
+			tp->parityError = true;
+			tp->endOfOperation = true;
 			return;
 		}
 	}
@@ -1986,27 +1958,23 @@ static void mt362xFuncForespace(u8 mfrId)
 **------------------------------------------------------------------------*/
 static void mt362xFuncBackspace(u8 mfrId)
 {
-	u32 len;
 	u32 recLen0;
 	u32 recLen1;
 	u32 recLen2;
-	i8 unitNo;
-	TapeParam *tp;
-	i32 position;
 
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	unitNo = mfr->active3000Device->selectedUnit;
-	tp = (TapeParam *)mfr->active3000Device->context[unitNo];
+	i8 unitNo = mfr->active3000Device->selectedUnit;
+	TapeParam *tp = static_cast<TapeParam *>(mfr->active3000Device->context[unitNo]);
 
 	/*
 	**  Check if we are already at the beginning of the tape.
 	*/
-	position = ftell(mfr->active3000Device->fcb[unitNo]);
+	i32 position = ftell(mfr->active3000Device->fcb[unitNo]);
 	if (position == 0)
 	{
 		tp->intStatus |= Int362xEndOfOp;
-		tp->endOfOperation = TRUE;
+		tp->endOfOperation = true;
 		tp->blockNo = 0;
 		return;
 	}
@@ -2017,15 +1985,15 @@ static void mt362xFuncBackspace(u8 mfrId)
 	**  record trailer).
 	*/
 	fseek(mfr->active3000Device->fcb[unitNo], -4, SEEK_CUR);
-	len = (u32)fread(&recLen0, sizeof(recLen0), 1, mfr->active3000Device->fcb[unitNo]);
+	u32 len = static_cast<u32>(fread(&recLen0, sizeof(recLen0), 1, mfr->active3000Device->fcb[unitNo]));
 	fseek(mfr->active3000Device->fcb[unitNo], -4, SEEK_CUR);
 
 	if (len != 1)
 	{
 		logError(LogErrorLocation, "channel %02o - missing tape record trailer", mfr->activeChannel->id);
 		tp->intStatus |= Int362xError | Int362xEndOfOp;
-		tp->parityError = TRUE;
-		tp->endOfOperation = TRUE;
+		tp->parityError = true;
+		tp->endOfOperation = true;
 		return;
 	}
 
@@ -2048,8 +2016,8 @@ static void mt362xFuncBackspace(u8 mfrId)
 	{
 		logError(LogErrorLocation, "channel %02o - tape record too long: %d", mfr->activeChannel->id, recLen1);
 		tp->intStatus |= Int362xError | Int362xEndOfOp;
-		tp->parityError = TRUE;
-		tp->endOfOperation = TRUE;
+		tp->parityError = true;
+		tp->endOfOperation = true;
 		return;
 	}
 
@@ -2065,14 +2033,14 @@ static void mt362xFuncBackspace(u8 mfrId)
 		/*
 		**  Read and verify the TAP record header.
 		*/
-		len = (u32)fread(&recLen2, sizeof(recLen2), 1, mfr->active3000Device->fcb[unitNo]);
+		len = static_cast<u32>(fread(&recLen2, sizeof(recLen2), 1, mfr->active3000Device->fcb[unitNo]));
 
 		if (len != 1)
 		{
 			logError(LogErrorLocation, "channel %02o - missing TAP record header", mfr->activeChannel->id);
 			tp->intStatus |= Int362xError | Int362xEndOfOp;
-			tp->parityError = TRUE;
-			tp->endOfOperation = TRUE;
+			tp->parityError = true;
+			tp->endOfOperation = true;
 			return;
 		}
 
@@ -2083,14 +2051,14 @@ static void mt362xFuncBackspace(u8 mfrId)
 			*/
 			position -= 1;
 			fseek(mfr->active3000Device->fcb[unitNo], position, SEEK_SET);
-			len = (u32)fread(&recLen2, sizeof(recLen2), 1, mfr->active3000Device->fcb[unitNo]);
+			len = static_cast<u32>(fread(&recLen2, sizeof(recLen2), 1, mfr->active3000Device->fcb[unitNo]));
 
 			if (len != 1 || recLen0 != recLen2)
 			{
 				logError(LogErrorLocation, "channel %02o - invalid record length2: %d %08X != %08X", mfr->activeChannel->id, len, recLen0, recLen2);
 				tp->intStatus |= Int362xError | Int362xEndOfOp;
-				tp->parityError = TRUE;
-				tp->endOfOperation = TRUE;
+				tp->parityError = true;
+				tp->endOfOperation = true;
 				return;
 			}
 		}
@@ -2105,9 +2073,9 @@ static void mt362xFuncBackspace(u8 mfrId)
 		/*
 		**  A tape mark consists of only a single TAP record header of zero.
 		*/
-		tp->fileMark = TRUE;
+		tp->fileMark = true;
 		tp->intStatus |= Int362xEndOfOp;
-		tp->endOfOperation = TRUE;
+		tp->endOfOperation = true;
 
 #if DEBUG
 		fprintf(mt362xLog, "Tape mark\n");
@@ -2140,17 +2108,14 @@ static void mt362xPackAndConvert(u32 recLen, u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 	i8 unitNo = mfr->active3000Device->selectedUnit;
-	TapeParam *tp = (TapeParam*)mfr->active3000Device->context[unitNo];
+	TapeParam *tp = static_cast<TapeParam*>(mfr->active3000Device->context[unitNo]);
 	u32 i;
-	u16 c1, c2, c3;
-	u16 *op;
-	u8 *rp;
 
 	/*
 	**  Convert the raw data into PP words suitable for a channel.
 	*/
-	op = tp->ioBuffer;
-	rp = rawBuffer;
+	u16 *op = tp->ioBuffer;
+	u8 *rp = rawBuffer;
 
 	if (tp->bcdMode)
 	{
@@ -2161,11 +2126,11 @@ static void mt362xPackAndConvert(u32 recLen, u8 mfrId)
 
 		for (i = 0; i < recLen; i += 2)
 		{
-			*op++ = ((PpWord)asciiToBcd[rp[0]] << 6) | ((PpWord)asciiToBcd[rp[1]] << 0);
+			*op++ = (static_cast<PpWord>(asciiToBcd[rp[0]]) << 6) | (static_cast<PpWord>(asciiToBcd[rp[1]]) << 0);
 			rp += 2;
 		}
 
-		mfr->active3000Device->recordLength = (PpWord)(op - tp->ioBuffer);
+		mfr->active3000Device->recordLength = static_cast<PpWord>(op - tp->ioBuffer);
 	}
 	else
 	{
@@ -2181,9 +2146,9 @@ static void mt362xPackAndConvert(u32 recLen, u8 mfrId)
 			*/
 			for (i = 0; i < recLen; i += 3)
 			{
-				c1 = *rp++;
-				c2 = *rp++;
-				c3 = *rp++;
+				u16 c1 = *rp++;
+				u16 c2 = *rp++;
+				u16 c3 = *rp++;
 
 				*op++ = ((c1 << 4) | (c2 >> 4)) & Mask12;
 				*op++ = ((c2 << 8) | (c3 >> 0)) & Mask12;
@@ -2193,7 +2158,7 @@ static void mt362xPackAndConvert(u32 recLen, u8 mfrId)
 			**  Now calculate the number of PP words.
 			*/
 			recLen *= 8;
-			mfr->active3000Device->recordLength = (PpWord)(recLen / 12);
+			mfr->active3000Device->recordLength = static_cast<PpWord>(recLen / 12);
 			if (recLen % 12 != 0)
 			{
 				mfr->active3000Device->recordLength += 1;
@@ -2208,11 +2173,11 @@ static void mt362xPackAndConvert(u32 recLen, u8 mfrId)
 
 			for (i = 0; i < recLen; i += 2)
 			{
-				*op++ = ((PpWord)(rp[0] & Mask6) << 6) | ((PpWord)(rp[1] & Mask6) << 0);
+				*op++ = (static_cast<PpWord>(rp[0] & Mask6) << 6) | (static_cast<PpWord>(rp[1] & Mask6) << 0);
 				rp += 2;
 			}
 
-			mfr->active3000Device->recordLength = (PpWord)(op - tp->ioBuffer);
+			mfr->active3000Device->recordLength = static_cast<PpWord>(op - tp->ioBuffer);
 		}
 	}
 }
@@ -2228,18 +2193,16 @@ static void mt362xPackAndConvert(u32 recLen, u8 mfrId)
 **------------------------------------------------------------------------*/
 static void mt362xUnload(TapeParam *tp, u8 mfrId)
 {
-	i8 unitNo;
-
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 	mt362xResetStatus(tp);
 	tp->blockNo = 0;
-	tp->unitReady = FALSE;
-	tp->ringIn = FALSE;
-	tp->endOfOperation = TRUE;
-	unitNo = mfr->active3000Device->selectedUnit;
+	tp->unitReady = false;
+	tp->ringIn = false;
+	tp->endOfOperation = true;
+	i8 unitNo = mfr->active3000Device->selectedUnit;
 	fclose(mfr->active3000Device->fcb[unitNo]);
-	mfr->active3000Device->fcb[unitNo] = NULL;
+	mfr->active3000Device->fcb[unitNo] = nullptr;
 }
 
 /*--------------------------------------------------------------------------

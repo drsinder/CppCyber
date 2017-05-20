@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: npu_net.c
+**  Name: npu_net.cpp
 **
 **  Description:
 **      Provides TCP/IP networking interface to the ASYNC TIP in an NPU
@@ -145,8 +145,6 @@ static int pollIndex = 0;
 **------------------------------------------------------------------------*/
 int npuNetRegister(int tcpPort, int numConns, int connType)
 {
-	int i;
-
 	/*
 	** Check for too many registrations.
 	*/
@@ -158,7 +156,7 @@ int npuNetRegister(int tcpPort, int numConns, int connType)
 	/*
 	**  Check for duplicate TCP ports.
 	*/
-	for (i = 0; i < numConnTypes; i++)
+	for (int i = 0; i < numConnTypes; i++)
 	{
 		if (connTypes[i].tcpPort == tcpPort)
 		{
@@ -191,15 +189,11 @@ int npuNetRegister(int tcpPort, int numConns, int connType)
 void npuNetInit(bool startup, u8 mfrId)
 {
 	int i;
-	int j;
-	int numConns;
-	u8 connType;
-	Tcb *tp;
 
 	/*
 	**  Initialise network part of TCBs.
 	*/
-	tp = npuTcbs;
+	Tcb *tp = npuTcbs;
 	for (i = 0; i < npuNetTcpConns; i++, tp++)
 	{
 		tp->state = StTermIdle;
@@ -213,10 +207,10 @@ void npuNetInit(bool startup, u8 mfrId)
 	for (i = 0; i < numConnTypes; i++)
 	{
 		connTypes[i].startTcb = tp;
-		numConns = connTypes[i].numConns;
-		connType = connTypes[i].connType;
+		int numConns = connTypes[i].numConns;
+		u8 connType = connTypes[i].connType;
 
-		for (j = 0; j < numConns; j++, tp++)
+		for (int j = 0; j < numConns; j++, tp++)
 		{
 			tp->connType = connType;
 		}
@@ -257,13 +251,12 @@ void npuNetInit(bool startup, u8 mfrId)
 **------------------------------------------------------------------------*/
 void npuNetReset(u8 mfrId)
 {
-	int i;
 	Tcb *tp = npuTcbs;
 
 	/*
 	**  Iterate through all TCBs.
 	*/
-	for (i = 0; i < npuNetTcpConns; i++, tp++)
+	for (int i = 0; i < npuNetTcpConns; i++, tp++)
 	{
 		if (tp->state != StTermIdle)
 		{
@@ -359,9 +352,9 @@ void npuNetSend(Tcb *tp, u8 *data, int len)
 				/*
 				**  Double FF to escape the Telnet IAC code making it a real FF.
 				*/
-				count = (int)(p - data);
+				count = static_cast<int>(p - data);
 				npuNetQueueOutput(tp, data, count);
-				npuNetQueueOutput(tp, (u8 *)"\xFF", 1);
+				npuNetQueueOutput(tp, reinterpret_cast<u8 *>("\xFF"), 1);
 				data = p;
 				break;
 
@@ -369,15 +362,15 @@ void npuNetSend(Tcb *tp, u8 *data, int len)
 				/*
 				**  Append zero to CR otherwise real zeroes will be stripped by Telnet.
 				*/
-				count = (int)(p - data);
+				count = static_cast<int>(p - data);
 				npuNetQueueOutput(tp, data, count);
-				npuNetQueueOutput(tp, (u8 *)"\x00", 1);
+				npuNetQueueOutput(tp, reinterpret_cast<u8 *>("\x00"), 1);
 				data = p;
 				break;
 			}
 		}
 
-		if ((count = (int)(p - data)) > 0)
+		if ((count = static_cast<int>(p - data)) > 0)
 		{
 			npuNetQueueOutput(tp, data, count);
 		}
@@ -406,20 +399,18 @@ void npuNetSend(Tcb *tp, u8 *data, int len)
 **------------------------------------------------------------------------*/
 void npuNetQueueAck(Tcb *tp, u8 blockSeqNo, u8 mfrId)
 {
-	NpuBuffer *bp;
-
 	/*
 	**  Try to use the last pending buffer unless it carries a sequence number
 	**  which must be acknowledged. If there is none, get a new one and queue it.
 	*/
-	bp = npuBipQueueGetLast(&tp->outputQ);
-	if (bp == NULL || bp->blockSeqNo != 0)
+	NpuBuffer *bp = npuBipQueueGetLast(&tp->outputQ);
+	if (bp == nullptr || bp->blockSeqNo != 0)
 	{
 		bp = npuBipBufGet();
 		npuBipQueueAppend(bp, &tp->outputQ);
 	}
 
-	if (bp != NULL)
+	if (bp != nullptr)
 	{
 		bp->blockSeqNo = blockSeqNo;
 	}
@@ -476,7 +467,7 @@ void npuNetCheckStatus(u8 mfrId)
 		FD_ZERO(&writeFds);
 		FD_SET(tp->connFd, &readFds);
 		FD_SET(tp->connFd, &writeFds);
-		readySockets = select(tp->connFd + 1, &readFds, &writeFds, NULL, &timeout);
+		readySockets = select(tp->connFd + 1, &readFds, &writeFds, nullptr, &timeout);
 		if (readySockets <= 0)
 		{
 			continue;
@@ -495,7 +486,7 @@ void npuNetCheckStatus(u8 mfrId)
 			/*
 			**  Receive a block of data.
 			*/
-			tp->inputCount = recv(tp->connFd, (char*)(tp->inputData), sizeof(tp->inputData), 0);
+			tp->inputCount = recv(tp->connFd, reinterpret_cast<char*>(tp->inputData), sizeof(tp->inputData), 0);
 			if (tp->inputCount <= 0)
 			{
 				/*
@@ -555,20 +546,19 @@ static void npuNetCreateThread(u8 mfrId)
 {
 #if defined(_WIN32)
 	DWORD dwThreadId;
-	HANDLE hThread;
 
 	/*
 	**  Create TCP thread.
 	*/
-	hThread = CreateThread(
-		NULL,                                       // no security attribute 
+	HANDLE hThread = CreateThread(
+		nullptr,                                       // no security attribute 
 		0,                                          // default stack size 
-		(LPTHREAD_START_ROUTINE) (mfrId==0 ? npuNetThread : npuNetThread1),
-		(LPVOID)mfrId,                               // thread parameter 
+		reinterpret_cast<LPTHREAD_START_ROUTINE>(mfrId == 0 ? npuNetThread : npuNetThread1),
+		reinterpret_cast<LPVOID>(mfrId),                               // thread parameter 
 		0,                                          // not suspended 
 		&dwThreadId);                               // returns thread ID 
 
-	if (hThread == NULL)
+	if (hThread == nullptr)
 	{
 		fprintf(stderr, "Failed to create npuNet thread\n");
 		exit(1);
@@ -606,19 +596,18 @@ static void npuNetThread(void *param)
 static void *npuNetThread(void *param)
 #endif
 {
-	u8 mfrId = (u8)param;
+	u8 mfrId = reinterpret_cast<u8>(param);
 
-	int rc;
 	static fd_set selectFds;
 	static fd_set acceptFds;
 	SOCKET listenFd[MaxConnTypes];
-	SOCKET acceptFd;
 	SOCKET maxFd = 0;
 	struct sockaddr_in server;
 	struct sockaddr_in from;
 	int i;
 	int optEnable = 1;
 #if defined(_WIN32)
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	int fromLen;
 	u_long blockEnable = 1;
 #else
@@ -659,13 +648,13 @@ static void *npuNetThread(void *param)
 		/*
 		**  Bind to configured TCP port number
 		*/
-		setsockopt(listenFd[i], SOL_SOCKET, SO_REUSEADDR, (const char *)&optEnable, sizeof(optEnable));
+		setsockopt(listenFd[i], SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char *>(&optEnable), sizeof(optEnable));
 		memset(&server, 0, sizeof(server));
 		server.sin_family = AF_INET;
 		server.sin_addr.s_addr = inet_addr("0.0.0.0");
 		server.sin_port = htons(connTypes[i].tcpPort);
 
-		if (bind(listenFd[i], (struct sockaddr *)&server, sizeof(server)) < 0)
+		if (bind(listenFd[i], reinterpret_cast<struct sockaddr *>(&server), sizeof(server)) < 0)
 		{
 			fprintf(stderr, "npuNet: Can't bind to socket\n");
 #if defined(_WIN32)
@@ -708,7 +697,7 @@ static void *npuNetThread(void *param)
 		**  Wait for a connection on all sockets for the configured connection types.
 		*/
 		memcpy(&acceptFds, &selectFds, sizeof(selectFds));
-		rc = select((int)maxFd + 1, &acceptFds, NULL, NULL, NULL);
+		int rc = select(static_cast<int>(maxFd) + 1, &acceptFds, nullptr, nullptr, nullptr);
 		if (rc <= 0)
 		{
 			fprintf(stderr, "npuNetThread: select returned unexpected %d\n", rc);
@@ -727,15 +716,16 @@ static void *npuNetThread(void *param)
 		{
 			if (FD_ISSET(listenFd[i], &acceptFds))
 			{
+				// ReSharper disable once CppJoinDeclarationAndAssignment
 				fromLen = sizeof(from);
-				acceptFd = accept(listenFd[i], (struct sockaddr *)&from, &fromLen);
+				SOCKET acceptFd = accept(listenFd[i], reinterpret_cast<struct sockaddr *>(&from), &fromLen);
 				if (acceptFd == -1)
 				{
 					printf("npuNetThread: spurious connection attempt\n");
 					continue;
 				}
 
-				npuNetProcessNewConnection((int)acceptFd, connTypes + i, mfrId);
+				npuNetProcessNewConnection(static_cast<int>(acceptFd), connTypes + i, mfrId);
 			}
 		}
 	}
@@ -751,12 +741,12 @@ static void npuNetThread1(void *param)
 static void *npuNetThread1(void *param)
 #endif
 {
-	u8 mfrId = (u8)param;
+	u8 mfrId = reinterpret_cast<u8>(param);
 
-	int rc;
 	static fd_set selectFds;
 	static fd_set acceptFds;
 	SOCKET listenFd[MaxConnTypes];
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	SOCKET acceptFd;
 	SOCKET maxFd = 0;
 	struct sockaddr_in server;
@@ -764,6 +754,7 @@ static void *npuNetThread1(void *param)
 	int i;
 	int optEnable = 1;
 #if defined(_WIN32)
+	// ReSharper disable once CppJoinDeclarationAndAssignment
 	int fromLen;
 	u_long blockEnable = 1;
 #else
@@ -804,19 +795,19 @@ static void *npuNetThread1(void *param)
 		/*
 		**  Bind to configured TCP port number
 		*/
-		setsockopt(listenFd[i], SOL_SOCKET, SO_REUSEADDR, (const char *)&optEnable, sizeof(optEnable));
+		setsockopt(listenFd[i], SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char *>(&optEnable), sizeof(optEnable));
 		memset(&server, 0, sizeof(server));
 		server.sin_family = AF_INET;
 		server.sin_addr.s_addr = inet_addr("0.0.0.0");
 		server.sin_port = htons(connTypes[i].tcpPort);
 
-		if (bind(listenFd[i], (struct sockaddr *)&server, sizeof(server)) < 0)
+		if (bind(listenFd[i], reinterpret_cast<struct sockaddr *>(&server), sizeof(server)) < 0)
 		{
 			fprintf(stderr, "npuNet: Can't bind to socket\n");
 #if defined(_WIN32)
 			return;
 #else
-			return(NULL);
+			return(nullptr);
 #endif
 		}
 
@@ -853,7 +844,7 @@ static void *npuNetThread1(void *param)
 		**  Wait for a connection on all sockets for the configured connection types.
 		*/
 		memcpy(&acceptFds, &selectFds, sizeof(selectFds));
-		rc = select((int)maxFd + 1, &acceptFds, NULL, NULL, NULL);
+		int rc = select(static_cast<int>(maxFd) + 1, &acceptFds, nullptr, nullptr, nullptr);
 		if (rc <= 0)
 		{
 			fprintf(stderr, "npuNetThread: select returned unexpected %d\n", rc);
@@ -872,15 +863,17 @@ static void *npuNetThread1(void *param)
 		{
 			if (FD_ISSET(listenFd[i], &acceptFds))
 			{
+				// ReSharper disable once CppJoinDeclarationAndAssignment
 				fromLen = sizeof(from);
-				acceptFd = accept(listenFd[i], (struct sockaddr *)&from, &fromLen);
+				// ReSharper disable once CppJoinDeclarationAndAssignment
+				acceptFd = accept(listenFd[i], reinterpret_cast<struct sockaddr *>(&from), &fromLen);
 				if (acceptFd == -1)
 				{
 					printf("npuNetThread: spurious connection attempt\n");
 					continue;
 				}
 
-				npuNetProcessNewConnection((int)acceptFd, connTypes + i, mfrId);
+				npuNetProcessNewConnection(static_cast<int>(acceptFd), connTypes + i, mfrId);
 			}
 		}
 	}
@@ -903,7 +896,6 @@ static void *npuNetThread1(void *param)
 static void npuNetProcessNewConnection(int acceptFd, NpuConnType *ct, u8 mfrId)
 {
 	u8 i;
-	Tcb *tp;
 	int optEnable = 1;
 #if defined(_WIN32)
 	u_long blockEnable = 1;
@@ -913,7 +905,7 @@ static void npuNetProcessNewConnection(int acceptFd, NpuConnType *ct, u8 mfrId)
 	**  Set Keepalive option so that we can eventually discover if
 	**  a client has been rebooted.
 	*/
-	setsockopt(acceptFd, SOL_SOCKET, SO_KEEPALIVE, (const char *)&optEnable, sizeof(optEnable));
+	setsockopt(acceptFd, SOL_SOCKET, SO_KEEPALIVE, reinterpret_cast<const char *>(&optEnable), sizeof(optEnable));
 
 	/*
 	**  Make socket non-blocking.
@@ -951,7 +943,7 @@ static void npuNetProcessNewConnection(int acceptFd, NpuConnType *ct, u8 mfrId)
 	/*
 	**  Find a free TCB in the set of ports associated with this connection type.
 	*/
-	tp = ct->startTcb;
+	Tcb *tp = ct->startTcb;
 	for (i = 0; i < ct->numConns; i++)
 	{
 		if (tp->state == StTermIdle)
@@ -1036,28 +1028,24 @@ static void npuNetProcessNewConnection(int acceptFd, NpuConnType *ct, u8 mfrId)
 **------------------------------------------------------------------------*/
 static void npuNetQueueOutput(Tcb *tp, u8 *data, int len)
 {
-	NpuBuffer *bp;
-	u8 *startAddress;
-	int byteCount;
-
 	/*
 	**  Try to use the last pending buffer unless it carries a sequence number
 	**  which must be acknowledged. If there is none, get a new one and queue it.
 	*/
-	bp = npuBipQueueGetLast(&tp->outputQ);
-	if (bp == NULL || bp->blockSeqNo != 0)
+	NpuBuffer *bp = npuBipQueueGetLast(&tp->outputQ);
+	if (bp == nullptr || bp->blockSeqNo != 0)
 	{
 		bp = npuBipBufGet();
 		npuBipQueueAppend(bp, &tp->outputQ);
 	}
 
-	while (bp != NULL && len > 0)
+	while (bp != nullptr && len > 0)
 	{
 		/*
 		**  Append data to the buffer.
 		*/
-		startAddress = bp->data + bp->offset + bp->numBytes;
-		byteCount = MaxBuffer - bp->offset - bp->numBytes;
+		u8 *startAddress = bp->data + bp->offset + bp->numBytes;
+		int byteCount = MaxBuffer - bp->offset - bp->numBytes;
 		if (byteCount >= len)
 		{
 			byteCount = len;
@@ -1091,7 +1079,6 @@ static void npuNetQueueOutput(Tcb *tp, u8 *data, int len)
 static void npuNetTryOutput(Tcb *tp, u8 mfrId)
 {
 	NpuBuffer *bp;
-	u8 *data;
 	int result;
 
 	/*
@@ -1105,16 +1092,16 @@ static void npuNetTryOutput(Tcb *tp, u8 mfrId)
 	/*
 	**  Process all queued output buffers.
 	*/
-	while ((bp = npuBipQueueExtract(&tp->outputQ)) != NULL)
+	while ((bp = npuBipQueueExtract(&tp->outputQ)) != nullptr)
 	{
-		data = bp->data + bp->offset;
+		u8 *data = bp->data + bp->offset;
 
 		/*
 		**  Don't call into TCP if there is no data to send.
 		*/
 		if (bp->numBytes > 0)
 		{
-			result = send(tp->connFd, (const char*)data, bp->numBytes, 0);
+			result = send(tp->connFd, reinterpret_cast<const char*>(data), bp->numBytes, 0);
 		}
 		else
 		{

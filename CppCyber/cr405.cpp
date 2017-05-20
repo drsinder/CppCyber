@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: cr405b.c
+**  Name: cr405b.cpp
 **
 **  Description:
 **      Perform emulation of channel-connected CDC 405-B card reader.
@@ -117,9 +117,6 @@ static void cr405NextCard(DevSlot *dp);
 **------------------------------------------------------------------------*/
 void cr405Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 {
-	Cr405Context *cc;
-	DevSlot *dp;
-
 	(void)deviceName;
 
 	if (eqNo != 0)
@@ -134,7 +131,7 @@ void cr405Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 		exit(1);
 	}
 
-	dp = channelAttach(channelNo, eqNo, DtCr405, mfrID);
+	DevSlot *dp = channelAttach(channelNo, eqNo, DtCr405, mfrID);
 
 	dp->activate = cr405Activate;
 	dp->disconnect = cr405Disconnect;
@@ -145,26 +142,26 @@ void cr405Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	/*
 	**  Only one card reader unit is possible per equipment.
 	*/
-	if (dp->context[0] != NULL)
+	if (dp->context[0] != nullptr)
 	{
 		fprintf(stderr, "Only one CR405 unit is possible per equipment\n");
 		exit(1);
 	}
 
-	cc = (Cr405Context*)calloc(1, sizeof(Cr405Context));
-	if (cc == NULL)
+	Cr405Context *cc = static_cast<Cr405Context*>(calloc(1, sizeof(Cr405Context)));
+	if (cc == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate CR405 context block\n");
 		exit(1);
 	}
 
-	dp->context[0] = (void *)cc;
+	dp->context[0] = static_cast<void *>(cc);
 
 	/*
 	**  Setup character set translation table.
 	*/
 	cc->table = asciiTo026;     // default translation table
-	if (deviceName != NULL)
+	if (deviceName != nullptr)
 	{
 		if (strcmp(deviceName, "029") == 0)
 		{
@@ -195,8 +192,6 @@ void cr405Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 void cr405LoadCards(char *params)
 {
-	DevSlot *dp;
-	int numParam;
 	int channelNo;
 	int equipmentNo;
 	int mfrID;
@@ -205,7 +200,7 @@ void cr405LoadCards(char *params)
 	/*
 	**  Operator wants to load new card stack.
 	*/
-	numParam = sscanf(params, "%o,%o,%o,%s", &mfrID, &channelNo, &equipmentNo, str);
+	int numParam = sscanf(params, "%o,%o,%o,%s", &mfrID, &channelNo, &equipmentNo, str);
 
 	/*
 	**  Check parameters.
@@ -237,8 +232,8 @@ void cr405LoadCards(char *params)
 	/*
 	**  Locate the device control block.
 	*/
-	dp = channelFindDevice((u8)channelNo, DtCr405, mfrID);
-	if (dp == NULL)
+	DevSlot *dp = channelFindDevice(static_cast<u8>(channelNo), DtCr405, mfrID);
+	if (dp == nullptr)
 	{
 		return;
 	}
@@ -248,7 +243,7 @@ void cr405LoadCards(char *params)
 	/*
 	**  Ensure the tray is empty.
 	*/
-	if (dp->fcb[0] != NULL)
+	if (dp->fcb[0] != nullptr)
 	{
 		printf("Input tray full\n");
 		return;
@@ -259,7 +254,7 @@ void cr405LoadCards(char *params)
 	/*
 	**  Check if the open succeeded.
 	*/
-	if (dp->fcb[0] == NULL)
+	if (dp->fcb[0] == nullptr)
 	{
 		printf("Failed to open %s\n", str);
 		return;
@@ -313,7 +308,7 @@ static void cr405Io(u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	Cr405Context *cc = (Cr405Context*)mfr->activeDevice->context[0];
+	Cr405Context *cc = static_cast<Cr405Context*>(mfr->activeDevice->context[0]);
 
 	switch (mfr->activeDevice->fcode)
 	{
@@ -323,7 +318,7 @@ static void cr405Io(u8 mfrId)
 		break;
 
 	case FcCr405StatusReq:
-		if (mfr->activeDevice->fcb[0] == NULL && cc->col >= 80)
+		if (mfr->activeDevice->fcb[0] == nullptr && cc->col >= 80)
 		{
 			mfr->activeChannel->data = StCr405NotReady;
 		}
@@ -331,7 +326,7 @@ static void cr405Io(u8 mfrId)
 		{
 			mfr->activeChannel->data = StCr405Ready;
 		}
-		mfr->activeChannel->full = TRUE;
+		mfr->activeChannel->full = true;
 		break;
 
 	case FcCr405ReadNonStop:
@@ -349,7 +344,7 @@ static void cr405Io(u8 mfrId)
 		}
 
 		mfr->activeChannel->data = cc->card[cc->col++] & Mask12;
-		mfr->activeChannel->full = TRUE;
+		mfr->activeChannel->full = true;
 
 		if (cc->col >= 80)
 		{
@@ -394,16 +389,12 @@ static void cr405Disconnect(u8 mfrId)
 **------------------------------------------------------------------------*/
 static void cr405NextCard(DevSlot *dp)
 {
-	Cr405Context *cc = (Cr405Context*)dp->context[0];
+	Cr405Context *cc = static_cast<Cr405Context*>(dp->context[0]);
 	static char buffer[322];
-	bool binaryCard;
-	char *cp;
 	char c;
-	int value;
 	int i;
-	int j;
 
-	if (dp->fcb[0] == NULL)
+	if (dp->fcb[0] == nullptr)
 	{
 		return;
 	}
@@ -413,13 +404,13 @@ static void cr405NextCard(DevSlot *dp)
 	*/
 	cc->getCardCycle = dp->mfr->cycles;
 	cc->col = 0;
-	binaryCard = FALSE;
+	bool binaryCard = false;
 
 	/*
 	**  Read the next card.
 	*/
-	cp = fgets(buffer, sizeof(buffer), dp->fcb[0]);
-	if (cp == NULL)
+	char *cp = fgets(buffer, sizeof(buffer), dp->fcb[0]);
+	if (cp == nullptr)
 	{
 		/*
 		**  If the last card wasn't a 6/7/8/9 card, fake one.
@@ -435,7 +426,7 @@ static void cr405NextCard(DevSlot *dp)
 		}
 
 		fclose(dp->fcb[0]);
-		dp->fcb[0] = NULL;
+		dp->fcb[0] = nullptr;
 		return;
 	}
 
@@ -479,7 +470,7 @@ static void cr405NextCard(DevSlot *dp)
 			/*
 			**  Binary = 7/9 card.
 			*/
-			binaryCard = TRUE;
+			binaryCard = true;
 			cc->card[0] = 00005;
 		}
 	}
@@ -492,7 +483,7 @@ static void cr405NextCard(DevSlot *dp)
 		/*
 		**  Skip over any characters past column 80 (if line is longer).
 		*/
-		if ((cp = strchr(buffer, '\n')) == NULL)
+		if ((cp = strchr(buffer, '\n')) == nullptr)
 		{
 			do
 			{
@@ -522,7 +513,7 @@ static void cr405NextCard(DevSlot *dp)
 		/*
 		**  Skip over any characters past column 320 (if line is longer).
 		*/
-		if ((cp = strchr(buffer, '\n')) == NULL)
+		if ((cp = strchr(buffer, '\n')) == nullptr)
 		{
 			do
 			{
@@ -545,8 +536,8 @@ static void cr405NextCard(DevSlot *dp)
 		cp = buffer + 4;
 		for (i = 1; i < 80; i++)
 		{
-			value = 0;
-			for (j = 0; j < 4; j++)
+			int value = 0;
+			for (int j = 0; j < 4; j++)
 			{
 				if (cp[j] >= '0' && cp[j] <= '7')
 				{

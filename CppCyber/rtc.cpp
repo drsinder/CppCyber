@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter, Paul Koning
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: rtc.c
+**  Name: rtc.cpp
 **
 **  Description:
 **      Perform emulation of CDC 6600 real-time clock.
@@ -67,8 +67,8 @@ static FcStatus rtcFunc(PpWord funcCode, u8 mfrId);
 static void rtcIo(u8 mfrId);
 static void rtcActivate(u8 mfrId);
 static void rtcDisconnect(u8 mfrId);
-static bool rtcInitTick(void);
-static u64 rtcGetTick(void);
+static bool rtcInitTick();
+static u64 rtcGetTick();
 
 /*
 **  ----------------
@@ -113,12 +113,10 @@ static u64 startTime;
 **------------------------------------------------------------------------*/
 void rtcInit(u8 increment, u32 setMHz, u8 mfrID)
 {
-	DevSlot *dp;
-
 	(void)setMHz;
 	MMainFrame *mfr = BigIron->chasis[mfrID];
 
-	dp = channelAttach(ChClock, 0, DtRtc, mfrID);
+	DevSlot *dp = channelAttach(ChClock, 0, DtRtc, mfrID);
 
 	dp->activate = rtcActivate;
 	dp->disconnect = rtcDisconnect;
@@ -127,7 +125,7 @@ void rtcInit(u8 increment, u32 setMHz, u8 mfrID)
 	dp->selectedUnit = 0;
 
 	mfr->activeChannel->ioDevice = dp;
-	mfr->activeChannel->hardwired = TRUE;
+	mfr->activeChannel->hardwired = true;
 
 	mfr->activeChannel->mfrID = mfrID;
 
@@ -159,7 +157,7 @@ void rtcInit(u8 increment, u32 setMHz, u8 mfrID)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void rtcTick(void)
+void rtcTick()
 {
 	rtcClock += rtcIncrement;
 }
@@ -173,7 +171,7 @@ void rtcTick(void)
 **
 **------------------------------------------------------------------------*/
 #if CcCycleTime
-void rtcStartTimer(void)
+void rtcStartTimer()
 {
 	if (rtcIncrement == 0)
 	{
@@ -191,7 +189,7 @@ void rtcStartTimer(void)
 **
 **------------------------------------------------------------------------*/
 #if CcCycleTime
-double rtcStopTimer(void)
+double rtcStopTimer()
 {
 	u64 endTime;
 	if (rtcIncrement == 0)
@@ -218,9 +216,9 @@ double rtcStopTimer(void)
 
 #define MaxMicroseconds 400.0L
 
-void rtcReadUsCounter(void)
+void rtcReadUsCounter()
 {
-	static bool first = TRUE;
+	static bool first = true;
 	static u64 old = 0;
 	static double fraction = 0.0L;
 	static double delayedMicroseconds = 0.0L;
@@ -232,7 +230,7 @@ void rtcReadUsCounter(void)
 
 	if (first)
 	{
-		first = FALSE;
+		first = false;
 		old = rtcGetTick();
 	}
 
@@ -306,7 +304,7 @@ static void rtcIo(u8 mfrId)
 
 	rtcReadUsCounter();
 	mfr->activeChannel->full = rtcFull;
-	mfr->activeChannel->data = (PpWord)rtcClock & Mask12;
+	mfr->activeChannel->data = static_cast<PpWord>(rtcClock) & Mask12;
 }
 
 /*--------------------------------------------------------------------------
@@ -343,23 +341,23 @@ static void rtcDisconnect(u8 mfrId)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static bool rtcInitTick(void)
+static bool rtcInitTick()
 {
 	LARGE_INTEGER lhz;
 
 	if (!QueryPerformanceFrequency(&lhz))
 	{
 		printf("No high resolution hardware clock, using emulation cycle counter\n");
-		return(FALSE);
+		return(false);
 	}
 
 	Hz = lhz.QuadPart;
-	MHz = (double)(i64)Hz / 1000000.0;
+	MHz = static_cast<double>(static_cast<i64>(Hz)) / 1000000.0;
 	printf("Using QueryPerformanceCounter() clock at %f MHz\n", MHz);
-	return(TRUE);
+	return(true);
 }
 
-static u64 rtcGetTick(void)
+static u64 rtcGetTick()
 {
 	LARGE_INTEGER ctr;
 

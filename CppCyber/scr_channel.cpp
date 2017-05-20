@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: scr_channel.c
+**  Name: scr_channel.cpp
 **
 **  Description:
 **      Perform emulation of status and control register on channel 16.
@@ -102,9 +102,6 @@ static FILE *scrLog = NULL;
 **------------------------------------------------------------------------*/
 void scrInit(u8 channelNo, u8 mfrID)
 {
-	DevSlot *dp;
-
-
 #if DEBUG
 	if (scrLog == NULL)
 	{
@@ -112,18 +109,18 @@ void scrInit(u8 channelNo, u8 mfrID)
 	}
 #endif
 
-	dp = channelAttach(channelNo, 0, DtStatusControlRegister, mfrID);
+	DevSlot *dp = channelAttach(channelNo, 0, DtStatusControlRegister, mfrID);
 	dp->activate = scrActivate;
 	dp->disconnect = scrDisconnect;
 	dp->func = scrFunc;
 	dp->io = scrIo;
 
-	BigIron->chasis[mfrID]->channel[channelNo].active = TRUE;
+	BigIron->chasis[mfrID]->channel[channelNo].active = true;
 	BigIron->chasis[mfrID]->channel[channelNo].ioDevice = dp;
-	BigIron->chasis[mfrID]->channel[channelNo].hardwired = TRUE;
+	BigIron->chasis[mfrID]->channel[channelNo].hardwired = true;
 
 	dp->context[0] = calloc(StatusAndControlWords, sizeof(PpWord));
-	if (dp->context[0] == NULL)
+	if (dp->context[0] == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate Status/Control Register context block\n");
 		exit(1);
@@ -168,7 +165,7 @@ static void scrIo(u8 mfrId)
 
 	if (!mfr->activeChannel->inputPending && mfr->activeChannel->full)
 	{
-		mfr->activeChannel->inputPending = TRUE;
+		mfr->activeChannel->inputPending = true;
 		scrExecute(mfr->activeChannel->data, mfrId);
 	}
 }
@@ -208,19 +205,17 @@ static void scrDisconnect(u8 mfrId)
 **------------------------------------------------------------------------*/
 static void scrExecute(PpWord func, u8 mfrId)
 {
-	u8 code;
-	u8 designator;
 	u8 word;
 	u8 bit;
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	PpWord *scrRegister = (PpWord *)mfr->activeDevice->context[0];
+	PpWord *scrRegister = static_cast<PpWord *>(mfr->activeDevice->context[0]);
 
 	// <<<<<<<<<<<<<<<<<<<< change this to be an array of bytes with:
 	// value, read_enable, write_enable, status, control (as bits)
 
-	code = (func >> 9) & 7;
-	designator = func & 0377;
+	u8 code = (func >> 9) & 7;
+	u8 designator = func & 0377;
 
 	/*
 	**  If this is a read or test, work out which word is used.
@@ -572,7 +567,7 @@ static void scrExecute(PpWord func, u8 mfrId)
 		break;
 	}
 
-	mfr->activeChannel->full = TRUE;
+	mfr->activeChannel->full = true;
 
 #if DEBUG
 	{

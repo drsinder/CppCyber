@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: trace.c
+**  Name: trace.cpp
 **
 **  Description:
 **      Trace execution.
@@ -244,9 +244,9 @@ static DecCpControl cjDecode[010] =
 static DecCpControl cpDecode[0100] =
 {
 	CN,         "PS",                   R,      // 00
-	CLINK, (char *)rjDecode,            R,      // 01
+	CLINK, reinterpret_cast<char *>(rjDecode),            R,      // 01
 	CiK,        "JP    %6.6o",          R,      // 02
-	CLINK, (char *)cjDecode,            R,      // 03
+	CLINK, reinterpret_cast<char *>(cjDecode),            R,      // 03
 	CijK,       "EQ    B%o,B%o,%6.6o",  RBB,    // 04
 	CijK,       "NE    B%o,B%o,%6.6o",  RBB,    // 05
 	CijK,       "GE    B%o,B%o,%6.6o",  RBB,    // 06
@@ -349,13 +349,12 @@ long long milliseconds_now() {
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void traceInit(void)
+void traceInit()
 {
-	u8 pp;
 	char ppTraceName[20];
 
 	devF2 = fopen("device.trcx", "wt");
-	if (devF2 == NULL)
+	if (devF2 == nullptr)
 	{
 		fprintf(stderr, "can't open device.trcx - aborting\n");
 		exit(1);
@@ -366,7 +365,7 @@ void traceInit(void)
 		char stuff[40];
 		sprintf(stuff, "cpu%d.trcx", k);
 		cpuFAt[k] = fopen(stuff, "wt");
-		if (cpuFAt[k] == NULL)
+		if (cpuFAt[k] == nullptr)
 		{
 			fprintf(stderr, "can't open cpu%d.trcx - aborting\n", k);
 			exit(1);
@@ -374,8 +373,8 @@ void traceInit(void)
 	}
 
 
-	ppuF = (FILE**)calloc(BigIron->pps * BigIron->initMainFrames, sizeof(FILE *));
-	if (ppuF == NULL)
+	ppuF = static_cast<FILE**>(calloc(BigIron->pps * BigIron->initMainFrames, sizeof(FILE *)));
+	if (ppuF == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate PP trace FILE pointers - aborting\n");
 		exit(1);
@@ -383,11 +382,11 @@ void traceInit(void)
 
 	for (u8 k = 0; k < BigIron->initMainFrames; k++)
 	{
-		for (pp = 0; pp < BigIron->pps; pp++)
+		for (u8 pp = 0; pp < BigIron->pps; pp++)
 		{
 			sprintf(ppTraceName, "ppu%02o-%d.trcx", pp, k);
 			ppuF[pp + k*024] = fopen(ppTraceName, "wt");
-			if (ppuF[pp] == NULL)
+			if (ppuF[pp] == nullptr)
 			{
 				fprintf(stderr, "Can't open ppu[%02o] trace (%s) - aborting\n", pp, ppTraceName);
 				exit(1);
@@ -411,11 +410,9 @@ void traceInit(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void traceTerminate(void)
+void traceTerminate()
 {
-	u8 pp;
-
-	if (devF2 != NULL)
+	if (devF2 != nullptr)
 	{
 		fclose(devF2);
 	}
@@ -425,15 +422,15 @@ void traceTerminate(void)
 		for (u8 j = 0; j < BigIron->initCpus; j++)
 		{
 			u8 kk = j + 2 * k;
-			if (cpuFAt[kk] != NULL)
+			if (cpuFAt[kk] != nullptr)
 			{
 				fclose(cpuFAt[kk]);
 			}
 		}
 
-		for (pp = 0; pp < BigIron->pps; pp++)
+		for (u8 pp = 0; pp < BigIron->pps; pp++)
 		{
-			if (ppuF[pp] != NULL)
+			if (ppuF[pp] != nullptr)
 			{
 				fclose(ppuF[pp]);
 			}
@@ -459,8 +456,7 @@ void traceTerminate(void)
 **------------------------------------------------------------------------*/
 void traceCpu(MCpu *cpux, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
 {
-	u8 addrMode;
-	bool link = TRUE;
+	bool link = true;
 	//static bool oneIdle = TRUE;
 	DecCpControl *decode = cpDecode;
 	static char str[80];
@@ -553,7 +549,7 @@ void traceCpu(MCpu *cpux, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
 																   /*
 																   **  Print opcode mnemonic and operands.
 																   */
-	addrMode = decode[opFm].mode;
+	u8 addrMode = decode[opFm].mode;
 
 	if (opFm == 066 && opI == 0)
 	{
@@ -582,7 +578,7 @@ void traceCpu(MCpu *cpux, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
 
 	while (link)
 	{
-		link = FALSE;
+		link = false;
 
 		switch (addrMode)
 		{
@@ -635,10 +631,10 @@ void traceCpu(MCpu *cpux, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
 			break;
 
 		case CLINK:
-			decode = (DecCpControl *)decode[opFm].mnemonic;
+			decode = reinterpret_cast<DecCpControl *>(decode[opFm].mnemonic);
 			opFm = opI;
 			addrMode = decode[opFm].mode;
-			link = TRUE;
+			link = true;
 			break;
 
 		default:
@@ -827,8 +823,6 @@ void traceExchange(MCpu *cpux, u32 addr, char *title, char *xjSource)
 	CpuContext *cc = &cpux->cpu;
 	MCpu cpuo = *cpux;
 	FILE *cpuF = cpuFAt[cpuo.cpu.CpuID + 2 * cpuo.mainFrameID];
-	CpWord data;
-	u8 i;
 
 	/*
 	**  Bail out if no trace of exchange jumps is requested.
@@ -842,8 +836,7 @@ void traceExchange(MCpu *cpux, u32 addr, char *title, char *xjSource)
 
 	time_t mytime;
 	time(&mytime);
-	struct tm * timeinfo;
-	timeinfo = localtime(&mytime);
+	struct tm * timeinfo = localtime(&mytime);
 	
 	fprintf(cpuF, "\nAt: %02d:%02d:%02d", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 	fprintf(cpuF, "\n%06d CPU%d Exchange jump with package address %06o (%s) - Source: %s\n\n", cpux->mfr->traceSequenceNo & Mask31, cpuo.cpu.CpuID, addr, title, xjSource);
@@ -892,16 +885,16 @@ void traceExchange(MCpu *cpux, u32 addr, char *title, char *xjSource)
 	fprintf(cpuF, "\n");
 	fprintf(cpuF, "\n");
 
-	for (i = 0; i < 8; i++)
+	for (u8 i = 0; i < 8; i++)
 	{
 		fprintf(cpuF, "X%d ", i);
-		data = cc->regX[i];
+		CpWord data = cc->regX[i];
 		fprintf(cpuF, "%04o %04o %04o %04o %04o   ",
-			(PpWord)((data >> 48) & Mask12),
-			(PpWord)((data >> 36) & Mask12),
-			(PpWord)((data >> 24) & Mask12),
-			(PpWord)((data >> 12) & Mask12),
-			(PpWord)((data)& Mask12));
+			static_cast<PpWord>((data >> 48) & Mask12),
+			static_cast<PpWord>((data >> 36) & Mask12),
+			static_cast<PpWord>((data >> 24) & Mask12),
+			static_cast<PpWord>((data >> 12) & Mask12),
+			static_cast<PpWord>((data) & Mask12));
 		fprintf(cpuF, "\n");
 	}
 
@@ -981,11 +974,6 @@ void traceRegisters(u8 mfrID)
 **------------------------------------------------------------------------*/
 void traceOpcode(u8 mfrID)
 {
-	PpWord opCode;
-	u8 addrMode;
-	u8 opF;
-	u8 opD;
-
 	MMainFrame *mfr = BigIron->chasis[mfrID];
 
 	/*
@@ -1001,10 +989,10 @@ void traceOpcode(u8 mfrID)
 	/*
 	**  Print opcode.
 	*/
-	opCode = mfr->activePpu->mem[mfr->activePpu->regP];
-	opF = opCode >> 6;
-	opD = opCode & 077;
-	addrMode = ppDecode[opF].mode;
+	PpWord opCode = mfr->activePpu->mem[mfr->activePpu->regP];
+	u8 opF = opCode >> 6;
+	u8 opD = opCode & 077;
+	u8 addrMode = ppDecode[opF].mode;
 
 	fprintf(pF, "O:%04o   %3.3s ", opCode, ppDecode[opF].mnemonic);
 
@@ -1054,18 +1042,14 @@ void traceOpcode(u8 mfrID)
 u8 traceDisassembleOpcode(char *str, PpWord *pm)
 {
 	u8 result = 1;
-	PpWord opCode;
-	u8 addrMode;
-	u8 opF;
-	u8 opD;
 
 	/*
 	**  Print opcode.
 	*/
-	opCode = *pm++;
-	opF = opCode >> 6;
-	opD = opCode & 077;
-	addrMode = ppDecode[opF].mode;
+	PpWord opCode = *pm++;
+	u8 opF = opCode >> 6;
+	u8 opD = opCode & 077;
+	u8 addrMode = ppDecode[opF].mode;
 
 	str += sprintf(str, "%3.3s  ", ppDecode[opF].mnemonic);
 
@@ -1181,7 +1165,7 @@ void traceChannel(u8 ch, u8 mfrID)
 	fprintf(ppuF[mfr->activePpu->id], "  CH:%c%c%c",
 		BigIron->chasis[mfrID]->channel[ch].active ? 'A' : 'D',
 		BigIron->chasis[mfrID]->channel[ch].full ? 'F' : 'E',
-		BigIron->chasis[mfrID]->channel[ch].ioDevice == NULL ? 'I' : 'S');
+		BigIron->chasis[mfrID]->channel[ch].ioDevice == nullptr ? 'I' : 'S');
 }
 
 /*--------------------------------------------------------------------------

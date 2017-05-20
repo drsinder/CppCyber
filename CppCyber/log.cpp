@@ -2,7 +2,7 @@
 **
 **  Copyright (c) 2003-2011, Tom Hunter
 **
-**  Name: log.c
+**  Name: log.cpp
 **
 **  Description:
 **      Perform logging of abnormal conditions.
@@ -84,11 +84,10 @@ static FILE *logF;
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void logInit(void)
+void logInit()
 {
-	errno_t err;
-	err = fopen_s(&logF, "log.txt", "wt");
-	if (err != 0 || logF == NULL)
+	errno_t err = fopen_s(&logF, "log.txt", "wt");
+	if (err != 0 || logF == nullptr)
 	{
 		fprintf(stderr, "can't open log file");
 	}

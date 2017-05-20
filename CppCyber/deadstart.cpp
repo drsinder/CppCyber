@@ -3,7 +3,7 @@
 **  Copyright (c) 2003-2011, Tom Hunter
 **  C++ adaptation by Dale Sinder 2017
 **
-**  Name: deadstart.c
+**  Name: deadstart.cpp
 **
 **  Description:
 **      Perform emulation of CDC 6600 deadstart.
@@ -93,13 +93,9 @@ static u8 dsSequence1 = 0;       /* deadstart sequencer */
 **------------------------------------------------------------------------*/
 void deadStart(u8 k)
 {
-	DevSlot *dp;
-	u8 pp;
-	u8 ch;
-
 	MMainFrame *mfr = BigIron->chasis[k];
 
-	dp = channelAttach(0, 0, DtDeadStartPanel, k);
+	DevSlot *dp = channelAttach(0, 0, DtDeadStartPanel, k);
 
 	dp->activate = deadActivate;
 	dp->disconnect = deadDisconnect;
@@ -114,11 +110,11 @@ void deadStart(u8 k)
 	/*
 	**  Set all normal channels to active and empty.
 	*/
-	for (ch = 0; ch < mfr->channelCount; ch++)
+	for (u8 ch = 0; ch < mfr->channelCount; ch++)
 	{
 		if (ch <= 013 || (ch >= 020 && ch <= 033))
 		{
-			mfr->channel[ch].active = TRUE;
+			mfr->channel[ch].active = true;
 		}
 	}
 
@@ -126,14 +122,14 @@ void deadStart(u8 k)
 	**  Set special channels appropriately.
 	*/
 	mfr->channel[ChInterlock].active = (features & HasInterlockReg) != 0;
-	mfr->channel[ChMaintenance].active = FALSE;
+	mfr->channel[ChMaintenance].active = false;
 
 	/*
 	**  Reset deadstart sequencer.
 	*/
 	dsSequence = 0;
 
-	for (pp = 0; pp < BigIron->pps; pp++)
+	for (u8 pp = 0; pp < BigIron->pps; pp++)
 	{
 		/*
 		**  Assign PPs to the corresponding channels.
@@ -141,19 +137,19 @@ void deadStart(u8 k)
 		if (pp < 012)
 		{
 			mfr->ppBarrel[pp]->ppu.opD = pp;
-			mfr->channel[pp].active = TRUE;
+			mfr->channel[pp].active = true;
 		}
 		else
 		{
 			mfr->ppBarrel[pp]->ppu.opD = pp - 012 + 020;
-			mfr->channel[pp - 012 + 020].active = TRUE;
+			mfr->channel[pp - 012 + 020].active = true;
 		}
 
 		/*
 		**  Set all PPs to INPUT (71) instruction.
 		*/
 		mfr->ppBarrel[pp]->ppu.opF = 071;
-		mfr->ppBarrel[pp]->ppu.busy = TRUE;
+		mfr->ppBarrel[pp]->ppu.busy = true;
 
 		/*
 		**  Clear P registers and location zero of each PP.
@@ -170,8 +166,8 @@ void deadStart(u8 k)
 	**  Start load of PPU0.
 	*/
 	mfr->channel[0].ioDevice = dp;
-	mfr->channel[0].active = TRUE;
-	mfr->channel[0].full = TRUE;
+	mfr->channel[0].active = true;
+	mfr->channel[0].full = true;
 	mfr->channel[0].data = 0;
 }
 
@@ -207,12 +203,12 @@ static void deadIo(u8 mfrId)
 	{
 		if (dsSequence == mfr->deadstartCount)
 		{
-			mfr->activeChannel->active = FALSE;
+			mfr->activeChannel->active = false;
 		}
 		else
 		{
 			mfr->activeChannel->data = mfr->deadstartPanel[dsSequence++] & Mask12;
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 			//printf("\ndeadIo on mfr %d data %4o # %d", activeChannel->mfrID, activeChannel->data, dsSequence-1);
 		}
 	}
@@ -228,12 +224,12 @@ static void deadIo1(u8 mfrId)
 	{
 		if (dsSequence1 == mfr->deadstartCount)
 		{
-			mfr->activeChannel->active = FALSE;
+			mfr->activeChannel->active = false;
 		}
 		else
 		{
 			mfr->activeChannel->data = mfr->deadstartPanel[dsSequence1++] & Mask12;
-			mfr->activeChannel->full = TRUE;
+			mfr->activeChannel->full = true;
 			//printf("\ndeadIo1 on mfr %d data %4o # %d", activeChannel->mfrID, activeChannel->data, dsSequence1-1);
 		}
 	}
