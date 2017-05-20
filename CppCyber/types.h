@@ -201,7 +201,7 @@ typedef struct
     u32             exitMode;           /* CPU exit mode (24 bit) */
     u8              exitCondition;      /* recorded exit conditions since XJ */
 	
-	bool			cpuStopped = TRUE;
+	bool			cpuStopped = true;
 
     /*
     **  Instruction word stack.

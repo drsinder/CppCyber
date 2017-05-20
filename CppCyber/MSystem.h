@@ -31,10 +31,10 @@ public:
 	MSystem();
 	~MSystem();
 
-	void Terminate();
+	void Terminate() const;
 
 	void InitStartup(char *config);
-	void FinishInitFile();
+	void FinishInitFile() const;
 	void CreateMainFrames();
 
 	void InitDeadstart(u8 mfrId);
@@ -96,11 +96,11 @@ private:
 	void InitCyber(char *config);
 
 	bool initOpenSection(char *name);
-	char *initGetNextLine();
-	bool initGetOctal(char *entry, int defValue, long *value);
-	bool initGetInteger(char *entry, int defValue, long *value);
-	bool initGetDouble(char *entry, int defValue, double *value);
-	bool initGetString(char *entry, char *defString, char *str, int strLen);
+	char *initGetNextLine() const;
+	bool initGetOctal(char *entry, int defValue, long *value) const;
+	bool initGetInteger(char *entry, int defValue, long *value) const;
+	bool initGetDouble(char *entry, int defValue, double *value) const;
+	bool initGetString(char *entry, char *defString, char *str, int strLen) const;
 
 };
 

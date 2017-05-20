@@ -55,79 +55,79 @@ private:
 	u32 acc18;
 	bool noHang;
 
-	void Step(void);
+	void Step();
 
 	u32 Add18(u32 op1, u32 op2);
 	u32 Subtract18(u32 op1, u32 op2);
 
-	void OpPSN(void);    // 00
-	void OpLJM(void);    // 01
-	void OpRJM(void);    // 02
-	void OpUJN(void);    // 03
-	void OpZJN(void);    // 04
-	void OpNJN(void);    // 05
-	void OpPJN(void);    // 06
-	void OpMJN(void);    // 07
-	void OpSHN(void);    // 10
-	void OpLMN(void);    // 11
-	void OpLPN(void);    // 12
-	void OpSCN(void);    // 13
-	void OpLDN(void);    // 14
-	void OpLCN(void);    // 15
-	void OpADN(void);    // 16
-	void OpSBN(void);    // 17
-	void OpLDC(void);    // 20
-	void OpADC(void);    // 21
-	void OpLPC(void);    // 22
-	void OpLMC(void);    // 23
-	void OpPSN24(void);  // 24
-	void OpPSN25(void);  // 25
-	void OpEXN(void);    // 26
-	void OpRPN(void);    // 27
-	void OpLDD(void);    // 30
-	void OpADD(void);    // 31
-	void OpSBD(void);    // 32
-	void OpLMD(void);    // 33
-	void OpSTD(void);    // 34
-	void OpRAD(void);    // 35
-	void OpAOD(void);    // 36
-	void OpSOD(void);    // 37
-	void OpLDI(void);    // 40
-	void OpADI(void);    // 41
-	void OpSBI(void);    // 42
-	void OpLMI(void);    // 43
-	void OpSTI(void);    // 44
-	void OpRAI(void);    // 45
-	void OpAOI(void);    // 46
-	void OpSOI(void);    // 47
-	void OpLDM(void);    // 50
-	void OpADM(void);    // 51
-	void OpSBM(void);    // 52
-	void OpLMM(void);    // 53
-	void OpSTM(void);    // 54
-	void OpRAM(void);    // 55
-	void OpAOM(void);    // 56
-	void OpSOM(void);    // 57
-	void OpCRD(void);    // 60
-	void OpCRM(void);    // 61
-	void OpCWD(void);    // 62
-	void OpCWM(void);    // 63
-	void OpAJM(void);    // 64
-	void OpIJM(void);    // 65
-	void OpFJM(void);    // 66
-	void OpEJM(void);    // 67
-	void OpIAN(void);    // 70
-	void OpIAM(void);    // 71
-	void OpOAN(void);    // 72
-	void OpOAM(void);    // 73
-	void OpACN(void);    // 74
-	void OpDCN(void);    // 75
-	void OpFAN(void);    // 76
-	void OpFNC(void);    // 77
+	void OpPSN();    // 00
+	void OpLJM();    // 01
+	void OpRJM();    // 02
+	void OpUJN();    // 03
+	void OpZJN();    // 04
+	void OpNJN();    // 05
+	void OpPJN();    // 06
+	void OpMJN();    // 07
+	void OpSHN();    // 10
+	void OpLMN();    // 11
+	void OpLPN();    // 12
+	void OpSCN();    // 13
+	void OpLDN();    // 14
+	void OpLCN();    // 15
+	void OpADN();    // 16
+	void OpSBN();    // 17
+	void OpLDC();    // 20
+	void OpADC();    // 21
+	void OpLPC();    // 22
+	void OpLMC();    // 23
+	void OpPSN24();  // 24
+	void OpPSN25();  // 25
+	void OpEXN();    // 26
+	void OpRPN();    // 27
+	void OpLDD();    // 30
+	void OpADD();    // 31
+	void OpSBD();    // 32
+	void OpLMD();    // 33
+	void OpSTD();    // 34
+	void OpRAD();    // 35
+	void OpAOD();    // 36
+	void OpSOD();    // 37
+	void OpLDI();    // 40
+	void OpADI();    // 41
+	void OpSBI();    // 42
+	void OpLMI();    // 43
+	void OpSTI();    // 44
+	void OpRAI();    // 45
+	void OpAOI();    // 46
+	void OpSOI();    // 47
+	void OpLDM();    // 50
+	void OpADM();    // 51
+	void OpSBM();    // 52
+	void OpLMM();    // 53
+	void OpSTM();    // 54
+	void OpRAM();    // 55
+	void OpAOM();    // 56
+	void OpSOM();    // 57
+	void OpCRD();    // 60
+	void OpCRM();    // 61
+	void OpCWD();    // 62
+	void OpCWM();    // 63
+	void OpAJM();    // 64
+	void OpIJM();    // 65
+	void OpFJM();    // 66
+	void OpEJM();    // 67
+	void OpIAN();    // 70
+	void OpIAM();    // 71
+	void OpOAN();    // 72
+	void OpOAM();    // 73
+	void OpACN();    // 74
+	void OpDCN();    // 75
+	void OpFAN();    // 76
+	void OpFNC();    // 77
 
 
 	// member function pointer
-	typedef void (Mpp::*MppMbrFn)(void);
+	typedef void (Mpp::*MppMbrFn)();
 
 
 	MppMbrFn decodePpuOpcode[64] =

@@ -53,8 +53,8 @@ void MMainFrame::Init(u8 id, long memory)
 
 	// allocate CM here
 
-	cpMem = (CpWord*)calloc(memory, sizeof(CpWord));
-	if (cpMem == NULL)
+	cpMem = static_cast<CpWord*>(calloc(memory, sizeof(CpWord)));
+	if (cpMem == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate CPU memory\n");
 		exit(1);
@@ -75,7 +75,7 @@ void MMainFrame::Init(u8 id, long memory)
 		strcat(fileName, "/cmStore");
 		strcat(fileName, mfnum);
 		cmHandle = fopen(fileName, "r+b");
-		if (cmHandle != NULL)
+		if (cmHandle != nullptr)
 		{
 			/*
 			**  Read CM contents.
@@ -92,7 +92,7 @@ void MMainFrame::Init(u8 id, long memory)
 			**  Create a new file.
 			*/
 			cmHandle = fopen(fileName, "w+b");
-			if (cmHandle == NULL)
+			if (cmHandle == nullptr)
 			{
 				fprintf(stderr, "Failed to create CM backing file\n");
 				exit(1);
@@ -100,13 +100,9 @@ void MMainFrame::Init(u8 id, long memory)
 		}
 	}
 
-	/*
-	**  Allocate ppus.
-	*/
-	u8 pp;
-	u8 ppuCount = (u8)BigIron->pps;
+	u8 ppuCount = static_cast<u8>(BigIron->pps);
 
-	for (pp = 0; pp < ppuCount; pp++)
+	for (u8 pp = 0; pp < ppuCount; pp++)
 	{
 		ppBarrel[pp] = new Mpp(pp, mainFrameID);
 		ppBarrel[pp]->ppu.id = pp;
@@ -129,10 +125,10 @@ void MMainFrame::Init(u8 id, long memory)
 		chCount = 040;
 	}
 
-	channel = channelInit((u8)chCount, this);
+	channel = channelInit(static_cast<u8>(chCount), this);
 	channelCount = chCount;
 
-	rtcInit((u8)BigIron->clockIncrement, BigIron->setMHz, mainFrameID);
+	rtcInit(static_cast<u8>(BigIron->clockIncrement), BigIron->setMHz, mainFrameID);
 
 	/*
 	**  Initialise optional Interlock Register on channel 15.

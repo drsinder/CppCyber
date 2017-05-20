@@ -64,8 +64,8 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
-static void waitTerminationMessage(void);
-static void tracePpuCalls(void);
+static void waitTerminationMessage();
+static void tracePpuCalls();
 void CreateThreads();
 static void CreateCPUThread(MCpu *c);
 static void CPUThread(LPVOID p);
@@ -108,7 +108,7 @@ char printApp[256];
 u32 traceMaskx = 0;
 //u32 traceSequenceNo;
 
-volatile bool opActive = FALSE;
+volatile bool opActive = false;
 
 u16 mux6676TelnetPort;
 u16 mux6676TelnetConns;
@@ -148,12 +148,7 @@ double cycleTime;
 int main(int argc, char **argv)
 {
 #if defined(_WIN32)
-	/*
-	**  Select WINSOCK 2.2 by default.
-	*/
-	WORD versionRequested;
 	WSADATA wsaData;
-	int err;
 
 	int wsockv1 = 2;
 	int wsockv1b = 2;
@@ -164,9 +159,9 @@ int main(int argc, char **argv)
 		wsockv1b = atoi(argv[3]);
 	}
 
-	versionRequested = MAKEWORD(wsockv1, wsockv1b);
+	WORD versionRequested = MAKEWORD(wsockv1, wsockv1b);
 
-	err = WSAStartup(versionRequested, &wsaData);
+	int err = WSAStartup(versionRequested, &wsaData);
 	if (err != 0)
 	{
 		fprintf(stderr, "\r\nError in WSAStartup: %d\r\n", err);
@@ -287,20 +282,19 @@ void CreateCPUThread(MCpu *cpu)
 {
 #if defined(_WIN32)
 	DWORD dwThreadId;
-	HANDLE hThread;
 
 	/*
 	**  Create operator thread.
 	*/
-	hThread = CreateThread(
-		NULL,                                       // no security attribute 
+	HANDLE hThread = CreateThread(
+		nullptr,                                       // no security attribute 
 		0,                                          // default stack size 
-		(LPTHREAD_START_ROUTINE)CPUThread,
-		(LPVOID)cpu,                               // thread parameter = MCpu pointer 
+		reinterpret_cast<LPTHREAD_START_ROUTINE>(CPUThread),
+		static_cast<LPVOID>(cpu),                               // thread parameter = MCpu pointer 
 		0,                                          // not suspended 
 		&dwThreadId);                               // returns thread ID 
 
-	if (hThread == NULL)
+	if (hThread == nullptr)
 	{
 		fprintf(stderr, "Failed to create CPU %d thread\n", cpu->cpu.CpuID);
 		exit(1);
@@ -331,22 +325,21 @@ void CreateCPUThread1(MCpu *cpu)
 {
 #if defined(_WIN32)
 	DWORD dwThreadId;
-	HANDLE hThread;
 
 	INIT_COND_VAR(&cpu->mfr->CpuRun);
 
 	/*
 	**  Create operator thread.
 	*/
-	hThread = CreateThread(
-		NULL,                                       // no security attribute 
+	HANDLE hThread = CreateThread(
+		nullptr,                                       // no security attribute 
 		0,                                          // default stack size 
-		(LPTHREAD_START_ROUTINE)CPUThread1,
-		(LPVOID)cpu,                               // thread parameter = MCpu pointer
+		reinterpret_cast<LPTHREAD_START_ROUTINE>(CPUThread1),
+		static_cast<LPVOID>(cpu),                               // thread parameter = MCpu pointer
 		0,                                          // not suspended 
 		&dwThreadId);                               // returns thread ID 
 
-	if (hThread == NULL)
+	if (hThread == nullptr)
 	{
 		fprintf(stderr, "Failed to create CPU %d thread\n", cpu->cpu.CpuID);
 		exit(1);
@@ -378,20 +371,19 @@ void CreateCPUThreadX(MCpu *cpu)
 {
 #if defined(_WIN32)
 	DWORD dwThreadId;
-	HANDLE hThread;
 
 	/*
 	**  Create operator thread.
 	*/
-	hThread = CreateThread(
-		NULL,                                       // no security attribute 
+	HANDLE hThread = CreateThread(
+		nullptr,                                       // no security attribute 
 		0,                                          // default stack size 
-		(LPTHREAD_START_ROUTINE)CPUThreadX,
-		(LPVOID)cpu,                               // thread parameter = MCpu pointer 
+		reinterpret_cast<LPTHREAD_START_ROUTINE>(CPUThreadX),
+		static_cast<LPVOID>(cpu),                               // thread parameter = MCpu pointer 
 		0,                                          // not suspended 
 		&dwThreadId);                               // returns thread ID 
 
-	if (hThread == NULL)
+	if (hThread == nullptr)
 	{
 		fprintf(stderr, "Failed to create CPU %d thread\n", cpu->cpu.CpuID);
 		exit(1);
@@ -421,22 +413,21 @@ void CreateCPUThread1X(MCpu *cpu)
 {
 #if defined(_WIN32)
 	DWORD dwThreadId;
-	HANDLE hThread;
 
 	INIT_COND_VAR(&cpu->mfr->CpuRun);
 
 	/*
 	**  Create operator thread.
 	*/
-	hThread = CreateThread(
-		NULL,                                       // no security attribute 
+	HANDLE hThread = CreateThread(
+		nullptr,                                       // no security attribute 
 		0,                                          // default stack size 
-		(LPTHREAD_START_ROUTINE)CPUThread1X,
-		(LPVOID)cpu,                               // thread parameter = MCpu pointer
+		reinterpret_cast<LPTHREAD_START_ROUTINE>(CPUThread1X),
+		static_cast<LPVOID>(cpu),                               // thread parameter = MCpu pointer
 		0,                                          // not suspended 
 		&dwThreadId);                               // returns thread ID 
 
-	if (hThread == NULL)
+	if (hThread == nullptr)
 	{
 		fprintf(stderr, "Failed to create CPU %d thread\n", cpu->cpu.CpuID);
 		exit(1);
@@ -478,7 +469,7 @@ void CreateCPUThread1X(MCpu *cpu)
 **--------------------------------------------------------*/
 void CPUThread(LPVOID pCpu)
 {
-	MCpu *ncpu = (MCpu*)pCpu;
+	MCpu *ncpu = static_cast<MCpu*>(pCpu);
 	ncpu->mfr->cycles = 0;
 
 	while (BigIron->emulationActive)
@@ -576,7 +567,7 @@ void CPUThread(LPVOID pCpu)
 **---------------------------------------------------------------*/
 void CPUThread1(LPVOID pCpu)
 {
-	MCpu *ncpu = (MCpu*)pCpu;
+	MCpu *ncpu = static_cast<MCpu*>(pCpu);
 
 	while (BigIron->emulationActive)
 	{
@@ -619,7 +610,7 @@ void CPUThread1(LPVOID pCpu)
 **--------------------------------------------------------*/
 void CPUThreadX(LPVOID pCpu)
 {
-	MCpu *ncpu = (MCpu*)pCpu;
+	MCpu *ncpu = static_cast<MCpu*>(pCpu);
 	ncpu->mfr->cycles = 0;
 
 	while (BigIron->emulationActive)
@@ -723,7 +714,7 @@ void CPUThreadX(LPVOID pCpu)
 **---------------------------------------------------------------*/
 void CPUThread1X(LPVOID pCpu)
 {
-	MCpu *ncpu = (MCpu*)pCpu;
+	MCpu *ncpu = static_cast<MCpu*>(pCpu);
 
 	while (BigIron->emulationActive)
 	{
@@ -767,27 +758,25 @@ void CPUThread1X(LPVOID pCpu)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void tracePpuCalls(void)
+static void tracePpuCalls()
 {
 	static u64 ppIrStatus[10] = { 0 };
 	static u64 l;
 	static u64 r;
-	static FILE *f = NULL;
+	static FILE *f = nullptr;
 
-	int pp;
-
-	if (f == NULL)
+	if (f == nullptr)
 	{
 		errno_t err = fopen_s(&f, "ppcalls.txt", "w");
-		if (err != 0 || f == NULL)
+		if (err != 0 || f == nullptr)
 		{
 			return;
 		}
 	}
-	for (pp = 1; pp < 10; pp++)
+	for (int pp = 1; pp < 10; pp++)
 	{
-		l = BigIron->chasis[0]->cpMem[050 + (pp * 010)] & ((CpWord)Mask18 << (59 - 18));
-		r = ppIrStatus[pp] & ((CpWord)Mask18 << (59 - 18));
+		l = BigIron->chasis[0]->cpMem[050 + (pp * 010)] & (static_cast<CpWord>(Mask18) << (59 - 18));
+		r = ppIrStatus[pp] & (static_cast<CpWord>(Mask18) << (59 - 18));
 		if (l != r)
 		{
 			ppIrStatus[pp] = l;
@@ -812,7 +801,7 @@ static void tracePpuCalls(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void waitTerminationMessage(void)
+static void waitTerminationMessage()
 {
 	fflush(stdout);
 #if defined(_WIN32)

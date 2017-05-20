@@ -58,7 +58,7 @@ static u32 featuresCyber865 =
 // ReSharper disable once CppPossiblyUninitializedMember
 MSystem::MSystem()
 {
-	emulationActive = TRUE;
+	emulationActive = true;
 }
 
 
@@ -102,8 +102,8 @@ void MSystem::CreateMainFrames()
 	**  Allocate configured ECS memory.
 	*/
 	// ReSharper disable once CppDeclaratorMightNotBeInitialized
-	extMem = (CpWord*)calloc((ecsBanks + esmBanks) * extBanksSize, sizeof(CpWord));
-	if (extMem == NULL)
+	extMem = static_cast<CpWord*>(calloc((ecsBanks + esmBanks) * extBanksSize, sizeof(CpWord)));
+	if (extMem == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate ECS memory\n");
 		exit(1);
@@ -125,7 +125,7 @@ void MSystem::CreateMainFrames()
 		strcpy(fileName, persistDir);
 		strcat(fileName, "/ecsStore");
 		ecsHandle = fopen(fileName, "r+b");
-		if (ecsHandle != NULL)
+		if (ecsHandle != nullptr)
 		{
 			/*
 			**  Read ECS contents.
@@ -142,7 +142,7 @@ void MSystem::CreateMainFrames()
 			**  Create a new file.
 			*/
 			ecsHandle = fopen(fileName, "w+b");
-			if (ecsHandle == NULL)
+			if (ecsHandle == nullptr)
 			{
 				fprintf(stderr, "Failed to create ECS backing file\n");
 				exit(1);
@@ -154,13 +154,8 @@ void MSystem::CreateMainFrames()
 
 void MSystem::InitStartup(char *config)
 {
-	/*
-	**  Open startup file.
-	*/
-	errno_t err;
-
-	err = fopen_s(&fcb, startupFile, "rb");
-	if (err != 0 || fcb == NULL)
+	errno_t err = fopen_s(&fcb, startupFile, "rb");
+	if (err != 0 || fcb == nullptr)
 	{
 		perror(startupFile);
 		exit(1);
@@ -188,13 +183,13 @@ void MSystem::InitStartup(char *config)
 
 }
 
-void MSystem::FinishInitFile()
+void MSystem::FinishInitFile() const
 {
 	if ((features & HasMaintenanceChannel) != 0)
 	{
 		for (int k = 0; k < BigIron->initMainFrames; k++)
 		{
-			mchInit(k, 0, 0, ChMaintenance, NULL);
+			mchInit(k, 0, 0, ChMaintenance, nullptr);
 		}
 	}
 
@@ -247,8 +242,6 @@ void MSystem::InitCyber(char *config)
 
 #if defined(_WIN32)
 
-	DWORD dwPriClass;
-
 	if (initGetString("priority", "", dummy, sizeof(dummy)))
 	{
 		if (_stricmp(dummy, "above_normal") == 0)
@@ -259,7 +252,7 @@ void MSystem::InitCyber(char *config)
 			SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
 	}
 
-	dwPriClass = GetPriorityClass(GetCurrentProcess());
+	DWORD dwPriClass = GetPriorityClass(GetCurrentProcess());
 
 	sprintf(dummy, "UNKOWN");
 	if (dwPriClass == ABOVE_NORMAL_PRIORITY_CLASS)
@@ -563,19 +556,19 @@ void MSystem::InitCyber(char *config)
 	**  Get optional trace mask. If not specified, use compile time value.
 	*/
 	initGetOctal("trace", 0, &mask);
-	traceMaskx = (u32)mask;
+	traceMaskx = static_cast<u32>(mask);
 
 	/*
 	**  Get optional Telnet port number. If not specified, use default value.
 	*/
 	initGetInteger("telnetport", 5000, &port);
-	mux6676TelnetPort = (u16)port;
+	mux6676TelnetPort = static_cast<u16>(port);
 
 	/*
 	**  Get optional max Telnet connections. If not specified, use default value.
 	*/
 	initGetInteger("telnetconns", 4, &conns);
-	mux6676TelnetConns = (u16)conns;
+	mux6676TelnetConns = static_cast<u16>(conns);
 
 }
 
@@ -591,7 +584,6 @@ void MSystem::InitDeadstart(u8 mfrId)
 {
 	char *line;
 	char *token;
-	u8 lineNo;
 
 	if(mfrId == 1)
 	{
@@ -607,25 +599,25 @@ void MSystem::InitDeadstart(u8 mfrId)
 	/*
 	**  Process all deadstart panel switches.
 	*/
-	lineNo = 0;
-	while ((line = initGetNextLine()) != NULL && lineNo < MaxDeadStart)
+	u8 lineNo = 0;
+	while ((line = initGetNextLine()) != nullptr && lineNo < MaxDeadStart)
 	{
-		char *next_token1 = NULL;
+		char *next_token1 = nullptr;
 
 		/*
 		**  Parse switch settings.
 		*/
 		token = strtok_s(line, " ;\n", &next_token1);
-		if (token == NULL || strlen(token) != 4
+		if (token == nullptr || strlen(token) != 4
 			|| !isoctal(token[0]) || !isoctal(token[1])
 			|| !isoctal(token[2]) || !isoctal(token[3]))
 		{
 			fprintf(stderr, "Section [%s], relative line %d, invalid deadstart setting %s in %s\n",
-				deadstart, lineNo, token == NULL ? "NULL" : token, startupFile);
+				deadstart, lineNo, token == nullptr ? "NULL" : token, startupFile);
 			exit(1);
 		}
 
-		this->chasis[mfrId]->deadstartPanel[lineNo++] = (u16)strtol(token, NULL, 8);
+		this->chasis[mfrId]->deadstartPanel[lineNo++] = static_cast<u16>(strtol(token, nullptr, 8));
 	}
 
 	this->chasis[mfrId]->deadstartCount = lineNo + 1;
@@ -639,15 +631,10 @@ void MSystem::InitDeadstart(u8 mfrId)
 **  Returns : Nothing.
 **
 **------------------------------------------------------------------------*/
-void MSystem::InitNpuConnections(void)
+void MSystem::InitNpuConnections()
 {
 	char *line;
-	char *token;
-	int tcpPort;
-	int numConns;
 	u8 connType;
-	int lineNo;
-	int rc;
 
 	if (strlen(npuConnections) == 0)
 	{
@@ -667,29 +654,29 @@ void MSystem::InitNpuConnections(void)
 	/*
 	**  Process all equipment entries.
 	*/
-	lineNo = -1;
-	while ((line = initGetNextLine()) != NULL)
+	int lineNo = -1;
+	while ((line = initGetNextLine()) != nullptr)
 	{
-		char *next_token1 = NULL;
+		char *next_token1 = nullptr;
 
 		lineNo += 1;
 
 		/*
 		**  Parse TCP port number
 		*/
-		token = strtok_s(line, ",", &next_token1);
-		if (token == NULL || !isdigit(token[0]))
+		char *token = strtok_s(line, ",", &next_token1);
+		if (token == nullptr || !isdigit(token[0]))
 		{
 			fprintf(stderr, "Section [%s], relative line %d, invalid TCP port number %s in %s\n",
-				npuConnections, lineNo, token == NULL ? "NULL" : token, startupFile);
+				npuConnections, lineNo, token == nullptr ? "NULL" : token, startupFile);
 			exit(1);
 		}
 
-		tcpPort = strtol(token, NULL, 10);
+		int tcpPort = strtol(token, nullptr, 10);
 		if (tcpPort < 1000 || tcpPort > 65535)
 		{
 			fprintf(stderr, "Section [%s], relative line %d, out of range TCP port number %s in %s\n",
-				npuConnections, lineNo, token == NULL ? "NULL" : token, startupFile);
+				npuConnections, lineNo, token == nullptr ? "NULL" : token, startupFile);
 			fprintf(stderr, "TCP port numbers must be between 1000 and 65535\n");
 			exit(1);
 		}
@@ -697,19 +684,19 @@ void MSystem::InitNpuConnections(void)
 		/*
 		**  Parse number of connections on this port.
 		*/
-		token = strtok_s(NULL, ",", &next_token1);
-		if (token == NULL || !isdigit(token[0]))
+		token = strtok_s(nullptr, ",", &next_token1);
+		if (token == nullptr || !isdigit(token[0]))
 		{
 			fprintf(stderr, "Section [%s], relative line %d, invalid number of connections %s in %s\n",
-				npuConnections, lineNo, token == NULL ? "NULL" : token, startupFile);
+				npuConnections, lineNo, token == nullptr ? "NULL" : token, startupFile);
 			exit(1);
 		}
 
-		numConns = strtol(token, NULL, 10);
+		int numConns = strtol(token, nullptr, 10);
 		if (numConns < 0 || numConns > 100)
 		{
 			fprintf(stderr, "Section [%s], relative line %d, out of range number of connections %s in %s\n",
-				npuConnections, lineNo, token == NULL ? "NULL" : token, startupFile);
+				npuConnections, lineNo, token == nullptr ? "NULL" : token, startupFile);
 			fprintf(stderr, "Connection count must be between 0 and 100\n");
 			exit(1);
 		}
@@ -717,11 +704,11 @@ void MSystem::InitNpuConnections(void)
 		/*
 		**  Parse NPU connection type.
 		*/
-		token = strtok_s(NULL, " ", &next_token1);
-		if (token == NULL)
+		token = strtok_s(nullptr, " ", &next_token1);
+		if (token == nullptr)
 		{
 			fprintf(stderr, "Section [%s], relative line %d, invalid NPU connection type %s in %s\n",
-				npuConnections, lineNo, token == NULL ? "NULL" : token, startupFile);
+				npuConnections, lineNo, token == nullptr ? "NULL" : token, startupFile);
 			exit(1);
 		}
 
@@ -740,7 +727,7 @@ void MSystem::InitNpuConnections(void)
 		else
 		{
 			fprintf(stderr, "Section [%s], relative line %d, unknown NPU connection type %s in %s\n",
-				npuConnections, lineNo, token == NULL ? "NULL" : token, startupFile);
+				npuConnections, lineNo, token == nullptr ? "NULL" : token, startupFile);
 			fprintf(stderr, "NPU connection types must be 'raw' or 'pterm' or 'rs232'\n");
 			exit(1);
 		}
@@ -748,7 +735,7 @@ void MSystem::InitNpuConnections(void)
 		/*
 		**  Setup NPU connection type.
 		*/
-		rc = npuNetRegister(tcpPort, numConns, connType);
+		int rc = npuNetRegister(tcpPort, numConns, connType);
 		switch (rc)
 		{
 		case NpuNetRegOk:
@@ -783,12 +770,7 @@ void MSystem::InitEquipment()
 {
 	char *line;
 	char *token;
-	char *deviceName;
-	int eqNo;
-	int unitNo;
-	int channelNo;
 	u8 deviceIndex;
-	int lineNo;
 
 	if (!initOpenSection(equipment))
 	{
@@ -799,10 +781,10 @@ void MSystem::InitEquipment()
 	/*
 	**  Process all equipment entries.
 	*/
-	lineNo = -1;
-	while ((line = initGetNextLine()) != NULL)
+	int lineNo = -1;
+	while ((line = initGetNextLine()) != nullptr)
 	{
-		char *next_token1 = NULL;
+		char *next_token1 = nullptr;
 
 		lineNo += 1;
 
@@ -810,10 +792,10 @@ void MSystem::InitEquipment()
 		**  Parse device type.
 		*/
 		token = strtok_s(line, ",", &next_token1);
-		if (token == NULL || strlen(token) < 2)
+		if (token == nullptr || strlen(token) < 2)
 		{
 			fprintf(stderr, "Section [%s], relative line %d, invalid device type %s in %s\n",
-				equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
+				equipment, lineNo, token == nullptr ? "NULL" : token, startupFile);
 			exit(1);
 		}
 
@@ -828,53 +810,53 @@ void MSystem::InitEquipment()
 		if (deviceIndex == deviceCount)
 		{
 			fprintf(stderr, "Section [%s], relative line %d, unknown device %s in %s\n",
-				equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
+				equipment, lineNo, token == nullptr ? "NULL" : token, startupFile);
 			exit(1);
 		}
 
 		/*
 		**  Parse equipment number.
 		*/
-		token = strtok_s(NULL, ",", &next_token1);
-		if (token == NULL || strlen(token) != 1 || !isoctal(token[0]))
+		token = strtok_s(nullptr, ",", &next_token1);
+		if (token == nullptr || strlen(token) != 1 || !isoctal(token[0]))
 		{
 			fprintf(stderr, "Section [%s], relative line %d, invalid equipment no %s in %s\n",
-				equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
+				equipment, lineNo, token == nullptr ? "NULL" : token, startupFile);
 			exit(1);
 		}
 
-		eqNo = strtol(token, NULL, 8);
+		int eqNo = strtol(token, nullptr, 8);
 
 		/*
 		**  Parse unit number.
 		*/
-		token = strtok_s(NULL, ",", &next_token1);
-		if (token == NULL || !isoctal(token[0]))
+		token = strtok_s(nullptr, ",", &next_token1);
+		if (token == nullptr || !isoctal(token[0]))
 		{
 			fprintf(stderr, "Section [%s], relative line %d, invalid unit count %s in %s\n",
-				equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
+				equipment, lineNo, token == nullptr ? "NULL" : token, startupFile);
 			exit(1);
 		}
 
-		unitNo = strtol(token, NULL, 8);
+		int unitNo = strtol(token, nullptr, 8);
 
 		/*
 		**  Parse channel number.
 		*/
-		token = strtok_s(NULL, ", ", &next_token1);
-		if (token == NULL || strlen(token) != 2 || !isoctal(token[0]) || !isoctal(token[1]))
+		token = strtok_s(nullptr, ", ", &next_token1);
+		if (token == nullptr || strlen(token) != 2 || !isoctal(token[0]) || !isoctal(token[1]))
 		{
 			fprintf(stderr, "Section [%s], relative line %d, invalid channel no %s in %s\n",
-				equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
+				equipment, lineNo, token == nullptr ? "NULL" : token, startupFile);
 			exit(1);
 		}
 
-		channelNo = strtol(token, NULL, 8);
+		int channelNo = strtol(token, nullptr, 8);
 
 		if (channelNo < 0 || channelNo >= chCount)
 		{
 			fprintf(stderr, "Section [%s], relative line %d, channel no %s not permitted in %s\n",
-				equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
+				equipment, lineNo, token == nullptr ? "NULL" : token, startupFile);
 			exit(1);
 		}
 
@@ -886,20 +868,20 @@ void MSystem::InitEquipment()
 		/*
 		**  Parse mainfame number.
 		*/
-		token = strtok_s(NULL, ", ", &next_token1);
-		if (token == NULL || strlen(token) != 1 || !isoctal(token[0]))
+		token = strtok_s(nullptr, ", ", &next_token1);
+		if (token == nullptr || strlen(token) != 1 || !isoctal(token[0]))
 		{
 			fprintf(stderr, "Section [%s], relative line %d, invalid mainframe no %s in %s\n",
-				equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
+				equipment, lineNo, token == nullptr ? "NULL" : token, startupFile);
 			exit(1);
 		}
 
-		mainframeNo = strtol(token, NULL, 8);
+		mainframeNo = strtol(token, nullptr, 8);
 
 		if (mainframeNo < 0 || mainframeNo >= initMainFrames)
 		{
 			fprintf(stderr, "Section [%s], relative line %d, mainframe no %s not permitted in %s\n",
-				equipment, lineNo, token == NULL ? "NULL" : token, startupFile);
+				equipment, lineNo, token == nullptr ? "NULL" : token, startupFile);
 			exit(1);
 		}
 #endif
@@ -908,16 +890,16 @@ void MSystem::InitEquipment()
 		/*
 		**  Parse optional file name.
 		*/
-		deviceName = strtok_s(NULL, " ", &next_token1);
+		char *deviceName = strtok_s(nullptr, " ", &next_token1);
 
 		/*
 		**  Initialise device.
 		*/
-		deviceDesc[deviceIndex].init((u8)mainframeNo, (u8)eqNo, (u8)unitNo, (u8)channelNo, deviceName);
+		deviceDesc[deviceIndex].init(static_cast<u8>(mainframeNo), static_cast<u8>(eqNo), static_cast<u8>(unitNo), static_cast<u8>(channelNo), deviceName);
 	}
 }
 
-void MSystem::Terminate(void)
+void MSystem::Terminate() const
 {
 	for (int k = 0; k < initMainFrames; k++)
 	{
@@ -927,7 +909,7 @@ void MSystem::Terminate(void)
 	/*
 	**  Optionally save ECS.
 	*/
-	if (ecsHandle != NULL)
+	if (ecsHandle != nullptr)
 	{
 		fseek(ecsHandle, 0, SEEK_SET);
 		if (fwrite(extMem, sizeof(CpWord), extMaxMemory, ecsHandle) != extMaxMemory)
@@ -958,14 +940,14 @@ void MSystem::Terminate(void)
 **  Parameters:     Name        Description.
 **                  name        section name
 **
-**  Returns:        TRUE if section was found, FALSE otherwise.
+**  Returns:        true if section was found, FALSE otherwise.
 **
 **------------------------------------------------------------------------*/
 bool MSystem::initOpenSection(char *name)
 {
 	char lineBuffer[MaxLine];
 	char section[50];
-	u8 sectionLength = (u8)strlen(name) + 2;
+	u8 sectionLength = static_cast<u8>(strlen(name)) + 2;
 
 	/*
 	**  Build section label.
@@ -982,10 +964,8 @@ bool MSystem::initOpenSection(char *name)
 	fclose(fcb);
 
 	{
-		errno_t err;
-
-		err = fopen_s(&fcb, startupFile, "rb");
-		if (err != 0 || fcb == NULL)
+		errno_t err = fopen_s(&fcb, startupFile, "rb");
+		if (err != 0 || fcb == nullptr)
 		{
 			perror(startupFile);
 			exit(1);
@@ -996,12 +976,12 @@ bool MSystem::initOpenSection(char *name)
 	*/
 	do
 	{
-		if (fgets(lineBuffer, MaxLine, this->fcb) == NULL)
+		if (fgets(lineBuffer, MaxLine, this->fcb) == nullptr)
 		{
 			/*
 			**  End-of-file - return failure.
 			*/
-			return(FALSE);
+			return(false);
 		}
 	} while (strncmp(lineBuffer, section, sectionLength) != 0);
 
@@ -1009,7 +989,7 @@ bool MSystem::initOpenSection(char *name)
 	**  Remember start of section and return success.
 	*/
 	sectionStart = ftell(fcb);
-	return(TRUE);
+	return(true);
 }
 
 /*--------------------------------------------------------------------------
@@ -1020,10 +1000,9 @@ bool MSystem::initOpenSection(char *name)
 **  Returns:        Pointer to line buffer
 **
 **------------------------------------------------------------------------*/
-char *MSystem::initGetNextLine(void)
+char *MSystem::initGetNextLine() const
 {
 	static char lineBuffer[MaxLine];
-	char *cp;
 	bool blank;
 
 	/*
@@ -1031,21 +1010,21 @@ char *MSystem::initGetNextLine(void)
 	*/
 	do
 	{
-		if (fgets(lineBuffer, MaxLine, fcb) == NULL
+		if (fgets(lineBuffer, MaxLine, fcb) == nullptr
 			|| lineBuffer[0] == '[')
 		{
 			/*
 			**  End-of-file or end-of-section - return failure.
 			*/
-			return(NULL);
+			return(nullptr);
 		}
 
 		/*
 		**  Determine if this line consists only of whitespace or comment and
 		**  replace all whitespace by proper space.
 		*/
-		blank = TRUE;
-		for (cp = lineBuffer; *cp != 0; cp++)
+		blank = true;
+		for (char *cp = lineBuffer; *cp != 0; cp++)
 		{
 			if (blank && *cp == ';')
 			{
@@ -1058,7 +1037,7 @@ char *MSystem::initGetNextLine(void)
 			}
 			else
 			{
-				blank = FALSE;
+				blank = false;
 			}
 		}
 
@@ -1078,10 +1057,10 @@ char *MSystem::initGetNextLine(void)
 **                  defValue    default value
 **                  value       pointer to return value
 **
-**  Returns:        TRUE if entry was found, FALSE otherwise.
+**  Returns:        true if entry was found, FALSE otherwise.
 **
 **------------------------------------------------------------------------*/
-bool MSystem::initGetOctal(char *entry, int defValue, long *value)
+bool MSystem::initGetOctal(char *entry, int defValue, long *value) const
 {
 	char buffer[40];
 
@@ -1093,15 +1072,15 @@ bool MSystem::initGetOctal(char *entry, int defValue, long *value)
 		**  Return default value.
 		*/
 		*value = defValue;
-		return(FALSE);
+		return(false);
 	}
 
 	/*
 	**  Convert octal string to value.
 	*/
-	*value = strtol(buffer, NULL, 8);
+	*value = strtol(buffer, nullptr, 8);
 
-	return(TRUE);
+	return(true);
 }
 
 /*--------------------------------------------------------------------------
@@ -1112,10 +1091,10 @@ bool MSystem::initGetOctal(char *entry, int defValue, long *value)
 **                  defValue    default value
 **                  value       pointer to return value
 **
-**  Returns:        TRUE if entry was found, FALSE otherwise.
+**  Returns:        true if entry was found, FALSE otherwise.
 **
 **------------------------------------------------------------------------*/
-bool MSystem::initGetInteger(char *entry, int defValue, long *value)
+bool MSystem::initGetInteger(char *entry, int defValue, long *value) const
 {
 	char buffer[40];
 
@@ -1127,15 +1106,15 @@ bool MSystem::initGetInteger(char *entry, int defValue, long *value)
 		**  Return default value.
 		*/
 		*value = defValue;
-		return(FALSE);
+		return(false);
 	}
 
 	/*
 	**  Convert integer string to value.
 	*/
-	*value = strtol(buffer, NULL, 10);
+	*value = strtol(buffer, nullptr, 10);
 
-	return(TRUE);
+	return(true);
 }
 
 /*--------------------------------------------------------------------------
@@ -1146,10 +1125,10 @@ bool MSystem::initGetInteger(char *entry, int defValue, long *value)
 **                  defValue    default value
 **                  value       pointer to return value
 **
-**  Returns:        TRUE if entry was found, FALSE otherwise.
+**  Returns:        true if entry was found, FALSE otherwise.
 **
 **------------------------------------------------------------------------*/
-bool MSystem::initGetDouble(char *entry, int defValue, double *value)
+bool MSystem::initGetDouble(char *entry, int defValue, double *value) const
 {
 	char buffer[40];
 
@@ -1161,15 +1140,15 @@ bool MSystem::initGetDouble(char *entry, int defValue, double *value)
 		**  Return default value.
 		*/
 		*value = defValue;
-		return(FALSE);
+		return(false);
 	}
 
 	/*
 	**  Convert double string to value.
 	*/
-	*value = strtod(buffer, NULL);
+	*value = strtod(buffer, nullptr);
 
-	return(TRUE);
+	return(true);
 }
 
 /*--------------------------------------------------------------------------
@@ -1181,14 +1160,13 @@ bool MSystem::initGetDouble(char *entry, int defValue, double *value)
 **                  str         pointer to string buffer (return value)
 **                  strLen      length of string buffer
 **
-**  Returns:        TRUE if entry was found, FALSE otherwise.
+**  Returns:        true if entry was found, FALSE otherwise.
 **
 **------------------------------------------------------------------------*/
-bool MSystem::initGetString(char *entry, char *defString, char *str, int strLen)
+bool MSystem::initGetString(char *entry, char *defString, char *str, int strLen) const
 {
-	u8 entryLength = (u8)strlen(entry);
+	u8 entryLength = static_cast<u8>(strlen(entry));
 	char *line;
-	char *pos;
 
 	/*
 	**  Leave room for zero terminator.
@@ -1205,7 +1183,7 @@ bool MSystem::initGetString(char *entry, char *defString, char *str, int strLen)
 	*/
 	do
 	{
-		if ((line = initGetNextLine()) == NULL)
+		if ((line = initGetNextLine()) == nullptr)
 		{
 			/*
 			**  Copy return value.
@@ -1215,15 +1193,15 @@ bool MSystem::initGetString(char *entry, char *defString, char *str, int strLen)
 			/*
 			**  End-of-file or end-of-section - return failure.
 			*/
-			return(FALSE);
+			return(false);
 		}
 	} while (strncmp(line, entry, entryLength) != 0);
 
 	/*
 	**  Cut off any trailing comments.
 	*/
-	pos = strchr(line, ';');
-	if (pos != NULL)
+	char *pos = strchr(line, ';');
+	if (pos != nullptr)
 	{
 		*pos = 0;
 	}
@@ -1241,9 +1219,9 @@ bool MSystem::initGetString(char *entry, char *defString, char *str, int strLen)
 	**  Locate start of value.
 	*/
 	pos = strchr(line, '=');
-	if (pos == NULL)
+	if (pos == nullptr)
 	{
-		if (defString != NULL)
+		if (defString != nullptr)
 		{
 			strncpy(str, defString, strLen);
 		}
@@ -1251,14 +1229,14 @@ bool MSystem::initGetString(char *entry, char *defString, char *str, int strLen)
 		/*
 		**  No value specified.
 		*/
-		return(FALSE);
+		return(false);
 	}
 
 	/*
 	**  Return value and success.
 	*/
 	strncpy(str, pos + 1, strLen);
-	return(TRUE);
+	return(true);
 }
 
 /*--------------------------------------------------------------------------
@@ -1271,9 +1249,7 @@ bool MSystem::initGetString(char *entry, char *defString, char *str, int strLen)
 **------------------------------------------------------------------------*/
 u32 MSystem::ConvertEndian(u32 value)
 {
-	u32 result;
-
-	result = (value & 0xff000000) >> 24;
+	u32 result = (value & 0xff000000) >> 24;
 	result |= (value & 0x00ff0000) >> 8;
 	result |= (value & 0x0000ff00) << 8;
 	result |= (value & 0x000000ff) << 24;

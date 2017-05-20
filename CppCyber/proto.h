@@ -74,10 +74,10 @@ void deadStart(u8 k);
 **  rtc.c
 */
 void rtcInit(u8 increment, u32 setMHz, u8 mfrID);
-void rtcTick(void);
-void rtcStartTimer(void);
-double rtcStopTimer(void);
-void rtcReadUsCounter(void);
+void rtcTick();
+void rtcStartTimer();
+double rtcStopTimer();
+void rtcReadUsCounter();
 
 /*
 **  channel.c
@@ -105,7 +105,7 @@ void mt362xInit_7(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void mt362xInit_9(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void mt362xLoadTape(char *params);
 void mt362xUnloadTape(char *params);
-void mt362xShowTapeStatus(void);
+void mt362xShowTapeStatus();
 
 /*
 **  mt607.c
@@ -119,7 +119,7 @@ void mt669Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void mt669Terminate(DevSlot *dp);
 void mt669LoadTape(char *params);
 void mt669UnloadTape(char *params);
-void mt669ShowTapeStatus(void);
+void mt669ShowTapeStatus();
 
 /*
 **  mt679.c
@@ -128,7 +128,7 @@ void mt679Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 void mt679Terminate(DevSlot *dp);
 void mt679LoadTape(char *params);
 void mt679UnloadTape(char *params);
-void mt679ShowTapeStatus(void);
+void mt679ShowTapeStatus();
 
 /*
 **  cr405.c
@@ -202,7 +202,7 @@ void mux6676Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
 **  npu.c
 */
 void npuInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName);
-int npuBipBufCount(void);
+int npuBipBufCount();
 
 /*
 **  pci_channel_{win32,linux}.c
@@ -237,8 +237,8 @@ void ilrInit(u8 registerSize, u8 mfrID);
 /*
 **  trace.c
 */
-void traceInit(void);
-void traceTerminate(void);
+void traceInit();
+void traceTerminate();
 void traceSequence(u8 mfrID);
 void traceRegisters(u8 mfrID);
 void traceOpcode(u8 mfrID);
@@ -254,9 +254,9 @@ void traceExchange(MCpu *cc, u32 addr, char *title, char *xjSource);
 /*
 **  dump.c
 */
-void dumpInit(void);
-void dumpTerminate(void);
-void dumpAll(void);
+void dumpInit();
+void dumpTerminate();
+void dumpAll();
 void dumpCpu(u8 mfrID);
 void dumpPpu(u8 pp, u8 mfrID);
 void dumpDisassemblePpu(u8 pp);
@@ -288,28 +288,28 @@ void windowSetFont(u8 font);
 void windowSetX(u16 x);
 void windowSetY(u16 y);
 void windowQueue(u8 ch);
-void windowUpdate(void);
-void windowGetChar(void);
-void windowTerminate(void);
+void windowUpdate();
+void windowGetChar();
+void windowTerminate();
 
 void windowSetFont1(u8 font);
 void windowSetX1(u16 x);
 void windowSetY1(u16 y);
 void windowQueue1(u8 ch);
-void windowUpdate1(void);
-void windowGetChar1(void);
-void windowTerminate1(void);
+void windowUpdate1();
+void windowGetChar1();
+void windowTerminate1();
 
 /*
 **  operator.c
 */
-void opInit(void);
-void opRequest(void);
+void opInit();
+void opRequest();
 
 /*
 **  log.c
 */
-void logInit(void);
+void logInit();
 void logError(char *file, int line, char *fmt, ...);
 
 

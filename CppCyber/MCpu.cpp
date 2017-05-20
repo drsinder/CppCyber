@@ -76,7 +76,7 @@ MCpu::MCpu(u8 id, u8 mfrID)
 		exit(1);
 	}
 
-	floatException = FALSE;
+	floatException = false;
 
 	BigIron->chasis[mfrID]->cpuCnt++;
 
@@ -98,7 +98,7 @@ MCpu::~MCpu()
 
 void MCpu::Init(char *model, MMainFrame *mainfr)
 {
-	cpu.cpuStopped = TRUE;
+	cpu.cpuStopped = true;
 	cpu.regP = 0;
 	mfr = mainfr;
 	cpMem = mfr->cpMem;
@@ -128,13 +128,13 @@ void MCpu::Init(char *model, MMainFrame *mainfr)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void MCpu::Terminate(void)
+void MCpu::Terminate() const
 {
 	/*
 	**  Optionally save CM.
 	*/
 
-	if (mfr->cmHandle != NULL)
+	if (mfr->cmHandle != nullptr)
 	{
 		fseek(mfr->cmHandle, 0, SEEK_SET);
 		if (fwrite(cpMem, sizeof(CpWord), cpuMaxMemory, mfr->cmHandle) != cpuMaxMemory)
@@ -160,7 +160,7 @@ void MCpu::Terminate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-u32 MCpu::GetP(void)
+u32 MCpu::GetP() const
 {
 	return((cpu.regP) & Mask18);
 }
@@ -176,7 +176,7 @@ u32 MCpu::GetP(void)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-void MCpu::PpReadMem(u32 address, CpWord *data)
+void MCpu::PpReadMem(u32 address, CpWord *data) const
 {
 	if ((features & HasNoCmWrap) != 0)
 	{
@@ -186,7 +186,7 @@ void MCpu::PpReadMem(u32 address, CpWord *data)
 		}
 		else
 		{
-			*data = (~((CpWord)0)) & Mask60;
+			*data = (~static_cast<CpWord>(0)) & Mask60;
 		}
 	}
 	else
@@ -207,7 +207,7 @@ void MCpu::PpReadMem(u32 address, CpWord *data)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-void MCpu::PpWriteMem(u32 address, CpWord data)
+void MCpu::PpWriteMem(u32 address, CpWord data) const
 {
 	if ((features & HasNoCmWrap) != 0)
 	{
@@ -229,20 +229,17 @@ void MCpu::PpWriteMem(u32 address, CpWord data)
 **  Parameters:     Name        Description.
 **                  addr        Exchange jump address.
 **
-**  Returns:        TRUE if exchange jump can be performed, FALSE otherwise.
+**  Returns:        true if exchange jump can be performed, false otherwise.
 **
 **------------------------------------------------------------------------*/
 bool MCpu::ExchangeJump(u32 addr, int monitorx, char *xjSource)
 {
-	CpuContext tmp;
-	CpWord *mem;
-
 	/*
 	**  Only perform exchange jump on instruction boundary or when stopped.
 	*/
 	if (opOffset != 60 && !cpu.cpuStopped)
 	{
-		return(FALSE);
+		return(false);
 	}
 
 #if CcDebug == 1
@@ -262,8 +259,8 @@ bool MCpu::ExchangeJump(u32 addr, int monitorx, char *xjSource)
 #if CcDebug == 1
 		traceCpuPrint(this, stuff);
 		//  abort and dump
-		opActive = FALSE;
-		BigIron->emulationActive = FALSE;
+		opActive = false;
+		BigIron->emulationActive = false;
 #endif
 	}
 #if MaxCpus ==2
@@ -291,7 +288,7 @@ bool MCpu::ExchangeJump(u32 addr, int monitorx, char *xjSource)
 			}
 #endif
 			//printf("\nMonitor %d rejected on cpu %d from Source: %s\n", monitorx, cpu.CpuID, xjSource);
-			return (FALSE);		// reject
+			return (false);		// reject
 		}
 	}
 #if MaxCpus ==2
@@ -314,75 +311,75 @@ bool MCpu::ExchangeJump(u32 addr, int monitorx, char *xjSource)
 #endif	
 
 		printf("\nXJ addr outside cpuMaxMemory\n");
-		return(TRUE);
+		return(true);
 	}
 
 	/*
 	**  Save current context.
 	*/
-	tmp = cpu;
+	CpuContext tmp = cpu;
 
 	/*
 	**  Setup new context.
 	*/
-	mem = cpMem + addr;
+	CpWord *mem = cpMem + addr;
 
-	cpu.regP = (u32)((*mem >> 36) & Mask18);
-	cpu.regA[0] = (u32)((*mem >> 18) & Mask18);
+	cpu.regP = static_cast<u32>((*mem >> 36) & Mask18);
+	cpu.regA[0] = static_cast<u32>((*mem >> 18) & Mask18);
 	cpu.regB[0] = 0;
 
 	mem += 1;
-	cpu.regRaCm = (u32)((*mem >> 36) & Mask24);
-	cpu.regA[1] = (u32)((*mem >> 18) & Mask18);
-	cpu.regB[1] = (u32)((*mem) & Mask18);
+	cpu.regRaCm = static_cast<u32>((*mem >> 36) & Mask24);
+	cpu.regA[1] = static_cast<u32>((*mem >> 18) & Mask18);
+	cpu.regB[1] = static_cast<u32>((*mem) & Mask18);
 
 	mem += 1;
-	cpu.regFlCm = (u32)((*mem >> 36) & Mask24);
-	cpu.regA[2] = (u32)((*mem >> 18) & Mask18);
-	cpu.regB[2] = (u32)((*mem) & Mask18);
+	cpu.regFlCm = static_cast<u32>((*mem >> 36) & Mask24);
+	cpu.regA[2] = static_cast<u32>((*mem >> 18) & Mask18);
+	cpu.regB[2] = static_cast<u32>((*mem) & Mask18);
 
 	mem += 1;
-	cpu.exitMode = (u32)((*mem >> 36) & Mask24);
-	cpu.regA[3] = (u32)((*mem >> 18) & Mask18);
-	cpu.regB[3] = (u32)((*mem) & Mask18);
-
-	mem += 1;
-	if ((features & IsSeries800) != 0
-		&& (cpu.exitMode & EmFlagExpandedAddress) != 0)
-	{
-		cpu.regRaEcs = (u32)((*mem >> 30) & Mask30Ecs);
-	}
-	else
-	{
-		cpu.regRaEcs = (u32)((*mem >> 36) & Mask24Ecs);
-	}
-
-	cpu.regA[4] = (u32)((*mem >> 18) & Mask18);
-	cpu.regB[4] = (u32)((*mem) & Mask18);
+	cpu.exitMode = static_cast<u32>((*mem >> 36) & Mask24);
+	cpu.regA[3] = static_cast<u32>((*mem >> 18) & Mask18);
+	cpu.regB[3] = static_cast<u32>((*mem) & Mask18);
 
 	mem += 1;
 	if ((features & IsSeries800) != 0
 		&& (cpu.exitMode & EmFlagExpandedAddress) != 0)
 	{
-		cpu.regFlEcs = (u32)((*mem >> 30) & Mask30Ecs);
+		cpu.regRaEcs = static_cast<u32>((*mem >> 30) & Mask30Ecs);
 	}
 	else
 	{
-		cpu.regFlEcs = (u32)((*mem >> 36) & Mask24Ecs);
+		cpu.regRaEcs = static_cast<u32>((*mem >> 36) & Mask24Ecs);
 	}
 
-	cpu.regA[5] = (u32)((*mem >> 18) & Mask18);
-	cpu.regB[5] = (u32)((*mem) & Mask18);
+	cpu.regA[4] = static_cast<u32>((*mem >> 18) & Mask18);
+	cpu.regB[4] = static_cast<u32>((*mem) & Mask18);
 
 	mem += 1;
-	cpu.regMa = (u32)((*mem >> 36) & Mask24);
-	cpu.regA[6] = (u32)((*mem >> 18) & Mask18);
-	cpu.regB[6] = (u32)((*mem) & Mask18);
+	if ((features & IsSeries800) != 0
+		&& (cpu.exitMode & EmFlagExpandedAddress) != 0)
+	{
+		cpu.regFlEcs = static_cast<u32>((*mem >> 30) & Mask30Ecs);
+	}
+	else
+	{
+		cpu.regFlEcs = static_cast<u32>((*mem >> 36) & Mask24Ecs);
+	}
+
+	cpu.regA[5] = static_cast<u32>((*mem >> 18) & Mask18);
+	cpu.regB[5] = static_cast<u32>((*mem) & Mask18);
 
 	mem += 1;
-	cpu.regSpare = (u32)((*mem >> 36) & Mask24);
-	cpu.regA[7] = (u32)((*mem >> 18) & Mask18);
-	cpu.regB[7] = (u32)((*mem) & Mask18);
+	cpu.regMa = static_cast<u32>((*mem >> 36) & Mask24);
+	cpu.regA[6] = static_cast<u32>((*mem >> 18) & Mask18);
+	cpu.regB[6] = static_cast<u32>((*mem) & Mask18);
+
+	mem += 1;
+	cpu.regSpare = static_cast<u32>((*mem >> 36) & Mask24);
+	cpu.regA[7] = static_cast<u32>((*mem >> 18) & Mask18);
+	cpu.regB[7] = static_cast<u32>((*mem) & Mask18);
 
 	mem += 1;
 	cpu.regX[0] = *mem++ & Mask60;
@@ -413,33 +410,33 @@ bool MCpu::ExchangeJump(u32 addr, int monitorx, char *xjSource)
 	*/
 	mem = cpMem + addr;
 
-	*mem++ = ((CpWord)(tmp.regP     & Mask18) << 36) | ((CpWord)(tmp.regA[0] & Mask18) << 18);
-	*mem++ = ((CpWord)(tmp.regRaCm  & Mask24) << 36) | ((CpWord)(tmp.regA[1] & Mask18) << 18) | ((CpWord)(tmp.regB[1] & Mask18));
-	*mem++ = ((CpWord)(tmp.regFlCm  & Mask24) << 36) | ((CpWord)(tmp.regA[2] & Mask18) << 18) | ((CpWord)(tmp.regB[2] & Mask18));
-	*mem++ = ((CpWord)(tmp.exitMode & Mask24) << 36) | ((CpWord)(tmp.regA[3] & Mask18) << 18) | ((CpWord)(tmp.regB[3] & Mask18));
+	*mem++ = (static_cast<CpWord>(tmp.regP & Mask18) << 36) | (static_cast<CpWord>(tmp.regA[0] & Mask18) << 18);
+	*mem++ = (static_cast<CpWord>(tmp.regRaCm & Mask24) << 36) | (static_cast<CpWord>(tmp.regA[1] & Mask18) << 18) | static_cast<CpWord>(tmp.regB[1] & Mask18);
+	*mem++ = (static_cast<CpWord>(tmp.regFlCm & Mask24) << 36) | (static_cast<CpWord>(tmp.regA[2] & Mask18) << 18) | static_cast<CpWord>(tmp.regB[2] & Mask18);
+	*mem++ = (static_cast<CpWord>(tmp.exitMode & Mask24) << 36) | (static_cast<CpWord>(tmp.regA[3] & Mask18) << 18) | static_cast<CpWord>(tmp.regB[3] & Mask18);
 
 	if ((features & IsSeries800) != 0
 		&& (tmp.exitMode & EmFlagExpandedAddress) != 0)
 	{
-		*mem++ = ((CpWord)(tmp.regRaEcs & Mask30Ecs) << 30) | ((CpWord)(tmp.regA[4] & Mask18) << 18) | ((CpWord)(tmp.regB[4] & Mask18));
+		*mem++ = (static_cast<CpWord>(tmp.regRaEcs & Mask30Ecs) << 30) | (static_cast<CpWord>(tmp.regA[4] & Mask18) << 18) | (static_cast<CpWord>(tmp.regB[4] & Mask18));
 	}
 	else
 	{
-		*mem++ = ((CpWord)(tmp.regRaEcs & Mask24Ecs) << 36) | ((CpWord)(tmp.regA[4] & Mask18) << 18) | ((CpWord)(tmp.regB[4] & Mask18));
+		*mem++ = (static_cast<CpWord>(tmp.regRaEcs & Mask24Ecs) << 36) | (static_cast<CpWord>(tmp.regA[4] & Mask18) << 18) | (static_cast<CpWord>(tmp.regB[4] & Mask18));
 	}
 
 	if ((features & IsSeries800) != 0
 		&& (tmp.exitMode & EmFlagExpandedAddress) != 0)
 	{
-		*mem++ = ((CpWord)(tmp.regFlEcs & Mask30Ecs) << 30) | ((CpWord)(tmp.regA[5] & Mask18) << 18) | ((CpWord)(tmp.regB[5] & Mask18));
+		*mem++ = (static_cast<CpWord>(tmp.regFlEcs & Mask30Ecs) << 30) | (static_cast<CpWord>(tmp.regA[5] & Mask18) << 18) | (static_cast<CpWord>(tmp.regB[5] & Mask18));
 	}
 	else
 	{
-		*mem++ = ((CpWord)(tmp.regFlEcs & Mask24Ecs) << 36) | ((CpWord)(tmp.regA[5] & Mask18) << 18) | ((CpWord)(tmp.regB[5] & Mask18));
+		*mem++ = (static_cast<CpWord>(tmp.regFlEcs & Mask24Ecs) << 36) | (static_cast<CpWord>(tmp.regA[5] & Mask18) << 18) | (static_cast<CpWord>(tmp.regB[5] & Mask18));
 	}
 
-	*mem++ = ((CpWord)(tmp.regMa    & Mask24) << 36) | ((CpWord)(tmp.regA[6] & Mask18) << 18) | ((CpWord)(tmp.regB[6] & Mask18));
-	*mem++ = ((CpWord)(tmp.regSpare & Mask24) << 36) | ((CpWord)(tmp.regA[7] & Mask18) << 18) | ((CpWord)(tmp.regB[7] & Mask18));
+	*mem++ = (static_cast<CpWord>(tmp.regMa    & Mask24) << 36) | (static_cast<CpWord>(tmp.regA[6] & Mask18) << 18) | (static_cast<CpWord>(tmp.regB[6] & Mask18));
+	*mem++ = (static_cast<CpWord>(tmp.regSpare & Mask24) << 36) | (static_cast<CpWord>(tmp.regA[7] & Mask18) << 18) | (static_cast<CpWord>(tmp.regB[7] & Mask18));
 	*mem++ = tmp.regX[0] & Mask60;
 	*mem++ = tmp.regX[1] & Mask60;
 	*mem++ = tmp.regX[2] & Mask60;
@@ -462,7 +459,7 @@ bool MCpu::ExchangeJump(u32 addr, int monitorx, char *xjSource)
 	**  Activate CPU.
 	*/
 
-	cpu.cpuStopped = FALSE;
+	cpu.cpuStopped = false;
 	FetchOpWord(cpu.regP, &opWord);
 
 #if MaxCpus == 2
@@ -475,8 +472,7 @@ bool MCpu::ExchangeJump(u32 addr, int monitorx, char *xjSource)
 
 	// From Paul Koning code
 
-	CpWord t;
-	t = opWord;
+	CpWord t = opWord;
 	/*
 	**  Check for the idle loop.  Usually that's just an "eq *" but in recent
 	**  flavors of NOS it's a few Cxi instructions then "eq *".  If we see
@@ -490,13 +486,13 @@ bool MCpu::ExchangeJump(u32 addr, int monitorx, char *xjSource)
 	}
 	if ((t >> 30) == (00400000000 | cpu.regP))
 	{
-		cpu.cpuStopped = TRUE;
+		cpu.cpuStopped = true;
 	}
 
 
 //////////////////////////////
 
-	return(TRUE);
+	return(true);
 }
 
 
@@ -508,7 +504,7 @@ bool MCpu::ExchangeJump(u32 addr, int monitorx, char *xjSource)
 **  Returns:        true if stopped
 **
 **------------------------------------------------------------------------*/
-bool MCpu::Step(void)
+bool MCpu::Step()
 {
 	if (cpu.cpuStopped)
 	{
@@ -532,11 +528,11 @@ bool MCpu::Step(void)
 		/*
 		**  Decode based on type.
 		*/
-		opFm = (u8)((opWord >> (opOffset - 6)) & Mask6);
+		opFm = static_cast<u8>((opWord >> (opOffset - 6)) & Mask6);
 
-		opI = (u8)((opWord >> (opOffset - 9)) & Mask3);
-		opJ = (u8)((opWord >> (opOffset - 12)) & Mask3);
-		opLength = (u8)decodeCpuOpcode[opFm].length;
+		opI = static_cast<u8>((opWord >> (opOffset - 9)) & Mask3);
+		opJ = static_cast<u8>((opWord >> (opOffset - 12)) & Mask3);
+		opLength = static_cast<u8>(decodeCpuOpcode[opFm].length);
 
 		if (opLength == 0)
 		{
@@ -545,7 +541,7 @@ bool MCpu::Step(void)
 
 		if (opLength == 15)
 		{
-			opK = (u8)((opWord >> (opOffset - 15)) & Mask3);
+			opK = static_cast<u8>((opWord >> (opOffset - 15)) & Mask3);
 			opAddress = 0;
 
 			opOffset -= 15;
@@ -562,7 +558,7 @@ bool MCpu::Step(void)
 			}
 
 			opK = 0;
-			opAddress = (u32)((opWord >> (opOffset - 30)) & Mask18);
+			opAddress = static_cast<u32>((opWord >> (opOffset - 30)) & Mask18);
 
 			opOffset -= 30;
 		}
@@ -621,7 +617,7 @@ bool MCpu::Step(void)
 **  Parameters:     Name        Description.
 **                  ecsAddress  ECS address (flag register function and data)
 **
-**  Returns:        TRUE if accepted, FALSE otherwise.
+**  Returns:        true if accepted, false otherwise.
 **
 **------------------------------------------------------------------------*/
 bool MCpu::EcsFlagRegister(u32 ecsAddress)
@@ -654,7 +650,7 @@ bool MCpu::EcsFlagRegister(u32 ecsAddress)
 				RELEASE1(&BigIron->ECSFlagMutex);
 			}
 #endif
-			return(FALSE);
+			return(false);
 		}
 
 		BigIron->ecsFlagRegister |= flagWord;
@@ -678,7 +674,7 @@ bool MCpu::EcsFlagRegister(u32 ecsAddress)
 			**  Error exit.
 			*/
 
-			return(FALSE);
+			return(false);
 		}
 
 		break;
@@ -705,7 +701,7 @@ bool MCpu::EcsFlagRegister(u32 ecsAddress)
 	/*
 	**  Normal exit.
 	*/
-	return(TRUE);
+	return(true);
 }
 
 
@@ -727,10 +723,10 @@ bool MCpu::EcsFlagRegister(u32 ecsAddress)
 **------------------------------------------------------------------------*/
 void MCpu::OpIllegal(char * from)
 {
-	cpu.cpuStopped = TRUE;
+	cpu.cpuStopped = true;
 	if (cpu.regRaCm < cpuMaxMemory)
 	{
-		cpMem[cpu.regRaCm] = ((CpWord)cpu.exitCondition << 48) | ((CpWord)(cpu.regP + 1) << 30);
+		cpMem[cpu.regRaCm] = (static_cast<CpWord>(cpu.exitCondition) << 48) | (static_cast<CpWord>(cpu.regP + 1) << 30);
 	}
 
 	cpu.regP = 0;
@@ -755,7 +751,7 @@ void MCpu::OpIllegal(char * from)
 **                  address     RA relative address to read.
 **                  location    Pointer to u32 which will contain absolute address.
 **
-**  Returns:        TRUE if validation failed, FALSE otherwise;
+**  Returns:        true if validation failed, false otherwise;
 **
 **------------------------------------------------------------------------*/
 bool MCpu::CheckOpAddress(u32 address, u32 *location)
@@ -770,7 +766,7 @@ bool MCpu::CheckOpAddress(u32 address, u32 *location)
 		/*
 		**  Exit mode is always selected for RNI or branch.
 		*/
-		cpu.cpuStopped = TRUE;
+		cpu.cpuStopped = true;
 
 		cpu.exitCondition |= EcAddressOutOfRange;
 		if (cpu.regRaCm < cpuMaxMemory)
@@ -778,7 +774,7 @@ bool MCpu::CheckOpAddress(u32 address, u32 *location)
 			// not need for RNI or branch - how about other uses?
 			if ((cpu.exitMode & EmAddressOutOfRange) != 0)
 			{
-				cpMem[cpu.regRaCm] = ((CpWord)cpu.exitCondition << 48) | ((CpWord)(cpu.regP) << 30);
+				cpMem[cpu.regRaCm] = (static_cast<CpWord>(cpu.exitCondition) << 48) | (static_cast<CpWord>(cpu.regP) << 30);
 			}
 		}
 
@@ -791,7 +787,7 @@ bool MCpu::CheckOpAddress(u32 address, u32 *location)
 			ExchangeJump(cpu.regMa, cpu.CpuID, "CheckOpAddress");
 		}
 
-		return(TRUE);
+		return(true);
 	}
 
 	/*
@@ -800,7 +796,7 @@ bool MCpu::CheckOpAddress(u32 address, u32 *location)
 
 	*location %= cpuMaxMemory;
 
-	return(FALSE);
+	return(false);
 }
 
 /*--------------------------------------------------------------------------
@@ -848,7 +844,7 @@ void MCpu::FetchOpWord(u32 address, CpWord *data)
 			cpu.iwRank = (cpu.iwRank + 1) % MaxIwStack;
 			cpu.iwAddress[cpu.iwRank] = location;
 			cpu.iwStack[cpu.iwRank] = cpMem[location] & Mask60;
-			cpu.iwValid[cpu.iwRank] = TRUE;
+			cpu.iwValid[cpu.iwRank] = true;
 			*data = cpu.iwStack[cpu.iwRank];
 		}
 
@@ -869,7 +865,7 @@ void MCpu::FetchOpWord(u32 address, CpWord *data)
 				cpu.iwRank = (cpu.iwRank + 1) % MaxIwStack;
 				cpu.iwAddress[cpu.iwRank] = location;
 				cpu.iwStack[cpu.iwRank] = cpMem[location] & Mask60;
-				cpu.iwValid[cpu.iwRank] = TRUE;
+				cpu.iwValid[cpu.iwRank] = true;
 			}
 #else
 			/*
@@ -884,7 +880,7 @@ void MCpu::FetchOpWord(u32 address, CpWord *data)
 			cpu.iwRank = (cpu.iwRank + 1) % MaxIwStack;
 			cpu.iwAddress[cpu.iwRank] = location;
 			cpu.iwStack[cpu.iwRank] = cpMem[location] & Mask60;
-			cpu.iwValid[cpu.iwRank] = TRUE;
+			cpu.iwValid[cpu.iwRank] = true;
 #endif
 		}
 	}
@@ -914,12 +910,11 @@ void MCpu::FetchOpWord(u32 address, CpWord *data)
 **------------------------------------------------------------------------*/
 void MCpu::VoidIwStack(u32 branchAddr)
 {
-	u32 location;
 	int i;
 
 	if (branchAddr != ~0)
 	{
-		location = AddRa(branchAddr);
+		u32 location = AddRa(branchAddr);
 
 		for (i = 0; i < MaxIwStack; i++)
 		{
@@ -938,7 +933,7 @@ void MCpu::VoidIwStack(u32 branchAddr)
 	*/
 	for (i = 0; i < MaxIwStack; i++)
 	{
-		cpu.iwValid[i] = FALSE;
+		cpu.iwValid[i] = false;
 	}
 
 	cpu.iwRank = 0;
@@ -951,13 +946,11 @@ void MCpu::VoidIwStack(u32 branchAddr)
 **                  address     RA relative address to read.
 **                  data        Pointer to 60 bit word which gets the data.
 **
-**  Returns:        TRUE if access failed, FALSE otherwise;
+**  Returns:        true if access failed, false otherwise;
 **
 **------------------------------------------------------------------------*/
 bool MCpu::ReadMem(u32 address, CpWord *data)
 {
-	u32 location;
-
 	if (address >= cpu.regFlCm)
 	{
 		cpu.exitCondition |= EcAddressOutOfRange;
@@ -972,11 +965,11 @@ bool MCpu::ReadMem(u32 address, CpWord *data)
 			/*
 			**  Exit mode selected.
 			*/
-			cpu.cpuStopped = TRUE;
+			cpu.cpuStopped = true;
 
 			if (cpu.regRaCm < cpuMaxMemory)
 			{
-				cpMem[cpu.regRaCm] = ((CpWord)cpu.exitCondition << 48) | ((CpWord)(cpu.regP + 1) << 30);
+				cpMem[cpu.regRaCm] = (static_cast<CpWord>(cpu.exitCondition) << 48) | (static_cast<CpWord>(cpu.regP + 1) << 30);
 			}
 
 			cpu.regP = 0;
@@ -996,16 +989,16 @@ bool MCpu::ReadMem(u32 address, CpWord *data)
 				*/
 				ExchangeJump(cpu.regMa, cpu.CpuID, "ReadMem");
 			}
-			return(TRUE);
+			return(true);
 		}
 
-		return(FALSE);
+		return(false);
 	}
 
 	/*
 	**  Calculate absolute address.
 	*/
-	location = AddRa(address);
+	u32 location = AddRa(address);
 
 	/*
 	**  Wrap around or fail gracefully if wrap around is disabled.
@@ -1014,8 +1007,8 @@ bool MCpu::ReadMem(u32 address, CpWord *data)
 	{
 		if ((features & HasNoCmWrap) != 0)
 		{
-			*data = (~((CpWord)0)) & Mask60;
-			return(FALSE);
+			*data = (~(static_cast<CpWord>(0))) & Mask60;
+			return(false);
 		}
 
 		location %= cpuMaxMemory;
@@ -1026,7 +1019,7 @@ bool MCpu::ReadMem(u32 address, CpWord *data)
 	*/
 	*data = cpMem[location] & Mask60;
 
-	return(FALSE);
+	return(false);
 }
 
 /*--------------------------------------------------------------------------
@@ -1036,13 +1029,11 @@ bool MCpu::ReadMem(u32 address, CpWord *data)
 **                  address     RA relative address to write.
 **                  data        Pointer to 60 bit word which holds the data.
 **
-**  Returns:        TRUE if access failed, FALSE otherwise;
+**  Returns:        true if access failed, false otherwise;
 **
 **------------------------------------------------------------------------*/
 bool MCpu::WriteMem(u32 address, CpWord *data)
 {
-	u32 location;
-
 	if (address >= cpu.regFlCm)
 	{
 		cpu.exitCondition |= EcAddressOutOfRange;
@@ -1052,11 +1043,11 @@ bool MCpu::WriteMem(u32 address, CpWord *data)
 			/*
 			**  Exit mode selected.
 			*/
-			cpu.cpuStopped = TRUE;
+			cpu.cpuStopped = true;
 
 			if (cpu.regRaCm < cpuMaxMemory)
 			{
-				cpMem[cpu.regRaCm] = ((CpWord)cpu.exitCondition << 48) | ((CpWord)(cpu.regP + 1) << 30);
+				cpMem[cpu.regRaCm] = (static_cast<CpWord>(cpu.exitCondition) << 48) | (static_cast<CpWord>(cpu.regP + 1) << 30);
 			}
 
 			cpu.regP = 0;
@@ -1069,16 +1060,16 @@ bool MCpu::WriteMem(u32 address, CpWord *data)
 				ExchangeJump(cpu.regMa, cpu.CpuID, "WriteMem");
 			}
 
-			return(TRUE);
+			return(true);
 		}
 
-		return(FALSE);
+		return(false);
 	}
 
 	/*
 	**  Calculate absolute address.
 	*/
-	location = AddRa(address);
+	u32 location = AddRa(address);
 
 	/*
 	**  Wrap around or fail gracefully if wrap around is disabled.
@@ -1087,7 +1078,7 @@ bool MCpu::WriteMem(u32 address, CpWord *data)
 	{
 		if ((features & HasNoCmWrap) != 0)
 		{
-			return(FALSE);
+			return(false);
 		}
 
 		location %= cpuMaxMemory;
@@ -1098,7 +1089,7 @@ bool MCpu::WriteMem(u32 address, CpWord *data)
 	*/
 	cpMem[location] = *data & Mask60;
 
-	return(FALSE);
+	return(false);
 }
 
 /*--------------------------------------------------------------------------
@@ -1109,7 +1100,7 @@ bool MCpu::WriteMem(u32 address, CpWord *data)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void MCpu::RegASemantics(void)
+void MCpu::RegASemantics()
 {
 	if (opI == 0)
 	{
@@ -1240,7 +1231,7 @@ u32 MCpu::Subtract18(u32 op1, u32 op2)
 **  Purpose:        Transfer word to/from UEM initiated by a CPU instruction.
 **
 **  Parameters:     Name        Description.
-**                  writeToUem  TRUE if this is a write to UEM, FALSE if
+**                  writeToUem  true if this is a write to UEM, false if
 **                              this is a read.
 **
 **  Returns:        Nothing
@@ -1248,12 +1239,10 @@ u32 MCpu::Subtract18(u32 op1, u32 op2)
 **------------------------------------------------------------------------*/
 void MCpu::UemWord(bool writeToUem)
 {
-	u32 uemAddress;
-
 	/*
 	**  Calculate source or destination addresses.
 	*/
-	uemAddress = (u32)(cpu.regX[opK] & Mask24);
+	u32 uemAddress = static_cast<u32>(cpu.regX[opK] & Mask24);
 
 	/*
 	**  Check for UEM range.
@@ -1266,11 +1255,11 @@ void MCpu::UemWord(bool writeToUem)
 			/*
 			**  Exit mode selected.
 			*/
-			cpu.cpuStopped = TRUE;
+			cpu.cpuStopped = true;
 
 			if (cpu.regRaCm < cpuMaxMemory)
 			{
-				cpMem[cpu.regRaCm] = ((CpWord)cpu.exitCondition << 48) | ((CpWord)(cpu.regP + 1) << 30);
+				cpMem[cpu.regRaCm] = (static_cast<CpWord>(cpu.exitCondition) << 48) | (static_cast<CpWord>(cpu.regP + 1) << 30);
 			}
 
 			cpu.regP = 0;
@@ -1323,7 +1312,7 @@ void MCpu::UemWord(bool writeToUem)
 **  Purpose:        Transfer word to/from ECS initiated by a CPU instruction.
 **
 **  Parameters:     Name        Description.
-**                  writeToEcs  TRUE if this is a write to ECS, FALSE if
+**                  writeToEcs  true if this is a write to ECS, false if
 **                              this is a read.
 **
 **  Returns:        Nothing
@@ -1331,8 +1320,6 @@ void MCpu::UemWord(bool writeToUem)
 **------------------------------------------------------------------------*/
 void MCpu::EcsWord(bool writeToEcs)
 {
-	u32 ecsAddress;
-
 	/*
 	**  ECS must exist.
 	*/
@@ -1342,7 +1329,7 @@ void MCpu::EcsWord(bool writeToEcs)
 		return;
 	}
 
-	ecsAddress = (u32)(cpu.regX[opK] & Mask24);
+	u32 ecsAddress = static_cast<u32>(cpu.regX[opK] & Mask24);
 
 	/*
 	**  Check for ECS range.
@@ -1355,11 +1342,11 @@ void MCpu::EcsWord(bool writeToEcs)
 			/*
 			**  Exit mode selected.
 			*/
-			cpu.cpuStopped = TRUE;
+			cpu.cpuStopped = true;
 
 			if (cpu.regRaCm < cpuMaxMemory)
 			{
-				cpMem[cpu.regRaCm] = ((CpWord)cpu.exitCondition << 48) | ((CpWord)(cpu.regP + 1) << 30);
+				cpMem[cpu.regRaCm] = (static_cast<CpWord>(cpu.exitCondition) << 48) | (static_cast<CpWord>(cpu.regP + 1) << 30);
 			}
 
 			cpu.regP = 0;
@@ -1413,7 +1400,7 @@ void MCpu::EcsWord(bool writeToEcs)
 **  Purpose:        Transfer block to/from UEM initiated by a CPU instruction.
 **
 **  Parameters:     Name        Description.
-**                  writeToUem  TRUE if this is a write to UEM, FALSE if
+**                  writeToUem  true if this is a write to UEM, false if
 **                              this is a read.
 **
 **  Returns:        Nothing
@@ -1421,8 +1408,6 @@ void MCpu::EcsWord(bool writeToEcs)
 **------------------------------------------------------------------------*/
 void MCpu::UemTransfer(bool writeToUem)
 {
-	u32 wordCount;
-	u32 uemAddress;
 	u32 cmAddress;
 
 	/*
@@ -1437,12 +1422,12 @@ void MCpu::UemTransfer(bool writeToUem)
 	/*
 	**  Calculate word count, source and destination addresses.
 	*/
-	wordCount = Add18(cpu.regB[opJ], opAddress);
-	uemAddress = (u32)(cpu.regX[0] & Mask30);
+	u32 wordCount = Add18(cpu.regB[opJ], opAddress);
+	u32 uemAddress = static_cast<u32>(cpu.regX[0] & Mask30);
 
 	if ((cpu.exitMode & EmFlagEnhancedBlockCopy) != 0)
 	{
-		cmAddress = (u32)((cpu.regX[0] >> 30) & Mask21);
+		cmAddress = static_cast<u32>((cpu.regX[0] >> 30) & Mask21);
 	}
 	else
 	{
@@ -1470,11 +1455,11 @@ void MCpu::UemTransfer(bool writeToUem)
 			/*
 			**  Exit mode selected.
 			*/
-			cpu.cpuStopped = TRUE;
+			cpu.cpuStopped = true;
 
 			if (cpu.regRaCm < cpuMaxMemory)
 			{
-				cpMem[cpu.regRaCm] = ((CpWord)cpu.exitCondition << 48) | ((CpWord)(cpu.regP + 1) << 30);
+				cpMem[cpu.regRaCm] = (static_cast<CpWord>(cpu.exitCondition) << 48) | (static_cast<CpWord>(cpu.regP + 1) << 30);
 			}
 
 			cpu.regP = 0;
@@ -1531,7 +1516,7 @@ void MCpu::UemTransfer(bool writeToUem)
 	}
 	else
 	{
-		bool takeErrorExit = FALSE;
+		bool takeErrorExit = false;
 
 		while (wordCount--)
 		{
@@ -1545,7 +1530,7 @@ void MCpu::UemTransfer(bool writeToUem)
 				>>>>>>>>>>>> Maybe the manual is wrong about bits 21/22 and it should be bit 24 instead? <<<<<<<<<<<<<<<<
 				*/
 				cpMem[cmAddress] = 0;
-				takeErrorExit = TRUE;
+				takeErrorExit = true;
 			}
 			else
 			{
@@ -1579,7 +1564,7 @@ void MCpu::UemTransfer(bool writeToUem)
 **  Purpose:        Transfer block to/from ECS initiated by a CPU instruction.
 **
 **  Parameters:     Name        Description.
-**                  writeToEcs  TRUE if this is a write to ECS, FALSE if
+**                  writeToEcs  true if this is a write to ECS, false if
 **                              this is a read.
 **
 **  Returns:        Nothing
@@ -1587,8 +1572,6 @@ void MCpu::UemTransfer(bool writeToUem)
 **------------------------------------------------------------------------*/
 void MCpu::EcsTransfer(bool writeToEcs)
 {
-	u32 wordCount;
-	u32 ecsAddress;
 	u32 cmAddress;
 
 	/*
@@ -1603,12 +1586,12 @@ void MCpu::EcsTransfer(bool writeToEcs)
 	/*
 	**  Calculate word count, source and destination addresses.
 	*/
-	wordCount = Add18(cpu.regB[opJ], opAddress);
-	ecsAddress = (u32)(cpu.regX[0] & Mask24);
+	u32 wordCount = Add18(cpu.regB[opJ], opAddress);
+	u32 ecsAddress = static_cast<u32>(cpu.regX[0] & Mask24);
 
 	if ((cpu.exitMode & EmFlagEnhancedBlockCopy) != 0)
 	{
-		cmAddress = (u32)((cpu.regX[0] >> 30) & Mask24);
+		cmAddress = static_cast<u32>((cpu.regX[0] >> 30) & Mask24);
 	}
 	else
 	{
@@ -1623,8 +1606,8 @@ void MCpu::EcsTransfer(bool writeToEcs)
 	**
 	**  Note that the ECS RA is NOT added to the relative address.
 	*/
-	if ((ecsAddress   & ((u32)1 << 23)) != 0
-		&& (cpu.regFlEcs & ((u32)1 << 23)) != 0)
+	if ((ecsAddress   & (static_cast<u32>(1) << 23)) != 0
+		&& (cpu.regFlEcs & (static_cast<u32>(1) << 23)) != 0)
 	{
 		if (!EcsFlagRegister(ecsAddress))
 		{
@@ -1660,11 +1643,11 @@ void MCpu::EcsTransfer(bool writeToEcs)
 			/*
 			**  Exit mode selected.
 			*/
-			cpu.cpuStopped = TRUE;
+			cpu.cpuStopped = true;
 
 			if (cpu.regRaCm < cpuMaxMemory)
 			{
-				cpMem[cpu.regRaCm] = ((CpWord)cpu.exitCondition << 48) | ((CpWord)(cpu.regP + 1) << 30);
+				cpMem[cpu.regRaCm] = (static_cast<CpWord>(cpu.exitCondition) << 48) | (static_cast<CpWord>(cpu.regP + 1) << 30);
 			}
 
 			cpu.regP = 0;
@@ -1720,7 +1703,7 @@ void MCpu::EcsTransfer(bool writeToEcs)
 	}
 	else
 	{
-		bool takeErrorExit = FALSE;
+		bool takeErrorExit = false;
 
 		while (wordCount--)
 		{
@@ -1730,7 +1713,7 @@ void MCpu::EcsTransfer(bool writeToEcs)
 				**  Zero CM, but take error exit to lower 30 bits once zeroing is finished.
 				*/
 				cpMem[cmAddress] = 0;
-				takeErrorExit = TRUE;
+				takeErrorExit = true;
 			}
 			else
 			{
@@ -1768,14 +1751,11 @@ void MCpu::EcsTransfer(bool writeToEcs)
 **                  pos         character position
 **                  byte        pointer to byte
 **
-**  Returns:        TRUE if access failed, FALSE otherwise.
+**  Returns:        true if access failed, false otherwise.
 **
 **------------------------------------------------------------------------*/
 bool MCpu::CmuGetByte(u32 address, u32 pos, u8 *byte)
 {
-	u32 location;
-	CpWord data;
-
 	/*
 	**  Validate access.
 	*/
@@ -1787,11 +1767,11 @@ bool MCpu::CmuGetByte(u32 address, u32 pos, u8 *byte)
 			/*
 			**  Exit mode selected.
 			*/
-			cpu.cpuStopped = TRUE;
+			cpu.cpuStopped = true;
 
 			if (cpu.regRaCm < cpuMaxMemory)
 			{
-				cpMem[cpu.regRaCm] = ((CpWord)cpu.exitCondition << 48) | ((CpWord)(cpu.regP + 1) << 30);
+				cpMem[cpu.regRaCm] = (static_cast<CpWord>(cpu.exitCondition) << 48) | (static_cast<CpWord>(cpu.regP + 1) << 30);
 			}
 
 			cpu.regP = 0;
@@ -1805,26 +1785,26 @@ bool MCpu::CmuGetByte(u32 address, u32 pos, u8 *byte)
 			}
 		}
 
-		return(TRUE);
+		return(true);
 	}
 
 	/*
 	**  Calculate absolute address with wraparound.
 	*/
-	location = AddRa(address);
+	u32 location = AddRa(address);
 	location %= cpuMaxMemory;
 
 	/*
 	**  Fetch the word.
 	*/
-	data = cpMem[location] & Mask60;
+	CpWord data = cpMem[location] & Mask60;
 
 	/*
 	**  Extract and return the byte.
 	*/
-	*byte = (u8)((data >> ((9 - pos) * 6)) & Mask6);
+	*byte = static_cast<u8>((data >> ((9 - pos) * 6)) & Mask6);
 
-	return(FALSE);
+	return(false);
 }
 
 /*--------------------------------------------------------------------------
@@ -1835,14 +1815,11 @@ bool MCpu::CmuGetByte(u32 address, u32 pos, u8 *byte)
 **                  pos         character position
 **                  byte        data byte to put
 **
-**  Returns:        TRUE if access failed, FALSE otherwise.
+**  Returns:        true if access failed, false otherwise.
 **
 **------------------------------------------------------------------------*/
 bool MCpu::CmuPutByte(u32 address, u32 pos, u8 byte)
 {
-	u32 location;
-	CpWord data;
-
 	/*
 	**  Validate access.
 	*/
@@ -1854,11 +1831,11 @@ bool MCpu::CmuPutByte(u32 address, u32 pos, u8 byte)
 			/*
 			**  Exit mode selected.
 			*/
-			cpu.cpuStopped = TRUE;
+			cpu.cpuStopped = true;
 
 			if (cpu.regRaCm < cpuMaxMemory)
 			{
-				cpMem[cpu.regRaCm] = ((CpWord)cpu.exitCondition << 48) | ((CpWord)(cpu.regP + 1) << 30);
+				cpMem[cpu.regRaCm] = (static_cast<CpWord>(cpu.exitCondition) << 48) | (static_cast<CpWord>(cpu.regP + 1) << 30);
 			}
 
 			cpu.regP = 0;
@@ -1872,36 +1849,36 @@ bool MCpu::CmuPutByte(u32 address, u32 pos, u8 byte)
 			}
 		}
 
-		return(TRUE);
+		return(true);
 	}
 
 	/*
 	**  Calculate absolute address with wraparound.
 	*/
-	location = AddRa(address);
+	u32 location = AddRa(address);
 	location %= cpuMaxMemory;
 
 	/*
 	**  Fetch the word.
 	*/
-	data = cpMem[location] & Mask60;
+	CpWord data = cpMem[location] & Mask60;
 
 	/*
 	**  Mask the destination position.
 	*/
-	data &= ~(((CpWord)Mask6) << ((9 - pos) * 6));
+	data &= ~((static_cast<CpWord>(Mask6)) << ((9 - pos) * 6));
 
 	/*
 	**  Store byte into position
 	*/
-	data |= (((CpWord)byte) << ((9 - pos) * 6));
+	data |= (static_cast<CpWord>(byte) << ((9 - pos) * 6));
 
 	/*
 	**  Store the word.
 	*/
 	cpMem[location] = data & Mask60;
 
-	return(FALSE);
+	return(false);
 }
 
 /*--------------------------------------------------------------------------
@@ -1912,23 +1889,19 @@ bool MCpu::CmuPutByte(u32 address, u32 pos, u8 byte)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-void MCpu::CmuMoveIndirect(void)
+void MCpu::CmuMoveIndirect()
 {
 	CpWord descWord;
-	u32 k1, k2;
-	u32 c1, c2;
-	u32 ll;
 	u8 byte;
-	bool failed;
 
 	//<<<<<<<<<<<<<<<<<<<<<<<< don't forget to optimise c1 == c2 cases.
 
 	/*
 	**  Fetch the descriptor word.
 	*/
-	opAddress = (u32)((opWord >> 30) & Mask18);
+	opAddress = static_cast<u32>((opWord >> 30) & Mask18);
 	opAddress = Add18(cpu.regB[opJ], opAddress);
-	failed = ReadMem(opAddress, &descWord);
+	bool failed = ReadMem(opAddress, &descWord);
 	if (failed)
 	{
 		return;
@@ -1937,11 +1910,11 @@ void MCpu::CmuMoveIndirect(void)
 	/*
 	**  Decode descriptor word.
 	*/
-	k1 = (u32)(descWord >> 30) & Mask18;
-	k2 = (u32)(descWord >> 0) & Mask18;
-	c1 = (u32)(descWord >> 22) & Mask4;
-	c2 = (u32)(descWord >> 18) & Mask4;
-	ll = (u32)((descWord >> 26) & Mask4) | (u32)((descWord >> (48 - 4)) & (Mask9 << 4));
+	u32 k1 = static_cast<u32>(descWord >> 30) & Mask18;
+	u32 k2 = static_cast<u32>(descWord >> 0) & Mask18;
+	u32 c1 = static_cast<u32>(descWord >> 22) & Mask4;
+	u32 c2 = static_cast<u32>(descWord >> 18) & Mask4;
+	u32 ll = static_cast<u32>((descWord >> 26) & Mask4) | static_cast<u32>((descWord >> (48 - 4)) & (Mask9 << 4));
 
 	/*
 	**  Check for address out of range.
@@ -1954,11 +1927,11 @@ void MCpu::CmuMoveIndirect(void)
 			/*
 			**  Exit mode selected.
 			*/
-			cpu.cpuStopped = TRUE;
+			cpu.cpuStopped = true;
 
 			if (cpu.regRaCm < cpuMaxMemory)
 			{
-				cpMem[cpu.regRaCm] = ((CpWord)cpu.exitCondition << 48) | ((CpWord)(cpu.regP + 1) << 30);
+				cpMem[cpu.regRaCm] = (static_cast<CpWord>(cpu.exitCondition) << 48) | (static_cast<CpWord>(cpu.regP + 1) << 30);
 			}
 
 			cpu.regP = 0;
@@ -2036,11 +2009,8 @@ void MCpu::CmuMoveIndirect(void)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-void MCpu::CmuMoveDirect(void)
+void MCpu::CmuMoveDirect()
 {
-	u32 k1, k2;
-	u32 c1, c2;
-	u32 ll;
 	u8 byte;
 
 	//<<<<<<<<<<<<<<<<<<<<<<<< don't forget to optimise c1 == c2 cases.
@@ -2048,11 +2018,11 @@ void MCpu::CmuMoveDirect(void)
 	/*
 	**  Decode opcode word.
 	*/
-	k1 = (u32)(opWord >> 30) & Mask18;
-	k2 = (u32)(opWord >> 0) & Mask18;
-	c1 = (u32)(opWord >> 22) & Mask4;
-	c2 = (u32)(opWord >> 18) & Mask4;
-	ll = (u32)((opWord >> 26) & Mask4) | (u32)((opWord >> (48 - 4)) & (Mask3 << 4));
+	u32 k1 = static_cast<u32>(opWord >> 30) & Mask18;
+	u32 k2 = static_cast<u32>(opWord >> 0) & Mask18;
+	u32 c1 = static_cast<u32>(opWord >> 22) & Mask4;
+	u32 c2 = static_cast<u32>(opWord >> 18) & Mask4;
+	u32 ll = static_cast<u32>((opWord >> 26) & Mask4) | static_cast<u32>((opWord >> (48 - 4)) & (Mask3 << 4));
 
 	/*
 	**  Check for address out of range.
@@ -2065,11 +2035,11 @@ void MCpu::CmuMoveDirect(void)
 			/*
 			**  Exit mode selected.
 			*/
-			cpu.cpuStopped = TRUE;
+			cpu.cpuStopped = true;
 
 			if (cpu.regRaCm < cpuMaxMemory)
 			{
-				cpMem[cpu.regRaCm] = ((CpWord)cpu.exitCondition << 48) | ((CpWord)(cpu.regP + 1) << 30);
+				cpMem[cpu.regRaCm] = (static_cast<CpWord>(cpu.exitCondition) << 48) | (static_cast<CpWord>(cpu.regP + 1) << 30);
 			}
 
 			cpu.regP = 0;
@@ -2148,28 +2118,24 @@ void MCpu::CmuMoveDirect(void)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-void MCpu::CmuCompareCollated(void)
+void MCpu::CmuCompareCollated()
 {
 	CpWord result = 0;
-	u32 k1, k2;
-	u32 c1, c2;
-	u32 ll;
-	u32 collTable;
 	u8 byte1, byte2;
 
 	/*
 	**  Decode opcode word.
 	*/
-	k1 = (u32)(opWord >> 30) & Mask18;
-	k2 = (u32)(opWord >> 0) & Mask18;
-	c1 = (u32)(opWord >> 22) & Mask4;
-	c2 = (u32)(opWord >> 18) & Mask4;
-	ll = (u32)((opWord >> 26) & Mask4) | (u32)((opWord >> (48 - 4)) & (Mask3 << 4));
+	u32 k1 = static_cast<u32>(opWord >> 30) & Mask18;
+	u32 k2 = static_cast<u32>(opWord >> 0) & Mask18;
+	u32 c1 = static_cast<u32>(opWord >> 22) & Mask4;
+	u32 c2 = static_cast<u32>(opWord >> 18) & Mask4;
+	u32 ll = static_cast<u32>((opWord >> 26) & Mask4) | static_cast<u32>((opWord >> (48 - 4)) & (Mask3 << 4));
 
 	/*
 	**  Setup collating table.
 	*/
-	collTable = cpu.regA[0];
+	u32 collTable = cpu.regA[0];
 
 	/*
 	**  Check for addresses and collTable out of range.
@@ -2182,11 +2148,11 @@ void MCpu::CmuCompareCollated(void)
 			/*
 			**  Exit mode selected.
 			*/
-			cpu.cpuStopped = TRUE;
+			cpu.cpuStopped = true;
 
 			if (cpu.regRaCm < cpuMaxMemory)
 			{
-				cpMem[cpu.regRaCm] = ((CpWord)cpu.exitCondition << 48) | ((CpWord)(cpu.regP + 1) << 30);
+				cpMem[cpu.regRaCm] = (static_cast<CpWord>(cpu.exitCondition) << 48) | (static_cast<CpWord>(cpu.regP + 1) << 30);
 			}
 
 			cpu.regP = 0;
@@ -2300,22 +2266,19 @@ void MCpu::CmuCompareCollated(void)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-void MCpu::CmuCompareUncollated(void)
+void MCpu::CmuCompareUncollated()
 {
 	CpWord result = 0;
-	u32 k1, k2;
-	u32 c1, c2;
-	u32 ll;
 	u8 byte1, byte2;
 
 	/*
 	**  Decode opcode word.
 	*/
-	k1 = (u32)(opWord >> 30) & Mask18;
-	k2 = (u32)(opWord >> 0) & Mask18;
-	c1 = (u32)(opWord >> 22) & Mask4;
-	c2 = (u32)(opWord >> 18) & Mask4;
-	ll = (u32)((opWord >> 26) & Mask4) | (u32)((opWord >> (48 - 4)) & (Mask3 << 4));
+	u32 k1 = static_cast<u32>(opWord >> 30) & Mask18;
+	u32 k2 = static_cast<u32>(opWord >> 0) & Mask18;
+	u32 c1 = static_cast<u32>(opWord >> 22) & Mask4;
+	u32 c2 = static_cast<u32>(opWord >> 18) & Mask4;
+	u32 ll = static_cast<u32>((opWord >> 26) & Mask4) | static_cast<u32>((opWord >> (48 - 4)) & (Mask3 << 4));
 
 	/*
 	**  Check for address out of range.
@@ -2328,11 +2291,11 @@ void MCpu::CmuCompareUncollated(void)
 			/*
 			**  Exit mode selected.
 			*/
-			cpu.cpuStopped = TRUE;
+			cpu.cpuStopped = true;
 
 			if (cpu.regRaCm < cpuMaxMemory)
 			{
-				cpMem[cpu.regRaCm] = ((CpWord)cpu.exitCondition << 48) | ((CpWord)(cpu.regP + 1) << 30);
+				cpMem[cpu.regRaCm] = (static_cast<CpWord>(cpu.exitCondition) << 48) | (static_cast<CpWord>(cpu.regP + 1) << 30);
 			}
 
 			cpu.regP = 0;
@@ -2430,17 +2393,17 @@ void MCpu::CmuCompareUncollated(void)
 **------------------------------------------------------------------------*/
 void MCpu::FloatCheck(CpWord value)
 {
-	int exponent = ((int)(value >> 48)) & Mask12;
+	int exponent = static_cast<int>(value >> 48) & Mask12;
 
 	if (exponent == 03777 || exponent == 04000)
 	{
 		cpu.exitCondition |= EcOperandOutOfRange;
-		floatException = TRUE;
+		floatException = true;
 	}
 	else if (exponent == 01777 || exponent == 06000)
 	{
 		cpu.exitCondition |= EcIndefiniteOperand;
-		floatException = TRUE;
+		floatException = true;
 	}
 }
 
@@ -2452,22 +2415,22 @@ void MCpu::FloatCheck(CpWord value)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void MCpu::FloatExceptionHandler(void)
+void MCpu::FloatExceptionHandler()
 {
 	if (floatException)
 	{
-		floatException = FALSE;
+		floatException = false;
 
 		if ((cpu.exitMode & (cpu.exitCondition << 12)) != 0)
 		{
 			/*
 			**  Exit mode selected.
 			*/
-			cpu.cpuStopped = TRUE;
+			cpu.cpuStopped = true;
 
 			if (cpu.regRaCm < cpuMaxMemory)
 			{
-				cpMem[cpu.regRaCm] = ((CpWord)cpu.exitCondition << 48) | ((CpWord)(cpu.regP + 1) << 30);
+				cpMem[cpu.regRaCm] = (static_cast<CpWord>(cpu.exitCondition) << 48) | (static_cast<CpWord>(cpu.regP + 1) << 30);
 			}
 
 			cpu.regP = 0;
@@ -2492,7 +2455,7 @@ void MCpu::FloatExceptionHandler(void)
 **
 **------------------------------------------------------------------------*/
 
-void MCpu::Op00(void)
+void MCpu::Op00()
 {
 	/*
 	**  PS or Error Exit to MA.
@@ -2502,7 +2465,7 @@ void MCpu::Op00(void)
 		if ((features & HasNoCejMej) != 0)
 			printf("HasNoCejMej in cpOp00\n");
 
-		cpu.cpuStopped = TRUE;
+		cpu.cpuStopped = true;
 	}
 	else
 	{
@@ -2511,7 +2474,7 @@ void MCpu::Op00(void)
 
 }
 
-void MCpu::Op01(void)
+void MCpu::Op01()
 {
 	u32 oldP = cpu.regP;
 	u8 oldOffset = opOffset;
@@ -2522,7 +2485,7 @@ void MCpu::Op01(void)
 		/*
 		**  RJ  K
 		*/
-		acc60 = ((CpWord)0400 << 48) | ((CpWord)((cpu.regP + 1) & Mask18) << 30);
+		acc60 = (static_cast<CpWord>(0400) << 48) | (static_cast<CpWord>((cpu.regP + 1) & Mask18) << 30);
 		if (WriteMem(opAddress, &acc60))
 		{
 			return;
@@ -2547,11 +2510,11 @@ void MCpu::Op01(void)
 		*/
 		if ((cpu.exitMode & EmFlagUemEnable) != 0)
 		{
-			UemTransfer(FALSE);
+			UemTransfer(false);
 		}
 		else
 		{
-			EcsTransfer(FALSE);
+			EcsTransfer(false);
 		}
 
 		if ((features & HasInstructionStack) != 0)
@@ -2570,11 +2533,11 @@ void MCpu::Op01(void)
 		*/
 		if ((cpu.exitMode & EmFlagUemEnable) != 0)
 		{
-			UemTransfer(TRUE);
+			UemTransfer(true);
 		}
 		else
 		{
-			EcsTransfer(TRUE);
+			EcsTransfer(true);
 		}
 
 		break;
@@ -2594,7 +2557,7 @@ void MCpu::Op01(void)
 		}
 
 		cpu.regP = (cpu.regP + 1) & Mask18;
-		cpu.cpuStopped = TRUE;
+		cpu.cpuStopped = true;
 
 		bool XJRet;
 
@@ -2671,11 +2634,11 @@ void MCpu::Op01(void)
 		*/
 		if ((cpu.exitMode & EmFlagUemEnable) != 0)
 		{
-			UemWord(FALSE);
+			UemWord(false);
 		}
 		else
 		{
-			EcsWord(FALSE);
+			EcsWord(false);
 		}
 
 		break;
@@ -2692,11 +2655,11 @@ void MCpu::Op01(void)
 		*/
 		if ((cpu.exitMode & EmFlagUemEnable) != 0)
 		{
-			UemWord(TRUE);
+			UemWord(true);
 		}
 		else
 		{
-			EcsWord(TRUE);
+			EcsWord(true);
 		}
 
 		break;
@@ -2729,7 +2692,7 @@ void MCpu::Op01(void)
 	}
 }
 
-void MCpu::Op02(void)
+void MCpu::Op02()
 {
 	/*
 	**  JP  Bi+K
@@ -2747,9 +2710,9 @@ void MCpu::Op02(void)
 	FetchOpWord(cpu.regP, &opWord);
 }
 
-void MCpu::Op03(void)
+void MCpu::Op03()
 {
-	bool jump = FALSE;
+	bool jump = false;
 
 	switch (opI)
 	{
@@ -2846,7 +2809,7 @@ void MCpu::Op03(void)
 	}
 }
 
-void MCpu::Op04(void)
+void MCpu::Op04()
 {
 	/*
 	**  EQ  Bi Bj K
@@ -2866,7 +2829,7 @@ void MCpu::Op04(void)
 	}
 }
 
-void MCpu::Op05(void)
+void MCpu::Op05()
 {
 	/*
 	**  NE  Bi Bj K
@@ -2886,7 +2849,7 @@ void MCpu::Op05(void)
 	}
 }
 
-void MCpu::Op06(void)
+void MCpu::Op06()
 {
 	/*
 	**  GE  Bi Bj K
@@ -2923,7 +2886,7 @@ void MCpu::Op06(void)
 	FetchOpWord(cpu.regP, &opWord);
 }
 
-void MCpu::Op07(void)
+void MCpu::Op07()
 {
 	/*
 	**  LT  Bi Bj K
@@ -2960,7 +2923,7 @@ void MCpu::Op07(void)
 	FetchOpWord(cpu.regP, &opWord);
 }
 
-void MCpu::Op10(void)
+void MCpu::Op10()
 {
 	/*
 	**  BXi Xj
@@ -2968,7 +2931,7 @@ void MCpu::Op10(void)
 	cpu.regX[opI] = cpu.regX[opJ] & Mask60;
 }
 
-void MCpu::Op11(void)
+void MCpu::Op11()
 {
 	/*
 	**  BXi Xj*Xk
@@ -2976,7 +2939,7 @@ void MCpu::Op11(void)
 	cpu.regX[opI] = (cpu.regX[opJ] & cpu.regX[opK]) & Mask60;
 }
 
-void MCpu::Op12(void)
+void MCpu::Op12()
 {
 	/*
 	**  BXi Xj+Xk
@@ -2984,7 +2947,7 @@ void MCpu::Op12(void)
 	cpu.regX[opI] = (cpu.regX[opJ] | cpu.regX[opK]) & Mask60;
 }
 
-void MCpu::Op13(void)
+void MCpu::Op13()
 {
 	/*
 	**  BXi Xj-Xk
@@ -2992,7 +2955,7 @@ void MCpu::Op13(void)
 	cpu.regX[opI] = (cpu.regX[opJ] ^ cpu.regX[opK]) & Mask60;
 }
 
-void MCpu::Op14(void)
+void MCpu::Op14()
 {
 	/*
 	**  BXi -Xj
@@ -3000,7 +2963,7 @@ void MCpu::Op14(void)
 	cpu.regX[opI] = ~cpu.regX[opK] & Mask60;
 }
 
-void MCpu::Op15(void)
+void MCpu::Op15()
 {
 	/*
 	**  BXi -Xk*Xj
@@ -3008,7 +2971,7 @@ void MCpu::Op15(void)
 	cpu.regX[opI] = (cpu.regX[opJ] & ~cpu.regX[opK]) & Mask60;
 }
 
-void MCpu::Op16(void)
+void MCpu::Op16()
 {
 	/*
 	**  BXi -Xk+Xj
@@ -3016,7 +2979,7 @@ void MCpu::Op16(void)
 	cpu.regX[opI] = (cpu.regX[opJ] | ~cpu.regX[opK]) & Mask60;
 }
 
-void MCpu::Op17(void)
+void MCpu::Op17()
 {
 	/*
 	**  BXi -Xk-Xj
@@ -3024,36 +2987,21 @@ void MCpu::Op17(void)
 	cpu.regX[opI] = (cpu.regX[opJ] ^ ~cpu.regX[opK]) & Mask60;
 }
 
-void MCpu::Op20(void)
+void MCpu::Op20()
 {
-	/*
-	**  LXi jk
-	*/
-	u8 jk;
-
-	jk = (u8)((opJ << 3) | opK);
+	u8 jk = static_cast<u8>((opJ << 3) | opK);
 	cpu.regX[opI] = shiftLeftCircular(cpu.regX[opI] & Mask60, jk);
 }
 
-void MCpu::Op21(void)
+void MCpu::Op21()
 {
-	/*
-	**  AXi jk
-	*/
-	u8 jk;
-
-	jk = (u8)((opJ << 3) | opK);
+	u8 jk = static_cast<u8>((opJ << 3) | opK);
 	cpu.regX[opI] = shiftRightArithmetic(cpu.regX[opI] & Mask60, jk);
 }
 
-void MCpu::Op22(void)
+void MCpu::Op22()
 {
-	/*
-	**  LXi Bj Xk
-	*/
-	u32 count;
-
-	count = cpu.regB[opJ] & Mask18;
+	u32 count = cpu.regB[opJ] & Mask18;
 	acc60 = cpu.regX[opK] & Mask60;
 
 	if ((count & Sign18) == 0)
@@ -3076,14 +3024,9 @@ void MCpu::Op22(void)
 	}
 }
 
-void MCpu::Op23(void)
+void MCpu::Op23()
 {
-	/*
-	**  AXi Bj Xk
-	*/
-	u32 count;
-
-	count = cpu.regB[opJ] & Mask18;
+	u32 count = cpu.regB[opJ] & Mask18;
 	acc60 = cpu.regX[opK] & Mask60;
 
 	if ((count & Sign18) == 0)
@@ -3106,34 +3049,34 @@ void MCpu::Op23(void)
 	}
 }
 
-void MCpu::Op24(void)
+void MCpu::Op24()
 {
 	/*
 	**  NXi Bj Xk
 	*/
 	FloatCheck(cpu.regX[opK]);
-	cpu.regX[opI] = shiftNormalize(cpu.regX[opK], &cpu.regB[opJ], FALSE);
+	cpu.regX[opI] = shiftNormalize(cpu.regX[opK], &cpu.regB[opJ], false);
 	FloatExceptionHandler();
 }
 
-void MCpu::Op25(void)
+void MCpu::Op25()
 {
 	/*
 	**  ZXi Bj Xk
 	*/
 	FloatCheck(cpu.regX[opK]);
-	cpu.regX[opI] = shiftNormalize(cpu.regX[opK], &cpu.regB[opJ], TRUE);
+	cpu.regX[opI] = shiftNormalize(cpu.regX[opK], &cpu.regB[opJ], true);
 	FloatExceptionHandler();
 }
 
-void MCpu::Op26(void)
+void MCpu::Op26()
 {
 	/*
 	**  UXi Bj Xk
 	*/
 	if (opJ == 0)
 	{
-		cpu.regX[opI] = shiftUnpack(cpu.regX[opK], NULL);
+		cpu.regX[opI] = shiftUnpack(cpu.regX[opK], nullptr);
 	}
 	else
 	{
@@ -3141,7 +3084,7 @@ void MCpu::Op26(void)
 	}
 }
 
-void MCpu::Op27(void)
+void MCpu::Op27()
 {
 	/*
 	**  PXi Bj Xk
@@ -3156,73 +3099,73 @@ void MCpu::Op27(void)
 	}
 }
 
-void MCpu::Op30(void)
+void MCpu::Op30()
 {
 	/*
 	**  FXi Xj+Xk
 	*/
 	FloatCheck(cpu.regX[opJ]);
 	FloatCheck(cpu.regX[opK]);
-	cpu.regX[opI] = floatAdd(cpu.regX[opJ], cpu.regX[opK], FALSE, FALSE);
+	cpu.regX[opI] = floatAdd(cpu.regX[opJ], cpu.regX[opK], false, false);
 	FloatExceptionHandler();
 }
 
-void MCpu::Op31(void)
+void MCpu::Op31()
 {
 	/*
 	**  FXi Xj-Xk
 	*/
 	FloatCheck(cpu.regX[opJ]);
 	FloatCheck(cpu.regX[opK]);
-	cpu.regX[opI] = floatAdd(cpu.regX[opJ], (~cpu.regX[opK] & Mask60), FALSE, FALSE);
+	cpu.regX[opI] = floatAdd(cpu.regX[opJ], (~cpu.regX[opK] & Mask60), false, false);
 	FloatExceptionHandler();
 }
 
-void MCpu::Op32(void)
+void MCpu::Op32()
 {
 	/*
 	**  DXi Xj+Xk
 	*/
 	FloatCheck(cpu.regX[opJ]);
 	FloatCheck(cpu.regX[opK]);
-	cpu.regX[opI] = floatAdd(cpu.regX[opJ], cpu.regX[opK], FALSE, TRUE);
+	cpu.regX[opI] = floatAdd(cpu.regX[opJ], cpu.regX[opK], false, true);
 	FloatExceptionHandler();
 }
 
-void MCpu::Op33(void)
+void MCpu::Op33()
 {
 	/*
 	**  DXi Xj-Xk
 	*/
 	FloatCheck(cpu.regX[opJ]);
 	FloatCheck(cpu.regX[opK]);
-	cpu.regX[opI] = floatAdd(cpu.regX[opJ], (~cpu.regX[opK] & Mask60), FALSE, TRUE);
+	cpu.regX[opI] = floatAdd(cpu.regX[opJ], (~cpu.regX[opK] & Mask60), false, true);
 	FloatExceptionHandler();
 }
 
-void MCpu::Op34(void)
+void MCpu::Op34()
 {
 	/*
 	**  RXi Xj+Xk
 	*/
 	FloatCheck(cpu.regX[opJ]);
 	FloatCheck(cpu.regX[opK]);
-	cpu.regX[opI] = floatAdd(cpu.regX[opJ], cpu.regX[opK], TRUE, FALSE);
+	cpu.regX[opI] = floatAdd(cpu.regX[opJ], cpu.regX[opK], true, false);
 	FloatExceptionHandler();
 }
 
-void MCpu::Op35(void)
+void MCpu::Op35()
 {
 	/*
 	**  RXi Xj-Xk
 	*/
 	FloatCheck(cpu.regX[opJ]);
 	FloatCheck(cpu.regX[opK]);
-	cpu.regX[opI] = floatAdd(cpu.regX[opJ], (~cpu.regX[opK] & Mask60), TRUE, FALSE);
+	cpu.regX[opI] = floatAdd(cpu.regX[opJ], (~cpu.regX[opK] & Mask60), true, false);
 	FloatExceptionHandler();
 }
 
-void MCpu::Op36(void)
+void MCpu::Op36()
 {
 	/*
 	**  IXi Xj+Xk
@@ -3236,7 +3179,7 @@ void MCpu::Op36(void)
 	cpu.regX[opI] = acc60 & Mask60;
 }
 
-void MCpu::Op37(void)
+void MCpu::Op37()
 {
 	/*
 	**  IXi Xj-Xk
@@ -3250,76 +3193,71 @@ void MCpu::Op37(void)
 	cpu.regX[opI] = acc60 & Mask60;
 }
 
-void MCpu::Op40(void)
+void MCpu::Op40()
 {
 	/*
 	**  FXi Xj*Xk
 	*/
 	FloatCheck(cpu.regX[opJ]);
 	FloatCheck(cpu.regX[opK]);
-	cpu.regX[opI] = floatMultiply(cpu.regX[opJ], cpu.regX[opK], FALSE, FALSE);
+	cpu.regX[opI] = floatMultiply(cpu.regX[opJ], cpu.regX[opK], false, false);
 	FloatExceptionHandler();
 }
 
-void MCpu::Op41(void)
+void MCpu::Op41()
 {
 	/*
 	**  RXi Xj*Xk
 	*/
 	FloatCheck(cpu.regX[opJ]);
 	FloatCheck(cpu.regX[opK]);
-	cpu.regX[opI] = floatMultiply(cpu.regX[opJ], cpu.regX[opK], TRUE, FALSE);
+	cpu.regX[opI] = floatMultiply(cpu.regX[opJ], cpu.regX[opK], true, false);
 	FloatExceptionHandler();
 }
 
-void MCpu::Op42(void)
+void MCpu::Op42()
 {
 	/*
 	**  DXi Xj*Xk
 	*/
 	FloatCheck(cpu.regX[opJ]);
 	FloatCheck(cpu.regX[opK]);
-	cpu.regX[opI] = floatMultiply(cpu.regX[opJ], cpu.regX[opK], FALSE, TRUE);
+	cpu.regX[opI] = floatMultiply(cpu.regX[opJ], cpu.regX[opK], false, true);
 	FloatExceptionHandler();
 }
 
-void MCpu::Op43(void)
+void MCpu::Op43()
 {
-	/*
-	**  MXi jk
-	*/
-	u8 jk;
-
-	jk = (u8)((opJ << 3) | opK);
+	u8 jk = static_cast<u8>((opJ << 3) | opK);
 	cpu.regX[opI] = shiftMask(jk);
 }
 
-void MCpu::Op44(void)
+void MCpu::Op44()
 {
 	/*
 	**  FXi Xj/Xk
 	*/
 	FloatCheck(cpu.regX[opJ]);
 	FloatCheck(cpu.regX[opK]);
-	cpu.regX[opI] = floatDivide(cpu.regX[opJ], cpu.regX[opK], FALSE);
+	cpu.regX[opI] = floatDivide(cpu.regX[opJ], cpu.regX[opK], false);
 	FloatExceptionHandler();
 #if CcSMM_EJT
 	skipStep = 20;
 #endif
 }
 
-void MCpu::Op45(void)
+void MCpu::Op45()
 {
 	/*
 	**  RXi Xj/Xk
 	*/
 	FloatCheck(cpu.regX[opJ]);
 	FloatCheck(cpu.regX[opK]);
-	cpu.regX[opI] = floatDivide(cpu.regX[opJ], cpu.regX[opK], TRUE);
+	cpu.regX[opI] = floatDivide(cpu.regX[opJ], cpu.regX[opK], true);
 	FloatExceptionHandler();
 }
 
-void MCpu::Op46(void)
+void MCpu::Op46()
 {
 	switch (opI)
 	{
@@ -3391,7 +3329,7 @@ void MCpu::Op46(void)
 	}
 }
 
-void MCpu::Op47(void)
+void MCpu::Op47()
 {
 	/*
 	**  CXi Xk
@@ -3406,7 +3344,7 @@ void MCpu::Op47(void)
 	cpu.regX[opI] = acc60 & Mask60;
 }
 
-void MCpu::Op50(void)
+void MCpu::Op50()
 {
 	/*
 	**  SAi Aj+K
@@ -3416,7 +3354,7 @@ void MCpu::Op50(void)
 	RegASemantics();
 }
 
-void MCpu::Op51(void)
+void MCpu::Op51()
 {
 	/*
 	**  SAi Bj+K
@@ -3426,27 +3364,27 @@ void MCpu::Op51(void)
 	RegASemantics();
 }
 
-void MCpu::Op52(void)
+void MCpu::Op52()
 {
 	/*
 	**  SAi Xj+K
 	*/
-	cpu.regA[opI] = Add18((u32)cpu.regX[opJ], opAddress);
+	cpu.regA[opI] = Add18(static_cast<u32>(cpu.regX[opJ]), opAddress);
 
 	RegASemantics();
 }
 
-void MCpu::Op53(void)
+void MCpu::Op53()
 {
 	/*
 	**  SAi Xj+Bk
 	*/
-	cpu.regA[opI] = Add18((u32)cpu.regX[opJ], cpu.regB[opK]);
+	cpu.regA[opI] = Add18(static_cast<u32>(cpu.regX[opJ]), cpu.regB[opK]);
 
 	RegASemantics();
 }
 
-void MCpu::Op54(void)
+void MCpu::Op54()
 {
 	/*
 	**  SAi Aj+Bk
@@ -3456,7 +3394,7 @@ void MCpu::Op54(void)
 	RegASemantics();
 }
 
-void MCpu::Op55(void)
+void MCpu::Op55()
 {
 	/*
 	**  SAi Aj-Bk
@@ -3466,7 +3404,7 @@ void MCpu::Op55(void)
 	RegASemantics();
 }
 
-void MCpu::Op56(void)
+void MCpu::Op56()
 {
 	/*
 	**  SAi Bj+Bk
@@ -3476,7 +3414,7 @@ void MCpu::Op56(void)
 	RegASemantics();
 }
 
-void MCpu::Op57(void)
+void MCpu::Op57()
 {
 	/*
 	**  SAi Bj-Bk
@@ -3486,7 +3424,7 @@ void MCpu::Op57(void)
 	RegASemantics();
 }
 
-void MCpu::Op60(void)
+void MCpu::Op60()
 {
 	/*
 	**  SBi Aj+K
@@ -3494,7 +3432,7 @@ void MCpu::Op60(void)
 	cpu.regB[opI] = Add18(cpu.regA[opJ], opAddress);
 }
 
-void MCpu::Op61(void)
+void MCpu::Op61()
 {
 	/*
 	**  SBi Bj+K
@@ -3502,23 +3440,23 @@ void MCpu::Op61(void)
 	cpu.regB[opI] = Add18(cpu.regB[opJ], opAddress);
 }
 
-void MCpu::Op62(void)
+void MCpu::Op62()
 {
 	/*
 	**  SBi Xj+K
 	*/
-	cpu.regB[opI] = Add18((u32)cpu.regX[opJ], opAddress);
+	cpu.regB[opI] = Add18(static_cast<u32>(cpu.regX[opJ]), opAddress);
 }
 
-void MCpu::Op63(void)
+void MCpu::Op63()
 {
 	/*
 	**  SBi Xj+Bk
 	*/
-	cpu.regB[opI] = Add18((u32)cpu.regX[opJ], cpu.regB[opK]);
+	cpu.regB[opI] = Add18(static_cast<u32>(cpu.regX[opJ]), cpu.regB[opK]);
 }
 
-void MCpu::Op64(void)
+void MCpu::Op64()
 {
 	/*
 	**  SBi Aj+Bk
@@ -3526,7 +3464,7 @@ void MCpu::Op64(void)
 	cpu.regB[opI] = Add18(cpu.regA[opJ], cpu.regB[opK]);
 }
 
-void MCpu::Op65(void)
+void MCpu::Op65()
 {
 	/*
 	**  SBi Aj-Bk
@@ -3534,14 +3472,14 @@ void MCpu::Op65(void)
 	cpu.regB[opI] = Subtract18(cpu.regA[opJ], cpu.regB[opK]);
 }
 
-void MCpu::Op66(void)
+void MCpu::Op66()
 {
 	if (opI == 0 && (features & IsSeries800) != 0)
 	{
 		/*
 		**  CR Xj,Xk
 		*/
-		ReadMem((u32)(cpu.regX[opK]) & Mask21, cpu.regX + opJ);
+		ReadMem(static_cast<u32>(cpu.regX[opK]) & Mask21, cpu.regX + opJ);
 		return;
 	}
 
@@ -3551,14 +3489,14 @@ void MCpu::Op66(void)
 	cpu.regB[opI] = Add18(cpu.regB[opJ], cpu.regB[opK]);
 }
 
-void MCpu::Op67(void)
+void MCpu::Op67()
 {
 	if (opI == 0 && (features & IsSeries800) != 0)
 	{
 		/*
 		**  CW Xj,Xk
 		*/
-		WriteMem((u32)(cpu.regX[opK]) & Mask21, cpu.regX + opJ);
+		WriteMem(static_cast<u32>(cpu.regX[opK]) & Mask21, cpu.regX + opJ);
 		return;
 	}
 
@@ -3568,12 +3506,12 @@ void MCpu::Op67(void)
 	cpu.regB[opI] = Subtract18(cpu.regB[opJ], cpu.regB[opK]);
 }
 
-void MCpu::Op70(void)
+void MCpu::Op70()
 {
 	/*
 	**  SXi Aj+K
 	*/
-	acc60 = (CpWord)Add18(cpu.regA[opJ], opAddress);
+	acc60 = static_cast<CpWord>(Add18(cpu.regA[opJ], opAddress));
 
 	if ((acc60 & 0400000) != 0)
 	{
@@ -3583,12 +3521,12 @@ void MCpu::Op70(void)
 	cpu.regX[opI] = acc60 & Mask60;
 }
 
-void MCpu::Op71(void)
+void MCpu::Op71()
 {
 	/*
 	**  SXi Bj+K
 	*/
-	acc60 = (CpWord)Add18(cpu.regB[opJ], opAddress);
+	acc60 = static_cast<CpWord>(Add18(cpu.regB[opJ], opAddress));
 
 	if ((acc60 & 0400000) != 0)
 	{
@@ -3598,12 +3536,12 @@ void MCpu::Op71(void)
 	cpu.regX[opI] = acc60 & Mask60;
 }
 
-void MCpu::Op72(void)
+void MCpu::Op72()
 {
 	/*
 	**  SXi Xj+K
 	*/
-	acc60 = (CpWord)Add18((u32)cpu.regX[opJ], opAddress);
+	acc60 = static_cast<CpWord>(Add18(static_cast<u32>(cpu.regX[opJ]), opAddress));
 
 	if ((acc60 & 0400000) != 0)
 	{
@@ -3613,12 +3551,12 @@ void MCpu::Op72(void)
 	cpu.regX[opI] = acc60 & Mask60;
 }
 
-void MCpu::Op73(void)
+void MCpu::Op73()
 {
 	/*
 	**  SXi Xj+Bk
 	*/
-	acc60 = (CpWord)Add18((u32)cpu.regX[opJ], cpu.regB[opK]);
+	acc60 = static_cast<CpWord>(Add18(static_cast<u32>(cpu.regX[opJ]), cpu.regB[opK]));
 
 	if ((acc60 & 0400000) != 0)
 	{
@@ -3628,12 +3566,12 @@ void MCpu::Op73(void)
 	cpu.regX[opI] = acc60 & Mask60;
 }
 
-void MCpu::Op74(void)
+void MCpu::Op74()
 {
 	/*
 	**  SXi Aj+Bk
 	*/
-	acc60 = (CpWord)Add18(cpu.regA[opJ], cpu.regB[opK]);
+	acc60 = static_cast<CpWord>(Add18(cpu.regA[opJ], cpu.regB[opK]));
 
 	if ((acc60 & 0400000) != 0)
 	{
@@ -3643,12 +3581,12 @@ void MCpu::Op74(void)
 	cpu.regX[opI] = acc60 & Mask60;
 }
 
-void MCpu::Op75(void)
+void MCpu::Op75()
 {
 	/*
 	**  SXi Aj-Bk
 	*/
-	acc60 = (CpWord)Subtract18(cpu.regA[opJ], cpu.regB[opK]);
+	acc60 = static_cast<CpWord>(Subtract18(cpu.regA[opJ], cpu.regB[opK]));
 
 
 	if ((acc60 & 0400000) != 0)
@@ -3659,12 +3597,12 @@ void MCpu::Op75(void)
 	cpu.regX[opI] = acc60 & Mask60;
 }
 
-void MCpu::Op76(void)
+void MCpu::Op76()
 {
 	/*
 	**  SXi Bj+Bk
 	*/
-	acc60 = (CpWord)Add18(cpu.regB[opJ], cpu.regB[opK]);
+	acc60 = static_cast<CpWord>(Add18(cpu.regB[opJ], cpu.regB[opK]));
 
 	if ((acc60 & 0400000) != 0)
 	{
@@ -3674,12 +3612,12 @@ void MCpu::Op76(void)
 	cpu.regX[opI] = acc60 & Mask60;
 }
 
-void MCpu::Op77(void)
+void MCpu::Op77()
 {
 	/*
 	**  SXi Bj-Bk
 	*/
-	acc60 = (CpWord)Subtract18(cpu.regB[opJ], cpu.regB[opK]);
+	acc60 = static_cast<CpWord>(Subtract18(cpu.regB[opJ], cpu.regB[opK]));
 
 	if ((acc60 & 0400000) != 0)
 	{
