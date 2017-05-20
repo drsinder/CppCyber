@@ -395,7 +395,11 @@ void traceInit(void)
 		}
 	}
 
-	traceSequenceNo = 0;
+	u8 mfrs = BigIron->initMainFrames;
+	BigIron->chasis[0]->traceSequenceNo = 0;
+	if (mfrs == 2)
+		BigIron->chasis[1]->traceSequenceNo = 0;
+
 	mstart = milliseconds_now();
 }
 
@@ -468,7 +472,7 @@ void traceCpu(MCpu *cpux, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
 
 	if (cpux->cpu.CpuID == 0)
 	{
-		if ((traceMask & TraceCpu) == 0)
+		if ((cpux->mfr->traceMask & TraceCpu) == 0)
 		{
 			return;
 		}
@@ -476,7 +480,7 @@ void traceCpu(MCpu *cpux, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
 
 	if (cpux->cpu.CpuID == 1)
 	{
-		if ((traceMask & TraceCpu1) == 0)
+		if ((cpux->mfr->traceMask & TraceCpu1) == 0)
 		{
 			return;
 		}
@@ -528,7 +532,7 @@ void traceCpu(MCpu *cpux, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
 	/*
 	**  Print sequence no.
 	*/
-	traceSequenceNo += 1;
+	cpux->mfr->traceSequenceNo += 1;
 
 	//if (p == 0 || p == 2 || p == 076)	// too much output EQ B0,B0
 	//{
@@ -538,7 +542,7 @@ void traceCpu(MCpu *cpux, u32 p, u8 opFm, u8 opI, u8 opJ, u8 opK, u32 opAddress)
 
 
 
-	fprintf(cpuF, "%06d ", traceSequenceNo & Mask31);
+	fprintf(cpuF, "%06d ", cpux->mfr->traceSequenceNo & Mask31);
 
 	/*
 	**  Print program counter and opcode.
@@ -829,7 +833,7 @@ void traceExchange(MCpu *cpux, u32 addr, char *title, char *xjSource)
 	/*
 	**  Bail out if no trace of exchange jumps is requested.
 	*/
-	if ((traceMask & TraceExchange) == 0)
+	if ((cpux->mfr->traceMask & TraceExchange) == 0)
 	{
 		RELEASE(&BigIron->TraceMutex);
 		return;
@@ -842,7 +846,7 @@ void traceExchange(MCpu *cpux, u32 addr, char *title, char *xjSource)
 	timeinfo = localtime(&mytime);
 	
 	fprintf(cpuF, "\nAt: %02d:%02d:%02d", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
-	fprintf(cpuF, "\n%06d CPU%d Exchange jump with package address %06o (%s) - Source: %s\n\n", traceSequenceNo & Mask31, cpuo.cpu.CpuID, addr, title, xjSource);
+	fprintf(cpuF, "\n%06d CPU%d Exchange jump with package address %06o (%s) - Source: %s\n\n", cpux->mfr->traceSequenceNo & Mask31, cpuo.cpu.CpuID, addr, title, xjSource);
 	fprintf(cpuF, "P       %06o  ", cc->regP);
 	fprintf(cpuF, "A%d %06o  ", 0, cc->regA[0]);
 	fprintf(cpuF, "B%d %06o", 0, cc->regB[0]);
@@ -917,17 +921,17 @@ void traceExchange(MCpu *cpux, u32 addr, char *title, char *xjSource)
 **------------------------------------------------------------------------*/
 void traceSequence(u8 mfrID)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrID];
 	/*
 	**  Increment sequence number here.
 	*/
-	traceSequenceNo += 1;
+	mfr->traceSequenceNo += 1;
 
-	MMainFrame *mfr = BigIron->chasis[mfrID];
 
 	/*
 	**  Bail out if no trace of this PPU is requested.
 	*/
-	if ((traceMask & (1 << mfr->activePpu->id)) == 0)
+	if ((mfr->traceMask & (1 << mfr->activePpu->id)) == 0)
 	{
 		return;
 	}
@@ -935,7 +939,7 @@ void traceSequence(u8 mfrID)
 	/*
 	**  Print sequence no and PPU number.
 	*/
-	fprintf(ppuF[mfr->activePpu->id + mfrID*024 ], "%06d [%2o]    ", traceSequenceNo & Mask31, mfr->activePpu->id);
+	fprintf(ppuF[mfr->activePpu->id + mfrID*024 ], "%06d [%2o]    ", mfr->traceSequenceNo & Mask31, mfr->activePpu->id);
 
 }
 
@@ -954,7 +958,7 @@ void traceRegisters(u8 mfrID)
 	/*
 	**  Bail out if no trace of this PPU is requested.
 	*/
-	if ((traceMask & (1 << mfr->activePpu->id)) == 0)
+	if ((mfr->traceMask & (1 << mfr->activePpu->id)) == 0)
 	{
 		return;
 	}
@@ -987,7 +991,7 @@ void traceOpcode(u8 mfrID)
 	/*
 	**  Bail out if no trace of this PPU is requested.
 	*/
-	if ((traceMask & (1 << mfr->activePpu->id)) == 0)
+	if ((mfr->traceMask & (1 << mfr->activePpu->id)) == 0)
 	{
 		return;
 	}
@@ -1114,7 +1118,7 @@ void traceChannelFunction(PpWord funcCode, u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	fprintf(devF2, "%06d [%02o]    ", traceSequenceNo & Mask31, BigIron->chasis[0]->activePpu->id);
+	fprintf(devF2, "%06d [%02o]    ", mfr->traceSequenceNo & Mask31, BigIron->chasis[0]->activePpu->id);
 	fprintf(devF2, "Unclaimed function code %04o on CH%02o\n", funcCode, mfr->activeChannel->id);
 }
 
@@ -1169,7 +1173,7 @@ void traceChannel(u8 ch, u8 mfrID)
 	/*
 	**  Bail out if no trace of this PPU is requested.
 	*/
-	if ((traceMask & (1 << mfr->activePpu->id)) == 0)
+	if ((mfr->traceMask & (1 << mfr->activePpu->id)) == 0)
 	{
 		return;
 	}
@@ -1195,7 +1199,7 @@ void traceEnd(u8 mfrID)
 	/*
 	**  Bail out if no trace of this PPU is requested.
 	*/
-	if ((traceMask & (1 << mfr->activePpu->id)) == 0)
+	if ((mfr->traceMask & (1 << mfr->activePpu->id)) == 0)
 	{
 		return;
 	}

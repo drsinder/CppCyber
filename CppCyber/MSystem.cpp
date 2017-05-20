@@ -563,7 +563,7 @@ void MSystem::InitCyber(char *config)
 	**  Get optional trace mask. If not specified, use compile time value.
 	*/
 	initGetOctal("trace", 0, &mask);
-	traceMask = (u32)mask;
+	traceMaskx = (u32)mask;
 
 	/*
 	**  Get optional Telnet port number. If not specified, use default value.

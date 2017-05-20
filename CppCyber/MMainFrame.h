@@ -28,7 +28,6 @@
 #include "stdafx.h"
 
 
-
 class MMainFrame
 {
 public:

@@ -321,16 +321,9 @@ void logError(char *file, int line, char *fmt, ...);
 */
 
 /*
-** Tried to put most things in the one and only MSystem instance.
+** Tried to put most Global things in the one and only MSystem instance.
 */
 extern MSystem *BigIron;
-
-/*
-** The rest of these were harder and left for now.
-*/
-
-extern u32 traceMask;
-extern u32 traceSequenceNo;
 
 extern u16 mux6676TelnetPort;
 extern u16 mux6676TelnetConns;
@@ -343,6 +336,7 @@ extern DevDesc deviceDesc[];
 extern u8 deviceCount;
 extern u32 features;
 extern u32 rtcClock;
+extern u32 traceMaskx;
 
 extern bool autoDate;		// enter date/time automatically - year 98
 extern bool autoDate1;		// enter date/time automatically - year 98

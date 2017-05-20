@@ -452,7 +452,7 @@ static void windowThread(LPVOID param)
 #if MaxMainFrames == 2
 static void windowThread1(LPVOID param)
 {
-	u8 mfrID = (u8)param;
+	//u8 mfrID = (u8)param;
 	MSG msg;
 
 	/*
@@ -719,6 +719,8 @@ static void windowClipboard1(HWND hWnd)
 **------------------------------------------------------------------------*/
 static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	MMainFrame *mfr = BigIron->chasis[0];
+
 	// ReSharper disable once CppEntityAssignedButNoRead
 	// ReSharper disable once CppJoinDeclarationAndAssignment
 	int wmId, wmEvent;
@@ -911,39 +913,39 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 		case '7':
 		case '8':
 		case '9':
-			traceMask ^= (1 << ((u32)wParam - '0' + (shifted ? 10 : 0)));
+			mfr->traceMask ^= (1 << ((u32)wParam - '0' + (shifted ? 10 : 0)));
 			break;
 
 		case 'C':
-			traceMask ^= TraceCpu1;
+			mfr->traceMask ^= TraceCpu1;
 			//traceMask ^= TraceExchange;
 			break;
 
 		case 'c':
-			traceMask ^= TraceCpu;
+			mfr->traceMask ^= TraceCpu;
 			//traceMask ^= TraceExchange;
 			break;
 
 		case 'E':
 		case 'e':
-			traceMask ^= TraceExchange;
+			mfr->traceMask ^= TraceExchange;
 			break;
 
 		case 'X':
 		case 'x':
-			if (traceMask == 0)
+			if (mfr->traceMask == 0)
 			{
-				traceMask = (u32)~0L;
+				mfr->traceMask = (u32)~0L;
 			}
 			else
 			{
-				traceMask = 0;
+				mfr->traceMask = 0;
 			}
 			break;
 
 		case 'D':
 		case 'd':
-			traceMask ^= TraceCpu | TraceCpu1 | TraceExchange | 2;
+			mfr->traceMask ^= TraceCpu | TraceCpu1 | TraceExchange | 2;
 			break;
 
 		case 'L':
@@ -991,9 +993,12 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 #if MaxMainFrames == 2
 static LRESULT CALLBACK windowProcedure1(HWND hWnd1, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	int wmId, wmEvent;
+	int wmId;
 	LOGFONT lfTmp;
 	RECT rt;
+	MMainFrame *mfr = BigIron->chasis[1];
+	// ReSharper disable once CppEntityNeverUsed
+	int wmEvent = HIWORD(wParam);
 
 	switch (message)
 	{
@@ -1002,7 +1007,7 @@ static LRESULT CALLBACK windowProcedure1(HWND hWnd1, UINT message, WPARAM wParam
 		*/
 	case WM_COMMAND:
 		wmId = LOWORD(wParam);
-		wmEvent = HIWORD(wParam);
+		// ReSharper disable once CppEntityNeverUsed
 
 		switch (wmId)
 		{
@@ -1017,7 +1022,6 @@ static LRESULT CALLBACK windowProcedure1(HWND hWnd1, UINT message, WPARAM wParam
 
 	case WM_ERASEBKGND:
 		return(1);
-		break;
 
 	case WM_CREATE:
 		hPen1 = CreatePen(PS_SOLID, 1, RGB(0, 255, 0));
@@ -1167,6 +1171,7 @@ static LRESULT CALLBACK windowProcedure1(HWND hWnd1, UINT message, WPARAM wParam
 #endif
 
 	case WM_SYSCHAR:
+		// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 		switch (wParam)
 		{
 		case '0':
@@ -1179,39 +1184,39 @@ static LRESULT CALLBACK windowProcedure1(HWND hWnd1, UINT message, WPARAM wParam
 		case '7':
 		case '8':
 		case '9':
-			traceMask ^= (1 << ((u32)wParam - '0' + (shifted ? 10 : 0)));
+			mfr->traceMask ^= (1 << ((u32)wParam - '0' + (shifted ? 10 : 0)));
 			break;
 
 		case 'C':
-			traceMask ^= TraceCpu1;
+			mfr->traceMask ^= TraceCpu1;
 			//traceMask ^= TraceExchange;
 			break;
 
 		case 'c':
-			traceMask ^= TraceCpu;
+			mfr->traceMask ^= TraceCpu;
 			//traceMask ^= TraceExchange;
 			break;
 
 		case 'E':
 		case 'e':
-			traceMask ^= TraceExchange;
+			mfr->traceMask ^= TraceExchange;
 			break;
 
 		case 'X':
 		case 'x':
-			if (traceMask == 0)
+			if (mfr->traceMask == 0)
 			{
-				traceMask = (u32)~0L;
+				mfr->traceMask = (u32)~0L;
 			}
 			else
 			{
-				traceMask = 0;
+				mfr->traceMask = 0;
 			}
 			break;
 
 		case 'D':
 		case 'd':
-			traceMask ^= TraceCpu | TraceCpu1 | TraceExchange | 2;
+			mfr->traceMask ^= TraceCpu | TraceCpu1 | TraceExchange | 2;
 			break;
 
 		case 'L':
@@ -1351,18 +1356,18 @@ void windowDisplay(HWND hWnd)
 			mfr->Acpu[0]->cpu.regP);
 
 		sprintf(buf + strlen(buf), "   Trace0x: %c%c%c%c%c%c%c%c%c%c%c%c %c",
-			(traceMask >> 0) & 1 ? '0' : '_',
-			(traceMask >> 1) & 1 ? '1' : '_',
-			(traceMask >> 2) & 1 ? '2' : '_',
-			(traceMask >> 3) & 1 ? '3' : '_',
-			(traceMask >> 4) & 1 ? '4' : '_',
-			(traceMask >> 5) & 1 ? '5' : '_',
-			(traceMask >> 6) & 1 ? '6' : '_',
-			(traceMask >> 7) & 1 ? '7' : '_',
-			(traceMask >> 8) & 1 ? '8' : '_',
-			(traceMask >> 9) & 1 ? '9' : '_',
-			traceMask & TraceCpu ? 'C' : '_',
-			traceMask & TraceExchange ? 'E' : '_',
+			(mfr->traceMask >> 0) & 1 ? '0' : '_',
+			(mfr->traceMask >> 1) & 1 ? '1' : '_',
+			(mfr->traceMask >> 2) & 1 ? '2' : '_',
+			(mfr->traceMask >> 3) & 1 ? '3' : '_',
+			(mfr->traceMask >> 4) & 1 ? '4' : '_',
+			(mfr->traceMask >> 5) & 1 ? '5' : '_',
+			(mfr->traceMask >> 6) & 1 ? '6' : '_',
+			(mfr->traceMask >> 7) & 1 ? '7' : '_',
+			(mfr->traceMask >> 8) & 1 ? '8' : '_',
+			(mfr->traceMask >> 9) & 1 ? '9' : '_',
+			mfr->traceMask & TraceCpu ? 'C' : '_',
+			mfr->traceMask & TraceExchange ? 'E' : '_',
 			shifted ? ' ' : '<');
 
 		TextOut(hdcMem, 0, 0, buf, (int)strlen(buf));
@@ -1386,17 +1391,17 @@ void windowDisplay(HWND hWnd)
 				BigIron->initCpus > 1 ? mfr->Acpu[1]->cpu.regP : 0);
 
 			sprintf(buf + strlen(buf), "   Trace1x: %c%c%c%c%c%c%c%c%c%c%c%c %c",
-				(traceMask >> 10) & 1 ? '0' : '_',
-				(traceMask >> 11) & 1 ? '1' : '_',
-				(traceMask >> 12) & 1 ? '2' : '_',
-				(traceMask >> 13) & 1 ? '3' : '_',
-				(traceMask >> 14) & 1 ? '4' : '_',
-				(traceMask >> 15) & 1 ? '5' : '_',
-				(traceMask >> 16) & 1 ? '6' : '_',
-				(traceMask >> 17) & 1 ? '7' : '_',
-				(traceMask >> 18) & 1 ? '8' : '_',
-				(traceMask >> 19) & 1 ? '9' : '_',
-				traceMask & TraceCpu1 ? 'C' : '_',
+				(mfr->traceMask >> 10) & 1 ? '0' : '_',
+				(mfr->traceMask >> 11) & 1 ? '1' : '_',
+				(mfr->traceMask >> 12) & 1 ? '2' : '_',
+				(mfr->traceMask >> 13) & 1 ? '3' : '_',
+				(mfr->traceMask >> 14) & 1 ? '4' : '_',
+				(mfr->traceMask >> 15) & 1 ? '5' : '_',
+				(mfr->traceMask >> 16) & 1 ? '6' : '_',
+				(mfr->traceMask >> 17) & 1 ? '7' : '_',
+				(mfr->traceMask >> 18) & 1 ? '8' : '_',
+				(mfr->traceMask >> 19) & 1 ? '9' : '_',
+				mfr->traceMask & TraceCpu1 ? 'C' : '_',
 				' ',
 				shifted ? '<' : ' ');
 
@@ -1509,22 +1514,22 @@ void windowDisplay(HWND hWnd)
 #if MaxMainFrames == 2
 void windowDisplay1(HWND hWnd)
 {
+	// ReSharper disable once CppEntityNeverUsed
 	static int refreshCount = 0;
 	char str[2] = " ";
-	DispList *curr;
 	DispList *end;
-	u8 oldFont = 0;
+	u8 oldFont;
 
 	RECT rect;
 	PAINTSTRUCT ps;
-	HDC hdc;
 	HBRUSH hBrush;
 
 	HDC hdcMem;
 	HGDIOBJ hbmMem, hbmOld;
 	HGDIOBJ hfntOld;
 
-	hdc = BeginPaint(hWnd, &ps);
+	// ReSharper disable once CppEntityNeverUsed
+	HDC hdc = BeginPaint(hWnd, &ps);
 
 	GetClientRect(hWnd, &rect);
 
@@ -1597,18 +1602,18 @@ void windowDisplay1(HWND hWnd)
 			mfr->Acpu[0]->cpu.regP);
 
 		sprintf(buf + strlen(buf), "   Trace0x: %c%c%c%c%c%c%c%c%c%c%c%c %c",
-			(traceMask >> 0) & 1 ? '0' : '_',
-			(traceMask >> 1) & 1 ? '1' : '_',
-			(traceMask >> 2) & 1 ? '2' : '_',
-			(traceMask >> 3) & 1 ? '3' : '_',
-			(traceMask >> 4) & 1 ? '4' : '_',
-			(traceMask >> 5) & 1 ? '5' : '_',
-			(traceMask >> 6) & 1 ? '6' : '_',
-			(traceMask >> 7) & 1 ? '7' : '_',
-			(traceMask >> 8) & 1 ? '8' : '_',
-			(traceMask >> 9) & 1 ? '9' : '_',
-			traceMask & TraceCpu ? 'C' : '_',
-			traceMask & TraceExchange ? 'E' : '_',
+			(mfr->traceMask >> 0) & 1 ? '0' : '_',
+			(mfr->traceMask >> 1) & 1 ? '1' : '_',
+			(mfr->traceMask >> 2) & 1 ? '2' : '_',
+			(mfr->traceMask >> 3) & 1 ? '3' : '_',
+			(mfr->traceMask >> 4) & 1 ? '4' : '_',
+			(mfr->traceMask >> 5) & 1 ? '5' : '_',
+			(mfr->traceMask >> 6) & 1 ? '6' : '_',
+			(mfr->traceMask >> 7) & 1 ? '7' : '_',
+			(mfr->traceMask >> 8) & 1 ? '8' : '_',
+			(mfr->traceMask >> 9) & 1 ? '9' : '_',
+			mfr->traceMask & TraceCpu ? 'C' : '_',
+			mfr->traceMask & TraceExchange ? 'E' : '_',
 			shifted ? ' ' : '<');
 
 		TextOut(hdcMem, 0, 0, buf, (int)strlen(buf));
@@ -1632,17 +1637,17 @@ void windowDisplay1(HWND hWnd)
 				BigIron->initCpus > 1 ? mfr->Acpu[1]->cpu.regP : 0);
 
 			sprintf(buf + strlen(buf), "   Trace1x: %c%c%c%c%c%c%c%c%c%c%c%c %c",
-				(traceMask >> 10) & 1 ? '0' : '_',
-				(traceMask >> 11) & 1 ? '1' : '_',
-				(traceMask >> 12) & 1 ? '2' : '_',
-				(traceMask >> 13) & 1 ? '3' : '_',
-				(traceMask >> 14) & 1 ? '4' : '_',
-				(traceMask >> 15) & 1 ? '5' : '_',
-				(traceMask >> 16) & 1 ? '6' : '_',
-				(traceMask >> 17) & 1 ? '7' : '_',
-				(traceMask >> 18) & 1 ? '8' : '_',
-				(traceMask >> 19) & 1 ? '9' : '_',
-				traceMask & TraceCpu1 ? 'C' : '_',
+				(mfr->traceMask >> 10) & 1 ? '0' : '_',
+				(mfr->traceMask >> 11) & 1 ? '1' : '_',
+				(mfr->traceMask >> 12) & 1 ? '2' : '_',
+				(mfr->traceMask >> 13) & 1 ? '3' : '_',
+				(mfr->traceMask >> 14) & 1 ? '4' : '_',
+				(mfr->traceMask >> 15) & 1 ? '5' : '_',
+				(mfr->traceMask >> 16) & 1 ? '6' : '_',
+				(mfr->traceMask >> 17) & 1 ? '7' : '_',
+				(mfr->traceMask >> 18) & 1 ? '8' : '_',
+				(mfr->traceMask >> 19) & 1 ? '9' : '_',
+				mfr->traceMask & TraceCpu1 ? 'C' : '_',
 				' ',
 				shifted ? '<' : ' ');
 
@@ -1661,7 +1666,8 @@ void windowDisplay1(HWND hWnd)
 
 	SelectObject(hdcMem, hPen1);
 
-	curr = display1;
+	// ReSharper disable once CppInitializedValueIsAlwaysRewritten
+	DispList *curr = display1;
 	end = display1 + listEnd1;
 	for (curr = display1; curr < end; curr++)
 	{
@@ -1669,6 +1675,7 @@ void windowDisplay1(HWND hWnd)
 		{
 			oldFont = curr->fontSize;
 
+			// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 			switch (oldFont)
 			{
 			case FontSmall:

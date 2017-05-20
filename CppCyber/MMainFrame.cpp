@@ -40,6 +40,7 @@ MMainFrame::~MMainFrame()
 void MMainFrame::Init(u8 id, long memory)
 {
 	mainFrameID = id;
+	traceMask = traceMaskx;
 
 #if MaxMainFrames == 2 || MaxCpus == 2
 	INIT_MUTEX(&PpuMutex, 0x0400000);

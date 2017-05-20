@@ -68,9 +68,6 @@ public:
 	long esmBanks;
 	long pps;
 
-	//u16 deadstartPanel[MaxDeadStart];
-	//u8 deadstartCount;
-
 	CpWord *extMem;
 	u32 extMaxMemory;
 

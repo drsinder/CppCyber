@@ -105,8 +105,8 @@ char persistDir[256];
 char printDir[256];	
 char printApp[256];	
 
-u32 traceMask = 0;
-u32 traceSequenceNo;
+u32 traceMaskx = 0;
+//u32 traceSequenceNo;
 
 volatile bool opActive = FALSE;
 

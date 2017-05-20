@@ -209,7 +209,7 @@ void Mpp::Step(void)
 			traceRegisters(mfrID);
 			traceOpcode(mfrID);
 #else
-			traceSequenceNo += 1;
+			mfr->traceSequenceNo += 1;
 #endif
 
 			/*
