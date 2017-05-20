@@ -96,10 +96,10 @@ typedef struct
 **  Private Function Prototypes
 **  ---------------------------
 */
-static FcStatus ddpFunc(PpWord funcCode);
-static void ddpIo(void);
-static void ddpActivate(void);
-static void ddpDisconnect(void);
+static FcStatus ddpFunc(PpWord funcCode, u8 mfrId);
+static void ddpIo(u8 mfrId);
+static void ddpActivate(u8 mfrId);
+static void ddpDisconnect(u8 mfrId);
 static char *ddpFunc2String(PpWord funcCode);
 
 /*
@@ -190,11 +190,12 @@ void ddpInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static FcStatus ddpFunc(PpWord funcCode)
+static FcStatus ddpFunc(PpWord funcCode, u8 mfrId)
 {
 	DdpContext *dc;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	dc = (DdpContext *)(activeDevice->context[0]);
+	dc = (DdpContext *)(mfr->activeDevice->context[0]);
 
 #if DEBUG
 	fprintf(ddpLog, "\n%06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
@@ -220,11 +221,11 @@ static FcStatus ddpFunc(PpWord funcCode)
 		dc->abyte = 0;
 		dc->dbyte = 0;
 		dc->addr = 0;
-		activeDevice->fcode = funcCode;
+		mfr->activeDevice->fcode = funcCode;
 		return(FcAccepted);
 
 	case FcDdpMasterClear:
-		activeDevice->fcode = 0;
+		mfr->activeDevice->fcode = 0;
 		dc->stat = StDdpAccept;
 		return(FcProcessed);
 	}
@@ -284,23 +285,25 @@ bool DdpTransfer(u32 ecsAddress, CpWord *data, bool writeToEcs)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void ddpIo(void)
+static void ddpIo(u8 mfrId)
 {
 	DdpContext *dc;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	dc = (DdpContext *)(activeDevice->context[0]);
 
-	switch (activeDevice->fcode)
+	dc = (DdpContext *)(mfr->activeDevice->context[0]);
+
+	switch (mfr->activeDevice->fcode)
 	{
 	default:
 		return;
 
 	case FcDdpStatus:
-		if (!activeChannel->full)
+		if (!mfr->activeChannel->full)
 		{
-			activeChannel->data = dc->stat;
-			activeChannel->full = TRUE;
-			activeDevice->fcode = 0;
+			mfr->activeChannel->data = dc->stat;
+			mfr->activeChannel->full = TRUE;
+			mfr->activeDevice->fcode = 0;
 			// ? activeChannel->discAfterInput = TRUE;
 #if DEBUG
 			fprintf(ddpLog, " %04o", activeChannel->data);
@@ -315,12 +318,12 @@ static void ddpIo(void)
 			/*
 			**  We need to get two address bytes from the PPU.
 			*/
-			if (activeChannel->full)
+			if (mfr->activeChannel->full)
 			{
 				dc->addr <<= 12;
-				dc->addr += activeChannel->data;
+				dc->addr += mfr->activeChannel->data;
 				dc->abyte++;
-				activeChannel->full = FALSE;
+				mfr->activeChannel->full = FALSE;
 			}
 
 			if (dc->abyte == 2)
@@ -329,12 +332,12 @@ static void ddpIo(void)
 				fprintf(ddpLog, " ECS addr: %08o Data: ", dc->addr);
 #endif
 
-				if (activeDevice->fcode == FcDdpReadECS)
+				if (mfr->activeDevice->fcode == FcDdpReadECS)
 				{
 					/*
 					**  Delay a bit before we set channel full.
 					*/
-					dc->endaddrcycle = activeDevice->mfr->cycles;
+					dc->endaddrcycle = mfr->activeDevice->mfr->cycles;
 
 					/*
 					**  A flag register reference occurs when bit 23 is set address.
@@ -342,13 +345,13 @@ static void ddpIo(void)
 					if ((dc->addr & DdpAddrFlagReg) != 0)
 					{
 						//printf("\nDDP EcsFlagRegister\n");
-						if (activeDevice->mfr->Acpu[0]->EcsFlagRegister(dc->addr))
+						if (mfr->activeDevice->mfr->Acpu[0]->EcsFlagRegister(dc->addr))
 						{
 							dc->stat = StDdpAccept;
 						}
 						else
 						{
-							activeChannel->discAfterInput = TRUE;
+							mfr->activeChannel->discAfterInput = TRUE;
 							dc->stat = StDdpAbort;
 						}
 
@@ -365,9 +368,9 @@ static void ddpIo(void)
 			break;
 		}
 
-		if (activeDevice->fcode == FcDdpReadECS)
+		if (mfr->activeDevice->fcode == FcDdpReadECS)
 		{
-			if (!activeChannel->full && labs(activeDevice->mfr->cycles - dc->endaddrcycle) > 20)
+			if (!mfr->activeChannel->full && labs(mfr->activeDevice->mfr->cycles - dc->endaddrcycle) > 20)
 			{
 				if (dc->dbyte == -1)
 				{
@@ -380,7 +383,7 @@ static void ddpIo(void)
 					}
 					else
 					{
-						activeChannel->discAfterInput = TRUE;
+						mfr->activeChannel->discAfterInput = TRUE;
 						dc->stat = StDdpAbort;
 					}
 
@@ -390,8 +393,8 @@ static void ddpIo(void)
 				/*
 				**  Return next byte to PPU.
 				*/
-				activeChannel->data = (PpWord)((dc->curword >> 48) & Mask12);
-				activeChannel->full = TRUE;
+				mfr->activeChannel->data = (PpWord)((dc->curword >> 48) & Mask12);
+				mfr->activeChannel->full = TRUE;
 
 #if DEBUG
 				fprintf(ddpLog, " %04o", activeChannel->data);
@@ -405,7 +408,7 @@ static void ddpIo(void)
 				{
 					if (dc->addr & (DdpAddrReadOne | DdpAddrFlagReg))
 					{
-						activeChannel->discAfterInput = TRUE;
+						mfr->activeChannel->discAfterInput = TRUE;
 					}
 
 					dc->dbyte = -1;
@@ -413,12 +416,12 @@ static void ddpIo(void)
 				}
 			}
 		}
-		else if (activeChannel->full)
+		else if (mfr->activeChannel->full)
 		{
 			dc->stat = StDdpAccept;
 			dc->curword <<= 12;
-			dc->curword += activeChannel->data;
-			activeChannel->full = FALSE;
+			dc->curword += mfr->activeChannel->data;
+			mfr->activeChannel->full = FALSE;
 
 #if DEBUG
 			fprintf(ddpLog, " %04o", activeChannel->data);
@@ -431,7 +434,7 @@ static void ddpIo(void)
 				*/
 				if (!DdpTransfer(dc->addr, &dc->curword, TRUE))   //DRS??
 				{
-					activeChannel->active = FALSE;
+					mfr->activeChannel->active = FALSE;
 					dc->stat = StDdpAbort;
 					return;
 				}
@@ -452,7 +455,7 @@ static void ddpIo(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void ddpActivate(void)
+static void ddpActivate(u8 mfrId)
 {
 #if DEBUG
 	fprintf(ddpLog, "\n%06d PP:%02o CH:%02o Activate",
@@ -470,11 +473,12 @@ static void ddpActivate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void ddpDisconnect(void)
+static void ddpDisconnect(u8 mfrId)
 {
 	DdpContext *dc;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	dc = (DdpContext *)(activeDevice->context[0]);
+	dc = (DdpContext *)(mfr->activeDevice->context[0]);
 
 #if DEBUG
 	fprintf(ddpLog, "\n%06d PP:%02o CH:%02o Disconnect",
@@ -483,7 +487,7 @@ static void ddpDisconnect(void)
 		activeDevice->channel->id);
 #endif
 
-	if (activeDevice->fcode == FcDdpWriteECS && dc->dbyte != 0)
+	if (mfr->activeDevice->fcode == FcDdpWriteECS && dc->dbyte != 0)
 	{
 		/*
 		**  Write final 60 bit to ECS padded with zeros.
@@ -491,7 +495,7 @@ static void ddpDisconnect(void)
 		dc->curword <<= 5 - dc->dbyte;
 		if (!DdpTransfer(dc->addr, &dc->curword, TRUE))	//DRS??
 		{
-			activeChannel->active = FALSE;
+			mfr->activeChannel->active = FALSE;
 			dc->stat = StDdpAbort;
 			return;
 		}
@@ -504,7 +508,7 @@ static void ddpDisconnect(void)
 	/*
 	**  Abort pending device disconnects - the PP is doing the disconnect.
 	*/
-	activeChannel->discAfterInput = FALSE;
+	mfr->activeChannel->discAfterInput = FALSE;
 }
 
 /*--------------------------------------------------------------------------

@@ -54,13 +54,13 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
-static FcStatus deadFunc(PpWord funcCode);
-static void deadIo(void);
-static void deadActivate(void);
-static void deadDisconnect(void);
+static FcStatus deadFunc(PpWord funcCode, u8 mfrId);
+static void deadIo(u8 mfrId);
+static void deadActivate(u8 mfrId);
+static void deadDisconnect(u8 mfrId);
 
 #if MaxMainFrames == 2
-static void deadIo1(void);
+static void deadIo1(u8 mfrId);
 #endif
 /*
 **  ----------------
@@ -184,7 +184,7 @@ void deadStart(u8 k)
 **  Returns:        FcStatus
 **
 **------------------------------------------------------------------------*/
-static FcStatus deadFunc(PpWord funcCode)
+static FcStatus deadFunc(PpWord funcCode, u8 mfrId)
 {
 	(void)funcCode;
 
@@ -199,38 +199,41 @@ static FcStatus deadFunc(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void deadIo(void)
+static void deadIo(u8 mfrId)
 {
-	
-	if (!activeChannel->full)
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	if (!mfr->activeChannel->full)
 	{
 		if (dsSequence == BigIron->deadstartCount)
 		{
-			activeChannel->active = FALSE;
+			mfr->activeChannel->active = FALSE;
 		}
 		else
 		{
-			activeChannel->data = BigIron->deadstartPanel[dsSequence++] & Mask12;
-			activeChannel->full = TRUE;
+			mfr->activeChannel->data = BigIron->deadstartPanel[dsSequence++] & Mask12;
+			mfr->activeChannel->full = TRUE;
 			//printf("\ndeadIo on mfr %d data %4o # %d", activeChannel->mfrID, activeChannel->data, dsSequence-1);
 		}
 	}
 }
 
 #if MaxMainFrames == 2
-static void deadIo1(void)
+static void deadIo1(u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	//printf("deadIo on mfr %d\n", activeChannel->mfrID);
-	if (!activeChannel->full)
+	if (!mfr->activeChannel->full)
 	{
 		if (dsSequence1 == BigIron->deadstartCount)
 		{
-			activeChannel->active = FALSE;
+			mfr->activeChannel->active = FALSE;
 		}
 		else
 		{
-			activeChannel->data = BigIron->deadstartPanel[dsSequence1++] & Mask12;
-			activeChannel->full = TRUE;
+			mfr->activeChannel->data = BigIron->deadstartPanel[dsSequence1++] & Mask12;
+			mfr->activeChannel->full = TRUE;
 			//printf("\ndeadIo1 on mfr %d data %4o # %d", activeChannel->mfrID, activeChannel->data, dsSequence1-1);
 		}
 	}
@@ -245,7 +248,7 @@ static void deadIo1(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void deadActivate(void)
+static void deadActivate(u8 mfrId)
 {
 }
 
@@ -257,7 +260,7 @@ static void deadActivate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void deadDisconnect(void)
+static void deadDisconnect(u8 mfrId)
 {
 }
 

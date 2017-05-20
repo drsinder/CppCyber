@@ -46,6 +46,9 @@ public:
 	u32 traceSequenceNo = 0;
 
 	PpSlot *activePpu;
+	ChSlot *activeChannel;
+	DevSlot *activeDevice;
+	DevSlot *active3000Device;
 
 	//u16 mux6676TelnetPort;
 	//u16 mux6676TelnetConns;
@@ -57,11 +60,6 @@ public:
 
 	ChSlot *channel;
 	u8 channelCount;
-
-	//PpSlot *activePpu;
-	//ChSlot *activeChannel;
-	//DevSlot *activeDevice;
-	//DevSlot *active3000Device;
 
 #if MaxMainFrames == 2 || MaxCpus == 2
 	CRITICAL_SECTION PpuMutex;

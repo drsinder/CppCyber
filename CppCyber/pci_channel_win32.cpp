@@ -83,14 +83,14 @@ typedef struct pciParam
 **  Private Function Prototypes
 **  ---------------------------
 */
-static FcStatus pciFunc(PpWord funcCode);
-static void pciIo(void);
+static FcStatus pciFunc(PpWord funcCode, u8 mfrId);
+static void pciIo(u8 mfrId);
 static PpWord pciIn(void);
 static void pciOut(PpWord data);
 static void pciFull(void);
 static void pciEmpty(void);
-static void pciActivate(void);
-static void pciDisconnect(void);
+static void pciActivate(u8 mfrId);
+static void pciDisconnect(u8 mfrId);
 static u16 pciFlags(void);
 static void pciCmd(PpWord data);
 static u16 pciStatus(void);
@@ -209,7 +209,7 @@ void pciInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Returns:        FcStatus
 **
 **------------------------------------------------------------------------*/
-static FcStatus pciFunc(PpWord funcCode)
+static FcStatus pciFunc(PpWord funcCode, u8 mfrId)
 {
 #if DEBUG
 	fprintf(pciLog, "\n%06d PP:%02o CH:%02o f:%04o >   ",
@@ -232,7 +232,7 @@ static FcStatus pciFunc(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void pciIo(void)
+static void pciIo(u8 mfrId)
 {
 }
 
@@ -308,7 +308,7 @@ static void pciEmpty(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void pciActivate(void)
+static void pciActivate(u8 mfrId)
 {
 #if DEBUG
 	fprintf(pciLog, " A");
@@ -325,7 +325,7 @@ static void pciActivate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void pciDisconnect(void)
+static void pciDisconnect(u8 mfrId)
 {
 #if DEBUG
 	fprintf(pciLog, " D");

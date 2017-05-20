@@ -86,13 +86,13 @@ typedef struct portParam
 **  Private Function Prototypes
 **  ---------------------------
 */
-static FcStatus mux6676Func(PpWord funcCode);
-static void mux6676Io(void);
-static void mux6676Activate(void);
-static void mux6676Disconnect(void);
+static FcStatus mux6676Func(PpWord funcCode, u8 mfrId);
+static void mux6676Io(u8 mfrId);
+static void mux6676Activate(u8 mfrId);
+static void mux6676Disconnect(u8 mfrId);
 static void mux6676CreateThread(DevSlot *dp);
 static int mux6676CheckInput(PortParam *mp);
-static bool mux6676InputRequired(void);
+static bool mux6676InputRequired(u8 mfrId);
 #if defined(_WIN32)
 static void mux6676Thread(void *param);
 #else
@@ -195,14 +195,16 @@ void mux6676Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Returns:        FcStatus
 **
 **------------------------------------------------------------------------*/
-static FcStatus mux6676Func(PpWord funcCode)
+static FcStatus mux6676Func(PpWord funcCode, u8 mfrId)
 {
 	u8 eqNo;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	// ReSharper disable once CppEntityNeverUsed
-	PortParam *mp = (PortParam *)activeDevice->context[0];
+	PortParam *mp = (PortParam *)mfr->activeDevice->context[0];
 
 	eqNo = (funcCode & Fc6676EqMask) >> Fc6676EqShift;
-	if (eqNo != activeDevice->eqNo)
+	if (eqNo != mfr->activeDevice->eqNo)
 	{
 		/*
 		**  Equipment not configured.
@@ -220,11 +222,11 @@ static FcStatus mux6676Func(PpWord funcCode)
 	case Fc6676Output:
 	case Fc6676Status:
 	case Fc6676Input:
-		activeDevice->recordLength = 0;
+		mfr->activeDevice->recordLength = 0;
 		break;
 	}
 
-	activeDevice->fcode = funcCode;
+	mfr->activeDevice->fcode = funcCode;
 	return(FcAccepted);
 }
 
@@ -236,28 +238,30 @@ static FcStatus mux6676Func(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void mux6676Io(void)
+static void mux6676Io(u8 mfrId)
 {
-	PortParam *cp = (PortParam *)activeDevice->context[0];
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	PortParam *cp = (PortParam *)mfr->activeDevice->context[0];
 	PortParam *mp;
 	PpWord function;
 	u8 portNumber;
 	char x;
 	int in;
 
-	switch (activeDevice->fcode)
+	switch (mfr->activeDevice->fcode)
 	{
 	default:
 		break;
 
 	case Fc6676Output:
-		if (activeChannel->full)
+		if (mfr->activeChannel->full)
 		{
 			/*
 			**  Output data.
 			*/
-			activeChannel->full = FALSE;
-			portNumber = (u8)activeDevice->recordLength++;
+			mfr->activeChannel->full = FALSE;
+			portNumber = (u8)mfr->activeDevice->recordLength++;
 			if (portNumber < mux6676TelnetConns)
 			{
 				mp = cp + portNumber;
@@ -266,14 +270,14 @@ static void mux6676Io(void)
 					/*
 					**  Port with active TCP connection.
 					*/
-					function = activeChannel->data >> 9;
+					function = mfr->activeChannel->data >> 9;
 					switch (function)
 					{
 					case 4:
 						/*
 						**  Send data with parity stripped off.
 						*/
-						x = (activeChannel->data >> 1) & 0x7f;
+						x = (mfr->activeChannel->data >> 1) & 0x7f;
 						send(mp->connFd, &x, 1, 0);
 						break;
 
@@ -299,11 +303,11 @@ static void mux6676Io(void)
 		break;
 
 	case Fc6676Input:
-		if (!activeChannel->full)
+		if (!mfr->activeChannel->full)
 		{
-			activeChannel->data = 0;
-			activeChannel->full = TRUE;
-			portNumber = (u8)activeDevice->recordLength++;
+			mfr->activeChannel->data = 0;
+			mfr->activeChannel->full = TRUE;
+			portNumber = (u8)mfr->activeDevice->recordLength++;
 			if (portNumber < mux6676TelnetConns)
 			{
 				mp = cp + portNumber;
@@ -312,10 +316,10 @@ static void mux6676Io(void)
 					/*
 					**  Port with active TCP connection.
 					*/
-					activeChannel->data |= 01000;
+					mfr->activeChannel->data |= 01000;
 					if ((in = mux6676CheckInput(mp)) > 0)
 					{
-						activeChannel->data |= ((in & 0x7F) << 1) | 04000;
+						mfr->activeChannel->data |= ((in & 0x7F) << 1) | 04000;
 					}
 				}
 			}
@@ -323,13 +327,13 @@ static void mux6676Io(void)
 		break;
 
 	case Fc6676Status:
-		activeChannel->data = St6676ChannelAReserved;
-		if (mux6676InputRequired())
+		mfr->activeChannel->data = St6676ChannelAReserved;
+		if (mux6676InputRequired(mfrId))
 		{
-			activeChannel->data |= St6676InputRequired;
+			mfr->activeChannel->data |= St6676InputRequired;
 		}
 
-		activeChannel->full = TRUE;
+		mfr->activeChannel->full = TRUE;
 		break;
 	}
 }
@@ -342,7 +346,7 @@ static void mux6676Io(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void mux6676Activate(void)
+static void mux6676Activate(u8 mfrId)
 {
 }
 
@@ -354,7 +358,7 @@ static void mux6676Activate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void mux6676Disconnect(void)
+static void mux6676Disconnect(u8 mfrId)
 {
 }
 
@@ -599,9 +603,11 @@ static int mux6676CheckInput(PortParam *mp)
 **  Returns:        TRUE if input is required, FALSE otherwise.
 **
 **------------------------------------------------------------------------*/
-static bool mux6676InputRequired(void)
+static bool mux6676InputRequired(u8 mfrId)
 {
-	PortParam *cp = (PortParam *)activeDevice->context[0];
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	PortParam *cp = (PortParam *)mfr->activeDevice->context[0];
 	PortParam *mp;
 	int i;
 	fd_set readFds;

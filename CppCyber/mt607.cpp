@@ -122,10 +122,10 @@ typedef struct tapeBuf
 **  Private Function Prototypes
 **  ---------------------------
 */
-static FcStatus mt607Func(PpWord funcCode);
-static void mt607Io(void);
-static void mt607Activate(void);
-static void mt607Disconnect(void);
+static FcStatus mt607Func(PpWord funcCode, u8 mfrId);
+static void mt607Io(u8 mfrId);
+static void mt607Activate(u8 mfrId);
+static void mt607Disconnect(u8 mfrId);
 static char *mt607Func2String(PpWord funcCode);
 
 /*
@@ -236,7 +236,7 @@ void mt607Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Returns:        FcStatus
 **
 **------------------------------------------------------------------------*/
-static FcStatus mt607Func(PpWord funcCode)
+static FcStatus mt607Func(PpWord funcCode, u8 mfrId)
 {
 	u32 len;
 	u32 recLen0;
@@ -247,6 +247,8 @@ static FcStatus mt607Func(PpWord funcCode)
 	u16 *op;
 	u8 *rp;
 	TapeBuf *tp;
+
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 #if DEBUG
 	fprintf(mt607Log, "\n%06d PP:%02o CH:%02o u:%d f:%04o T:%-25s  >   ",
@@ -272,53 +274,53 @@ static FcStatus mt607Func(PpWord funcCode)
 	case Fc607WrBCD:
 	case Fc607RdBCD:
 	case Fc607WrFileMark:
-		activeDevice->fcode = 0;
-		logError(LogErrorLocation, "channel %02o - unsupported function code: %04o", activeChannel->id, (u32)funcCode);
+		mfr->activeDevice->fcode = 0;
+		logError(LogErrorLocation, "channel %02o - unsupported function code: %04o", mfr->activeChannel->id, (u32)funcCode);
 		break;
 
 	case Fc607Rewind:
-		activeDevice->fcode = 0;
-		fseek(activeDevice->fcb[activeDevice->selectedUnit], 0, SEEK_SET);
+		mfr->activeDevice->fcode = 0;
+		fseek(mfr->activeDevice->fcb[mfr->activeDevice->selectedUnit], 0, SEEK_SET);
 		break;
 
 	case Fc607StatusReq:
-		activeDevice->fcode = funcCode;
+		mfr->activeDevice->fcode = funcCode;
 		break;
 
 	case Fc607SelUnitCode:
-		activeDevice->fcode = 0;
-		activeDevice->selectedUnit = funcCode & 07;
-		if (activeDevice->fcb[activeDevice->selectedUnit] == NULL)
+		mfr->activeDevice->fcode = 0;
+		mfr->activeDevice->selectedUnit = funcCode & 07;
+		if (mfr->activeDevice->fcb[mfr->activeDevice->selectedUnit] == NULL)
 		{
-			logError(LogErrorLocation, "channel %02o - invalid select: %04o", activeChannel->id, (u32)funcCode);
+			logError(LogErrorLocation, "channel %02o - invalid select: %04o", mfr->activeChannel->id, (u32)funcCode);
 		}
 		break;
 
 	case Fc607RdBinary:
-		activeDevice->fcode = funcCode;
-		if (activeDevice->recordLength > 0)
+		mfr->activeDevice->fcode = funcCode;
+		if (mfr->activeDevice->recordLength > 0)
 		{
-			activeChannel->status = St607Ready;
+			mfr->activeChannel->status = St607Ready;
 			break;
 		}
 
-		activeChannel->status = St607Ready;
+		mfr->activeChannel->status = St607Ready;
 
 		/*
 		**  Reset tape buffer pointer.
 		*/
-		tp = (TapeBuf *)activeDevice->context[activeDevice->selectedUnit];
+		tp = (TapeBuf *)mfr->activeDevice->context[mfr->activeDevice->selectedUnit];
 		tp->bp = tp->ioBuffer;
 
 		/*
 		**  Read and verify TAP record length header.
 		*/
-		len = (u32)fread(&recLen0, sizeof(recLen0), 1, activeDevice->fcb[activeDevice->selectedUnit]);
+		len = (u32)fread(&recLen0, sizeof(recLen0), 1, mfr->activeDevice->fcb[mfr->activeDevice->selectedUnit]);
 
 		if (len != 1)
 		{
-			activeChannel->status = St607EOT;
-			activeDevice->recordLength = 0;
+			mfr->activeChannel->status = St607EOT;
+			mfr->activeDevice->recordLength = 0;
 			break;
 		}
 
@@ -336,7 +338,7 @@ static FcStatus mt607Func(PpWord funcCode)
 
 		if (recLen1 == 0)
 		{
-			activeDevice->recordLength = 0;
+			mfr->activeDevice->recordLength = 0;
 #if DEBUG
 			fprintf(mt607Log, "Tape mark\n");
 #endif
@@ -345,35 +347,35 @@ static FcStatus mt607Func(PpWord funcCode)
 
 		if (recLen1 > MaxByteBuf)
 		{
-			logError(LogErrorLocation, "channel %02o - tape record too long: %d", activeChannel->id, recLen1);
-			activeChannel->status = St607NotReadyMask;
-			activeDevice->recordLength = 0;
+			logError(LogErrorLocation, "channel %02o - tape record too long: %d", mfr->activeChannel->id, recLen1);
+			mfr->activeChannel->status = St607NotReadyMask;
+			mfr->activeDevice->recordLength = 0;
 			break;
 		}
 
 		/*
 		**  Read and verify the actual raw data.
 		*/
-		len = (u32)fread(rawBuffer, 1, recLen1, activeDevice->fcb[activeDevice->selectedUnit]);
+		len = (u32)fread(rawBuffer, 1, recLen1, mfr->activeDevice->fcb[mfr->activeDevice->selectedUnit]);
 
 		if (recLen1 != (u32)len)
 		{
-			logError(LogErrorLocation, "channel %02o - short tape record read: %d", activeChannel->id, len);
-			activeChannel->status = St607NotReadyMask;
-			activeDevice->recordLength = 0;
+			logError(LogErrorLocation, "channel %02o - short tape record read: %d", mfr->activeChannel->id, len);
+			mfr->activeChannel->status = St607NotReadyMask;
+			mfr->activeDevice->recordLength = 0;
 			break;
 		}
 
 		/*
 		**  Read and verify the TAP record length trailer.
 		*/
-		len = (u32)fread(&recLen2, sizeof(recLen2), 1, activeDevice->fcb[activeDevice->selectedUnit]);
+		len = (u32)fread(&recLen2, sizeof(recLen2), 1, mfr->activeDevice->fcb[mfr->activeDevice->selectedUnit]);
 
 		if (len != 1 || recLen0 != recLen2)
 		{
-			logError(LogErrorLocation, "channel %02o - invalid tape record trailer: %08x", activeChannel->id, recLen2);
-			activeChannel->status = St607NotReadyMask;
-			activeDevice->recordLength = 0;
+			logError(LogErrorLocation, "channel %02o - invalid tape record trailer: %08x", mfr->activeChannel->id, recLen2);
+			mfr->activeChannel->status = St607NotReadyMask;
+			mfr->activeDevice->recordLength = 0;
 			break;
 		}
 
@@ -393,8 +395,8 @@ static FcStatus mt607Func(PpWord funcCode)
 			*op++ = ((c2 << 8) | (c3 >> 0)) & Mask12;
 		}
 
-		activeDevice->recordLength = (PpWord)(op - tp->ioBuffer);
-		activeChannel->status = St607Ready;
+		mfr->activeDevice->recordLength = (PpWord)(op - tp->ioBuffer);
+		mfr->activeChannel->status = St607Ready;
 
 #if DEBUG
 		fprintf(mt607Log, "Read fwd %d PP words (%d 8-bit bytes)\n", activeDevice->recordLength, recLen1);
@@ -413,11 +415,12 @@ static FcStatus mt607Func(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void mt607Io(void)
+static void mt607Io(u8 mfrId)
 {
 	TapeBuf *tp;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	switch (activeDevice->fcode & Fc607UnitMask)
+	switch (mfr->activeDevice->fcode & Fc607UnitMask)
 	{
 	default:
 	case Fc607SelUnitCode:
@@ -428,36 +431,36 @@ static void mt607Io(void)
 	case Fc607WrBCD:
 	case Fc607RdBCD:
 	case Fc607WrFileMark:
-		logError(LogErrorLocation, "channel %02o - unsupported function code: %04o", activeChannel->id, activeDevice->fcode);
+		logError(LogErrorLocation, "channel %02o - unsupported function code: %04o", mfr->activeChannel->id, mfr->activeDevice->fcode);
 		break;
 
 	case Fc607StatusReq:
-		activeChannel->data = activeChannel->status;
-		activeChannel->full = TRUE;
+		mfr->activeChannel->data = mfr->activeChannel->status;
+		mfr->activeChannel->full = TRUE;
 #if DEBUG
 		fprintf(mt607Log, " %04o", activeChannel->data);
 #endif
 		break;
 
 	case Fc607RdBinary:
-		if (activeChannel->full)
+		if (mfr->activeChannel->full)
 		{
 			break;
 		}
 
-		if (activeDevice->recordLength == 0)
+		if (mfr->activeDevice->recordLength == 0)
 		{
-			activeChannel->active = FALSE;
+			mfr->activeChannel->active = FALSE;
 		}
 
-		tp = (TapeBuf *)activeDevice->context[activeDevice->selectedUnit];
+		tp = (TapeBuf *)mfr->activeDevice->context[mfr->activeDevice->selectedUnit];
 
-		if (activeDevice->recordLength > 0)
+		if (mfr->activeDevice->recordLength > 0)
 		{
-			activeDevice->recordLength -= 1;
-			activeChannel->data = *tp->bp++;
-			activeChannel->full = TRUE;
-			if (activeDevice->recordLength == 0)
+			mfr->activeDevice->recordLength -= 1;
+			mfr->activeChannel->data = *tp->bp++;
+			mfr->activeChannel->full = TRUE;
+			if (mfr->activeDevice->recordLength == 0)
 			{
 				//                activeChannel->discAfterInput = TRUE;  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< fixed COS 
 			}
@@ -474,7 +477,7 @@ static void mt607Io(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void mt607Activate(void)
+static void mt607Activate(u8 mfrId)
 {
 }
 
@@ -486,12 +489,14 @@ static void mt607Activate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void mt607Disconnect(void)
+static void mt607Disconnect(u8 mfrId)
 {
 	/*
 	**  Abort pending device disconnects - the PP is doing the disconnect.
 	*/
-	activeChannel->discAfterInput = FALSE;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	mfr->activeChannel->discAfterInput = FALSE;
 }
 
 /*--------------------------------------------------------------------------

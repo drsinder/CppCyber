@@ -80,10 +80,10 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
-static FcStatus lp1612Func(PpWord funcCode);
-static void lp1612Io(void);
-static void lp1612Activate(void);
-static void lp1612Disconnect(void);
+static FcStatus lp1612Func(PpWord funcCode, u8 mfrId);
+static void lp1612Io(u8 mfrId);
+static void lp1612Activate(u8 mfrId);
+static void lp1612Disconnect(u8 mfrId);
 
 /*
 **  ----------------
@@ -270,9 +270,11 @@ void lp1612RemovePaper(char *params)
 **  Returns:        FcStatus
 **
 **------------------------------------------------------------------------*/
-static FcStatus lp1612Func(PpWord funcCode)
+static FcStatus lp1612Func(PpWord funcCode, u8 mfrId)
 {
-	FILE *fcb = activeDevice->fcb[0];
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	FILE *fcb = mfr->activeDevice->fcb[0];
 
 	switch (funcCode)
 	{
@@ -306,7 +308,7 @@ static FcStatus lp1612Func(PpWord funcCode)
 		return(FcProcessed);
 
 	case FcPrintStatusReq:
-		activeChannel->status = StPrintReady;
+		mfr->activeChannel->status = StPrintReady;
 		break;
 
 	case FcPrintClearFormat:
@@ -319,7 +321,7 @@ static FcStatus lp1612Func(PpWord funcCode)
 		break;
 	}
 
-	activeDevice->fcode = funcCode;
+	mfr->activeDevice->fcode = funcCode;
 	return(FcAccepted);
 }
 
@@ -331,11 +333,13 @@ static FcStatus lp1612Func(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void lp1612Io(void)
+static void lp1612Io(u8 mfrId)
 {
-	FILE *fcb = activeDevice->fcb[0];
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	switch (activeDevice->fcode)
+	FILE *fcb = mfr->activeDevice->fcb[0];
+
+	switch (mfr->activeDevice->fcode)
 	{
 	default:
 	case FcPrintSelect:
@@ -352,18 +356,18 @@ static void lp1612Io(void)
 	case FcPrintFormat4:
 	case FcPrintFormat5:
 	case FcPrintFormat6:
-		if (activeChannel->full)
+		if (mfr->activeChannel->full)
 		{
-			fputc(extBcdToAscii[activeChannel->data & 077], fcb);
-			activeChannel->full = FALSE;
+			fputc(extBcdToAscii[mfr->activeChannel->data & 077], fcb);
+			mfr->activeChannel->full = FALSE;
 		}
 		break;
 
 	case FcPrintStatusReq:
-		activeChannel->data = activeChannel->status;
-		activeChannel->full = TRUE;
-		activeDevice->fcode = 0;
-		activeChannel->status = 0;
+		mfr->activeChannel->data = mfr->activeChannel->status;
+		mfr->activeChannel->full = TRUE;
+		mfr->activeDevice->fcode = 0;
+		mfr->activeChannel->status = 0;
 		break;
 	}
 }
@@ -376,7 +380,7 @@ static void lp1612Io(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void lp1612Activate(void)
+static void lp1612Activate(u8 mfrId)
 {
 }
 
@@ -388,7 +392,7 @@ static void lp1612Activate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void lp1612Disconnect(void)
+static void lp1612Disconnect(u8 mfrId)
 {
 }
 

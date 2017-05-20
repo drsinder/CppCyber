@@ -88,7 +88,7 @@
 */
 DevSlot *dcc6681Attach(u8 channelNo, u8 eqNo, u8 unitNo, u8 devType, u8 mfrID);
 DevSlot *dcc6681FindDevice(u8 mfrID, u8 channelNo, u8 equipmentNo, u8 devType);
-void dcc6681Interrupt(bool status);
+void dcc6681Interrupt(bool status, u8 mfrId);
 
 /*
 **  ------------------------

@@ -65,11 +65,11 @@ typedef struct dccControl
 **  Private Function Prototypes
 **  ---------------------------
 */
-static FcStatus dcc6681Func(PpWord funcCode);
-static void dcc6681Io(void);
+static FcStatus dcc6681Func(PpWord funcCode, u8 mfrId);
+static void dcc6681Io(u8 mfrId);
 //static void dcc6681Load(DevSlot *, int, char *);
-static void dcc6681Activate(void);
-static void dcc6681Disconnect(void);
+static void dcc6681Activate(u8 mfrId);
+static void dcc6681Disconnect(u8 mfrId);
 
 /*
 **  ----------------
@@ -260,9 +260,10 @@ DevSlot *dcc6681FindDevice(u8 mfrID, u8 channelNo, u8 equipmentNo, u8 devType)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void dcc6681Interrupt(bool status)
+void dcc6681Interrupt(bool status, u8 mfrId)
 {
-	DccControl *mp = (DccControl *)activeDevice->context[0];
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+	DccControl *mp = (DccControl *)mfr->activeDevice->context[0];
 	if (mp->connectedEquipment >= 0)
 	{
 		mp->interrupting[mp->connectedEquipment] = status;
@@ -278,9 +279,10 @@ void dcc6681Interrupt(bool status)
 **  Returns:        FcStatus
 **
 **------------------------------------------------------------------------*/
-static FcStatus dcc6681Func(PpWord funcCode)
+static FcStatus dcc6681Func(PpWord funcCode, u8 mfrId)
 {
-	DccControl *mp = (DccControl *)activeDevice->context[0];
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+	DccControl *mp = (DccControl *)mfr->activeDevice->context[0];
 	DevSlot *device;
 	PpWord rc;
 	i8 u;
@@ -289,7 +291,7 @@ static FcStatus dcc6681Func(PpWord funcCode)
 	/*
 	**  Clear old function code.
 	*/
-	activeDevice->fcode = 0;
+	mfr->activeDevice->fcode = 0;
 
 	/*
 	**  If not selected, we recognize only a select.
@@ -315,7 +317,7 @@ static FcStatus dcc6681Func(PpWord funcCode)
 	case Fc6681ConnectMode2:
 	case Fc6681FunctionMode2:
 	case Fc6681DccStatusReq:
-		activeDevice->fcode = funcCode;
+		mfr->activeDevice->fcode = funcCode;
 		return(FcAccepted);
 
 	case Fc6681MasterClear:
@@ -323,11 +325,11 @@ static FcStatus dcc6681Func(PpWord funcCode)
 		for (e = 0; e < MaxEquipment; e++)
 		{
 			mp->interrupting[e] = FALSE;
-			active3000Device = mp->device3000[e];
-			if (active3000Device != NULL)
+			mfr->active3000Device = mp->device3000[e];
+			if (mfr->active3000Device != NULL)
 			{
-				active3000Device->selectedUnit = -1;
-				(active3000Device->func)(funcCode);
+				mfr->active3000Device->selectedUnit = -1;
+				(mfr->active3000Device->func)(funcCode, mfrId);
 			}
 		}
 
@@ -343,13 +345,13 @@ static FcStatus dcc6681Func(PpWord funcCode)
 		e = mp->connectedEquipment;
 		if (e < 0)
 		{
-			activeDevice->fcode = Fc6681DccStatusReq;
+			mfr->activeDevice->fcode = Fc6681DccStatusReq;
 			mp->status = StFc6681IntReject;
 			return(FcAccepted);
 		}
-		active3000Device = mp->device3000[e];
-		activeDevice->fcode = funcCode;
-		return((active3000Device->func)(funcCode));
+		mfr->active3000Device = mp->device3000[e];
+		mfr->activeDevice->fcode = funcCode;
+		return((mfr->active3000Device->func)(funcCode, mfrId));
 
 	case Fc6681InputToEor:
 	case Fc6681Input:
@@ -361,13 +363,13 @@ static FcStatus dcc6681Func(PpWord funcCode)
 			return(FcProcessed);
 		}
 
-		active3000Device = mp->device3000[e];
-		activeDevice->fcode = funcCode;
+		mfr->active3000Device = mp->device3000[e];
+		mfr->activeDevice->fcode = funcCode;
 		mp->ios = funcCode & Fc6681IoIosMask;
 		mp->bcd = funcCode & Fc6681IoBcdMask;
 		mp->status = StFc6681Ready;
 		funcCode &= Fc6681IoModeMask;
-		return((active3000Device->func)(funcCode));
+		return((mfr->active3000Device->func)(funcCode,  mfrId));
 	}
 
 	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
@@ -400,10 +402,10 @@ static FcStatus dcc6681Func(PpWord funcCode)
 			return(FcProcessed);
 		}
 
-		active3000Device = mp->device3000[e];
+		mfr->active3000Device = mp->device3000[e];
 		funcCode &= Fc6681ConnectFuncMask;
 		mp->status = StFc6681Ready;
-		rc = (active3000Device->func)(funcCode);
+		rc = (mfr->active3000Device->func)(funcCode, mfrId);
 		if (rc == FcDeclined)
 		{
 			mp->status = StFc6681IntReject;
@@ -428,15 +430,16 @@ static FcStatus dcc6681Func(PpWord funcCode)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-static void dcc6681Io(void)
+static void dcc6681Io(u8 mfrId)
 {
-	DccControl *mp = (DccControl *)activeDevice->context[0];
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+	DccControl *mp = (DccControl *)mfr->activeDevice->context[0];
 	DevSlot *device;
 	i8 u;
 	i8 e;
 	PpWord stat;
 
-	switch (activeDevice->fcode)
+	switch (mfr->activeDevice->fcode)
 	{
 	default:
 		return;
@@ -448,16 +451,16 @@ static void dcc6681Io(void)
 	case Fc6681Connect5Mode1:
 	case Fc6681Connect6Mode1:
 	case Fc6681Connect7Mode1:
-		printf("unexpected IO for function %04o\n", activeDevice->fcode);
+		printf("unexpected IO for function %04o\n", mfr->activeDevice->fcode);
 		break;
 
 	case Fc6681ConnectMode2:
-		if (activeChannel->full)
+		if (mfr->activeChannel->full)
 		{
-			activeChannel->full = FALSE;
-			activeDevice->fcode = 0;
-			e = (activeChannel->data & Fc6681ConnectEquipmentMask) >> 9;
-			u = activeChannel->data & Fc6681ConnectUnitMask;
+			mfr->activeChannel->full = FALSE;
+			mfr->activeDevice->fcode = 0;
+			e = (mfr->activeChannel->data & Fc6681ConnectEquipmentMask) >> 9;
+			u = mfr->activeChannel->data & Fc6681ConnectUnitMask;
 			device = mp->device3000[e];
 			if (device == NULL || device->context[u] == NULL)
 			{
@@ -473,11 +476,11 @@ static void dcc6681Io(void)
 		break;
 
 	case Fc6681FunctionMode2:
-		if (activeChannel->full)
+		if (mfr->activeChannel->full)
 		{
-			active3000Device = mp->device3000[mp->connectedEquipment];
+			mfr->active3000Device = mp->device3000[mp->connectedEquipment];
 			mp->status = StFc6681Ready;
-			if ((active3000Device->func)(activeChannel->data) == FcDeclined)
+			if ((mfr->active3000Device->func)(mfr->activeChannel->data, mfrId) == FcDeclined)
 			{
 				mp->status = StFc6681IntReject;
 			}
@@ -486,8 +489,8 @@ static void dcc6681Io(void)
 				mp->status = StFc6681Ready;
 			}
 
-			activeChannel->full = FALSE;
-			activeDevice->fcode = 0;
+			mfr->activeChannel->full = FALSE;
+			mfr->activeDevice->fcode = 0;
 		}
 		break;
 
@@ -495,12 +498,12 @@ static void dcc6681Io(void)
 	case Fc6681Input:
 	case Fc6681Output:
 	case Fc6681DevStatusReq:
-		active3000Device = mp->device3000[mp->connectedEquipment];
-		(active3000Device->io)();
+		mfr->active3000Device = mp->device3000[mp->connectedEquipment];
+		(mfr->active3000Device->io)(mfrId);
 		break;
 
 	case Fc6681DccStatusReq:
-		if (!activeChannel->full)
+		if (!mfr->activeChannel->full)
 		{
 			stat = mp->status;
 
@@ -519,13 +522,13 @@ static void dcc6681Io(void)
 			/*
 			**  Return status.
 			*/
-			activeChannel->data = stat;
-			activeChannel->full = TRUE;
+			mfr->activeChannel->data = stat;
+			mfr->activeChannel->full = TRUE;
 
 			/*
 			**  Clear function code and status.
 			*/
-			activeDevice->fcode = 0;
+			mfr->activeDevice->fcode = 0;
 			mp->status = StFc6681Ready;
 		}
 
@@ -541,9 +544,11 @@ static void dcc6681Io(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void dcc6681Activate(void)
+static void dcc6681Activate(u8 mfrId)
 {
-	DccControl *mp = (DccControl *)activeDevice->context[0];
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	DccControl *mp = (DccControl *)mfr->activeDevice->context[0];
 	i8 e;
 
 	e = mp->connectedEquipment;
@@ -552,13 +557,13 @@ static void dcc6681Activate(void)
 		return;
 	}
 
-	active3000Device = mp->device3000[e];
-	if (active3000Device == NULL)
+	mfr->active3000Device = mp->device3000[e];
+	if (mfr->active3000Device == NULL)
 	{
 		return;
 	}
 
-	(active3000Device->activate)();
+	(mfr->active3000Device->activate)(mfrId);
 }
 
 /*--------------------------------------------------------------------------
@@ -569,9 +574,11 @@ static void dcc6681Activate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void dcc6681Disconnect(void)
+static void dcc6681Disconnect(u8 mfrId)
 {
-	DccControl *mp = (DccControl *)activeDevice->context[0];
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	DccControl *mp = (DccControl *)mfr->activeDevice->context[0];
 	i8 e;
 
 	e = mp->connectedEquipment;
@@ -580,13 +587,13 @@ static void dcc6681Disconnect(void)
 		return;
 	}
 
-	active3000Device = mp->device3000[e];
-	if (active3000Device == NULL)
+	mfr->active3000Device = mp->device3000[e];
+	if (mfr->active3000Device == NULL)
 	{
 		return;
 	}
 
-	(active3000Device->disconnect)();
+	(mfr->active3000Device->disconnect)(mfrId);
 }
 
 /*---------------------------  End Of File  ------------------------------*/

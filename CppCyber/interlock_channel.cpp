@@ -61,11 +61,11 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
-static FcStatus ilrFunc(PpWord funcCode);
-static void ilrIo(void);
-static void ilrActivate(void);
-static void ilrDisconnect(void);
-static void ilrExecute(PpWord func);
+static FcStatus ilrFunc(PpWord funcCode, u8 mfrId);
+static void ilrIo(u8 mfrId);
+static void ilrActivate(u8 mfrId);
+static void ilrDisconnect(u8 mfrId);
+static void ilrExecute(PpWord func, u8 mfrId);
 
 /*
 **  ----------------
@@ -142,7 +142,7 @@ void ilrInit(u8 registerSize, u8 mfrID)
 **  Returns:        FcStatus
 **
 **------------------------------------------------------------------------*/
-static FcStatus ilrFunc(PpWord funcCode)
+static FcStatus ilrFunc(PpWord funcCode, u8 mfrId)
 {
 	return(FcAccepted);
 }
@@ -155,17 +155,19 @@ static FcStatus ilrFunc(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void ilrIo(void)
+static void ilrIo(u8 mfrId)
 {
 	/*
 	**  This function relies on pp.c only calling it when doing the OAN. The
 	**  IAN will not block as the response to the Interlock function request
 	**  is made available immediately (i.e. the channel is full).
 	*/
-	if (!activeChannel->inputPending && activeChannel->full)
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	if (!mfr->activeChannel->inputPending && mfr->activeChannel->full)
 	{
-		activeChannel->inputPending = TRUE;
-		ilrExecute(activeChannel->data);
+		mfr->activeChannel->inputPending = TRUE;
+		ilrExecute(mfr->activeChannel->data, mfrId);
 	}
 }
 
@@ -177,7 +179,7 @@ static void ilrIo(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void ilrActivate(void)
+static void ilrActivate(u8 mfrId)
 {
 }
 
@@ -189,7 +191,7 @@ static void ilrActivate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void ilrDisconnect(void)
+static void ilrDisconnect(u8 mfrId)
 {
 }
 
@@ -202,13 +204,14 @@ static void ilrDisconnect(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void ilrExecute(PpWord func)
+static void ilrExecute(PpWord func, u8 mfrId)
 {
 	static PpWord interlockRegister[InterlockWords] = { 0 };
 	u8 code;
 	u8 designator;
 	u8 word;
 	u8 bit;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 	code = (func >> 9) & 7;
 	designator = func & 0177;
@@ -222,11 +225,11 @@ static void ilrExecute(PpWord func)
 		*/
 		if (designator < ilrWords)
 		{
-			activeChannel->data = interlockRegister[designator] & Mask12;
+			mfr->activeChannel->data = interlockRegister[designator] & Mask12;
 		}
 		else
 		{
-			activeChannel->data = 0;
+			mfr->activeChannel->data = 0;
 		}
 
 		break;
@@ -240,11 +243,11 @@ static void ilrExecute(PpWord func)
 			word = designator / 12;
 			bit = designator % 12;
 
-			activeChannel->data = (interlockRegister[word] & (1 << bit)) != 0 ? 1 : 0;
+			mfr->activeChannel->data = (interlockRegister[word] & (1 << bit)) != 0 ? 1 : 0;
 		}
 		else
 		{
-			activeChannel->data = 0;
+			mfr->activeChannel->data = 0;
 		}
 
 		break;
@@ -261,7 +264,7 @@ static void ilrExecute(PpWord func)
 			interlockRegister[word] &= ~(1 << bit);
 		}
 
-		activeChannel->data = 0;
+		mfr->activeChannel->data = 0;
 		break;
 
 	case 3:
@@ -273,12 +276,12 @@ static void ilrExecute(PpWord func)
 			word = designator / 12;
 			bit = designator % 12;
 
-			activeChannel->data = (interlockRegister[word] & (1 << bit)) != 0 ? 1 : 0;
+			mfr->activeChannel->data = (interlockRegister[word] & (1 << bit)) != 0 ? 1 : 0;
 			interlockRegister[word] &= ~(1 << bit);
 		}
 		else
 		{
-			activeChannel->data = 0;
+			mfr->activeChannel->data = 0;
 		}
 
 		break;
@@ -295,7 +298,7 @@ static void ilrExecute(PpWord func)
 			interlockRegister[word] |= (1 << bit);
 		}
 
-		activeChannel->data = 0;
+		mfr->activeChannel->data = 0;
 		break;
 
 	case 5:
@@ -307,12 +310,12 @@ static void ilrExecute(PpWord func)
 			word = designator / 12;
 			bit = designator % 12;
 
-			activeChannel->data = (interlockRegister[word] & (1 << bit)) != 0 ? 1 : 0;
+			mfr->activeChannel->data = (interlockRegister[word] & (1 << bit)) != 0 ? 1 : 0;
 			interlockRegister[word] |= (1 << bit);
 		}
 		else
 		{
-			activeChannel->data = 0;
+			mfr->activeChannel->data = 0;
 		}
 
 		break;
@@ -326,19 +329,19 @@ static void ilrExecute(PpWord func)
 			interlockRegister[word] = 0;
 		}
 
-		activeChannel->data = 0;
+		mfr->activeChannel->data = 0;
 		break;
 
 	case 7:
 		/*
 		**  Test all bits and return one if any set.
 		*/
-		activeChannel->data = 0;
+		mfr->activeChannel->data = 0;
 		for (word = 0; word < ilrWords; word++)
 		{
 			if (interlockRegister[word] != 0)
 			{
-				activeChannel->data = 1;
+				mfr->activeChannel->data = 1;
 				break;
 			}
 		}
@@ -346,7 +349,7 @@ static void ilrExecute(PpWord func)
 		break;
 	}
 
-	activeChannel->full = TRUE;
+	mfr->activeChannel->full = TRUE;
 
 #if DEBUG
 	{

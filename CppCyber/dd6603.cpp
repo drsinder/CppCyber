@@ -111,11 +111,11 @@ typedef struct diskParam
 **  Private Function Prototypes
 **  ---------------------------
 */
-static FcStatus dd6603Func(PpWord funcCode);
-static void dd6603Io(void);
-static void dd6603Activate(void);
-static void dd6603Disconnect(void);
-static i32 dd6603Seek(i32 track, i32 head, i32 sector);
+static FcStatus dd6603Func(PpWord funcCode, u8 mfrId);
+static void dd6603Io(u8 mfrId);
+static void dd6603Activate(u8 mfrId);
+static void dd6603Disconnect(u8 mfrId);
+static i32 dd6603Seek(i32 track, i32 head, i32 sector, u8 mfrId);
 static char *dd6603Func2String(PpWord funcCode);
 
 /*
@@ -281,10 +281,11 @@ void dd6603Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Returns:        FcStatus
 **
 **------------------------------------------------------------------------*/
-static FcStatus dd6603Func(PpWord funcCode)
+static FcStatus dd6603Func(PpWord funcCode, u8 mfrId)
 {
-	FILE *fcb = activeDevice->fcb[activeDevice->selectedUnit];
-	DiskParam *dp = (DiskParam *)activeDevice->context[activeDevice->selectedUnit];
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+	FILE *fcb = mfr->activeDevice->fcb[mfr->activeDevice->selectedUnit];
+	DiskParam *dp = (DiskParam *)mfr->activeDevice->context[mfr->activeDevice->selectedUnit];
 	i32 pos;
 
 #if DEBUG
@@ -303,9 +304,9 @@ static FcStatus dd6603Func(PpWord funcCode)
 		return(FcDeclined);
 
 	case Fc6603ReadSector:
-		activeDevice->fcode = funcCode;
+		mfr->activeDevice->fcode = funcCode;
 		dp->sector = funcCode & Fc6603SectMask;
-		pos = dd6603Seek(dp->track, dp->head, dp->sector);
+		pos = dd6603Seek(dp->track, dp->head, dp->sector, mfrId);
 		if (pos < 0)
 		{
 			return(FcDeclined);
@@ -315,9 +316,9 @@ static FcStatus dd6603Func(PpWord funcCode)
 		break;
 
 	case Fc6603WriteSector:
-		activeDevice->fcode = funcCode;
+		mfr->activeDevice->fcode = funcCode;
 		dp->sector = funcCode & Fc6603SectMask;
-		pos = dd6603Seek(dp->track, dp->head, dp->sector);
+		pos = dd6603Seek(dp->track, dp->head, dp->sector, mfrId);
 		if (pos < 0)
 		{
 			return(FcDeclined);
@@ -333,8 +334,8 @@ static FcStatus dd6603Func(PpWord funcCode)
 	case Fc6603SelectHead:
 		if (funcCode == Fc6603StatusReq)
 		{
-			activeDevice->fcode = funcCode;
-			activeChannel->status = (u16)dp->sector;
+			mfr->activeDevice->fcode = funcCode;
+			mfr->activeChannel->status = (u16)dp->sector;
 
 			/*
 			**  Simulate the moving disk - seems strange but is required.
@@ -363,25 +364,27 @@ static FcStatus dd6603Func(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void dd6603Io(void)
+static void dd6603Io(u8 mfrId)
 {
-	FILE *fcb = activeDevice->fcb[activeDevice->selectedUnit];
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	FILE *fcb = mfr->activeDevice->fcb[mfr->activeDevice->selectedUnit];
 	//DiskParam *dp = (DiskParam *)activeDevice->context[activeDevice->selectedUnit];
 
-	switch (activeDevice->fcode & Fc6603CodeMask)
+	switch (mfr->activeDevice->fcode & Fc6603CodeMask)
 	{
 	default:
-		logError(LogErrorLocation, "channel %02o - invalid function code: %4.4o", activeChannel->id, (u32)activeDevice->fcode);
+		logError(LogErrorLocation, "channel %02o - invalid function code: %4.4o", mfr->activeChannel->id, (u32)mfr->activeDevice->fcode);
 		break;
 
 	case 0:
 		break;
 
 	case Fc6603ReadSector:
-		if (!activeChannel->full)
+		if (!mfr->activeChannel->full)
 		{
-			fread(&activeChannel->data, 2, 1, fcb);
-			activeChannel->full = TRUE;
+			fread(&mfr->activeChannel->data, 2, 1, fcb);
+			mfr->activeChannel->full = TRUE;
 
 #if DEBUG
 			dd6603LogByte(activeChannel->data);
@@ -390,10 +393,10 @@ static void dd6603Io(void)
 		break;
 
 	case Fc6603WriteSector:
-		if (activeChannel->full)
+		if (mfr->activeChannel->full)
 		{
-			fwrite(&activeChannel->data, 2, 1, fcb);
-			activeChannel->full = FALSE;
+			fwrite(&mfr->activeChannel->data, 2, 1, fcb);
+			mfr->activeChannel->full = FALSE;
 
 #if DEBUG
 			dd6603LogByte(activeChannel->data);
@@ -405,10 +408,10 @@ static void dd6603Io(void)
 		break;
 
 	case Fc6603SelectHead:
-		if (activeDevice->fcode == Fc6603StatusReq)
+		if (mfr->activeDevice->fcode == Fc6603StatusReq)
 		{
-			activeChannel->data = activeChannel->status;
-			activeChannel->full = TRUE;
+			mfr->activeChannel->data = mfr->activeChannel->status;
+			mfr->activeChannel->full = TRUE;
 
 #if 0
 			activeChannel->status = (u16)dp->sector;
@@ -418,8 +421,8 @@ static void dd6603Io(void)
 			*/
 			dp->sector = (dp->sector + 1) & 0177;
 #else
-			activeChannel->status = 0;
-			activeDevice->fcode = 0;
+			mfr->activeChannel->status = 0;
+			mfr->activeDevice->fcode = 0;
 #endif
 		}
 		break;
@@ -434,7 +437,7 @@ static void dd6603Io(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void dd6603Activate(void)
+static void dd6603Activate(u8 mfrId)
 {
 }
 
@@ -446,7 +449,7 @@ static void dd6603Activate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void dd6603Disconnect(void)
+static void dd6603Disconnect(u8 mfrId)
 {
 }
 
@@ -462,26 +465,28 @@ static void dd6603Disconnect(void)
 **                  is invalid.
 **
 **------------------------------------------------------------------------*/
-static i32 dd6603Seek(i32 track, i32 head, i32 sector)
+static i32 dd6603Seek(i32 track, i32 head, i32 sector, u8 mfrId)
 {
 	i32 result;
 	i32 sectorsPerTrack = MaxOuterSectors;
 
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	if (track >= MaxTracks)
 	{
-		logError(LogErrorLocation, "ch %o, track %o invalid", activeChannel->id, track);
+		logError(LogErrorLocation, "ch %o, track %o invalid", mfr->activeChannel->id, track);
 		return(-1);
 	}
 
 	if (head >= MaxHeads)
 	{
-		logError(LogErrorLocation, "ch %o, head %o invalid", activeChannel->id, head);
+		logError(LogErrorLocation, "ch %o, head %o invalid", mfr->activeChannel->id, head);
 		return(-1);
 	}
 
 	if (sector >= sectorsPerTrack)
 	{
-		logError(LogErrorLocation, "ch %o, sector %o invalid", activeChannel->id, sector);
+		logError(LogErrorLocation, "ch %o, sector %o invalid", mfr->activeChannel->id, sector);
 		return(-1);
 	}
 

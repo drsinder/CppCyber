@@ -61,11 +61,11 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
-static FcStatus scrFunc(PpWord funcCode);
-static void scrIo(void);
-static void scrActivate(void);
-static void scrDisconnect(void);
-static void scrExecute(PpWord func);
+static FcStatus scrFunc(PpWord funcCode, u8 mfrId);
+static void scrIo(u8 mfrId);
+static void scrActivate(u8 mfrId);
+static void scrDisconnect(u8 mfrId);
+static void scrExecute(PpWord func, u8 mfrId);
 static void scrSetBit(PpWord *scrRegister, u16 bit);
 static void scrClrBit(PpWord *scrRegister, u16 bit);
 
@@ -144,7 +144,7 @@ void scrInit(u8 channelNo, u8 mfrID)
 **  Returns:        FcStatus
 **
 **------------------------------------------------------------------------*/
-static FcStatus scrFunc(PpWord funcCode)
+static FcStatus scrFunc(PpWord funcCode, u8 mfrId)
 {
 	return(FcAccepted);
 }
@@ -157,17 +157,19 @@ static FcStatus scrFunc(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void scrIo(void)
+static void scrIo(u8 mfrId)
 {
 	/*
 	**  This function relies on pp.c only calling it when doing an OAN. The
 	**  IAN will not block as the response to the SCR function request is
 	**  made available immediately (i.e. the channel is full).
 	*/
-	if (!activeChannel->inputPending && activeChannel->full)
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	if (!mfr->activeChannel->inputPending && mfr->activeChannel->full)
 	{
-		activeChannel->inputPending = TRUE;
-		scrExecute(activeChannel->data);
+		mfr->activeChannel->inputPending = TRUE;
+		scrExecute(mfr->activeChannel->data, mfrId);
 	}
 }
 
@@ -179,7 +181,7 @@ static void scrIo(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void scrActivate(void)
+static void scrActivate(u8 mfrId)
 {
 }
 
@@ -191,7 +193,7 @@ static void scrActivate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void scrDisconnect(void)
+static void scrDisconnect(u8 mfrId)
 {
 }
 
@@ -204,13 +206,15 @@ static void scrDisconnect(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void scrExecute(PpWord func)
+static void scrExecute(PpWord func, u8 mfrId)
 {
 	u8 code;
 	u8 designator;
 	u8 word;
 	u8 bit;
-	PpWord *scrRegister = (PpWord *)activeDevice->context[0];
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	PpWord *scrRegister = (PpWord *)mfr->activeDevice->context[0];
 
 	// <<<<<<<<<<<<<<<<<<<< change this to be an array of bytes with:
 	// value, read_enable, write_enable, status, control (as bits)
@@ -262,15 +266,15 @@ static void scrExecute(PpWord func)
 
 			if (ppSelectCode < 012)
 			{
-				if (activeChannel->id == ChStatusAndControl)
+				if (mfr->activeChannel->id == ChStatusAndControl)
 				{
-					scrRegister[05] = BigIron->chasis[activeDevice->mfrID]->ppBarrel[ppSelectCode]->ppu.regP;
+					scrRegister[05] = BigIron->chasis[mfr->activeDevice->mfrID]->ppBarrel[ppSelectCode]->ppu.regP;
 				}
 				else
 				{
 					if (BigIron->pps == 024)
 					{
-						scrRegister[05] = BigIron->chasis[activeDevice->mfrID]->ppBarrel[ppSelectCode + 012]->ppu.regP;
+						scrRegister[05] = BigIron->chasis[mfr->activeDevice->mfrID]->ppBarrel[ppSelectCode + 012]->ppu.regP;
 					}
 					else
 					{
@@ -300,7 +304,7 @@ static void scrExecute(PpWord func)
 			/*
 			**  Select appropriate CM configuration quadrants.
 			*/
-			switch (BigIron->chasis[activeDevice->mfrID]->cpuMaxMemory)
+			switch (BigIron->chasis[mfr->activeDevice->mfrID]->cpuMaxMemory)
 			{
 			case 01000000:
 				scrSetBit(scrRegister, 0260);
@@ -376,15 +380,15 @@ static void scrExecute(PpWord func)
 		//printf("SCR 0300 %d %d\n", BigIron->chasis[activeDevice->mfrID]->Acpu[0]->cpu.cpuStopped,
 		//	BigIron->chasis[activeDevice->mfrID]->Acpu[1]->cpu.cpuStopped);
 #if MaxCpus == 2
-		if (BigIron->chasis[activeDevice->mfrID]->Acpu[0]->cpu.cpuStopped 
-			|| (BigIron->initCpus > 1 && BigIron->chasis[activeDevice->mfrID]->Acpu[1]->cpu.cpuStopped)) //DRS??!!
+		if (BigIron->chasis[mfr->activeDevice->mfrID]->Acpu[0]->cpu.cpuStopped
+			|| (BigIron->initCpus > 1 && BigIron->chasis[mfr->activeDevice->mfrID]->Acpu[1]->cpu.cpuStopped)) //DRS??!!
 #else
 		if (BigIron->chasis[activeDevice->mfrID]->Acpu[0]->cpu.cpuStopped)
 #endif
 		{
 			scrSetBit(scrRegister, 0300);
 #if MaxCpus == 2
-			stoppedID = BigIron->chasis[activeDevice->mfrID]->Acpu[0]->cpu.cpuStopped ? 0 : 1;
+			stoppedID = BigIron->chasis[mfr->activeDevice->mfrID]->Acpu[0]->cpu.cpuStopped ? 0 : 1;
 #else
 			stoppedID = 0;
 #endif
@@ -396,7 +400,7 @@ static void scrExecute(PpWord func)
 
 		scrClrBit(scrRegister, 0301);
 
-		if (BigIron->chasis[activeDevice->mfrID]->monitorCpu > -1)
+		if (BigIron->chasis[mfr->activeDevice->mfrID]->monitorCpu > -1)
 		{
 			scrSetBit(scrRegister, 0303);
 		}
@@ -412,7 +416,7 @@ static void scrExecute(PpWord func)
 			//printf("SCR 0312 %d %d\n", (BigIron->chasis[activeDevice->mfrID]->Acpu[0]->cpu.exitMode & EmFlagExpandedAddress) != 0,
 			//	(BigIron->chasis[activeDevice->mfrID]->Acpu[1]->cpu.exitMode & EmFlagExpandedAddress) != 0);
 
-			if ((((BigIron->chasis[activeDevice->mfrID]->Acpu[stoppedID]->cpu.exitMode & EmFlagExpandedAddress) != 0)))
+			if ((((BigIron->chasis[mfr->activeDevice->mfrID]->Acpu[stoppedID]->cpu.exitMode & EmFlagExpandedAddress) != 0)))
 			{
 				scrClrBit(scrRegister, 0312);
 			}
@@ -436,11 +440,11 @@ static void scrExecute(PpWord func)
 		*/
 		if (designator < StatusAndControlWords)
 		{
-			activeChannel->data = scrRegister[designator] & Mask12;
+			mfr->activeChannel->data = scrRegister[designator] & Mask12;
 		}
 		else
 		{
-			activeChannel->data = 0;
+			mfr->activeChannel->data = 0;
 		}
 
 		break;
@@ -454,11 +458,11 @@ static void scrExecute(PpWord func)
 
 		if (word < StatusAndControlWords)
 		{
-			activeChannel->data = (scrRegister[word] & (1 << bit)) != 0 ? 1 : 0;
+			mfr->activeChannel->data = (scrRegister[word] & (1 << bit)) != 0 ? 1 : 0;
 		}
 		else
 		{
-			activeChannel->data = 0;
+			mfr->activeChannel->data = 0;
 		}
 
 		break;
@@ -475,7 +479,7 @@ static void scrExecute(PpWord func)
 			scrRegister[word] &= ~(1 << bit);
 		}
 
-		activeChannel->data = 0;
+		mfr->activeChannel->data = 0;
 		break;
 
 	case 3:
@@ -487,12 +491,12 @@ static void scrExecute(PpWord func)
 
 		if (word < StatusAndControlWords)
 		{
-			activeChannel->data = (scrRegister[word] & (1 << bit)) != 0 ? 1 : 0;
+			mfr->activeChannel->data = (scrRegister[word] & (1 << bit)) != 0 ? 1 : 0;
 			scrRegister[word] &= ~(1 << bit);
 		}
 		else
 		{
-			activeChannel->data = 0;
+			mfr->activeChannel->data = 0;
 		}
 
 		break;
@@ -509,7 +513,7 @@ static void scrExecute(PpWord func)
 			scrRegister[word] |= (1 << bit);
 		}
 
-		activeChannel->data = 0;
+		mfr->activeChannel->data = 0;
 		break;
 
 	case 5:
@@ -521,12 +525,12 @@ static void scrExecute(PpWord func)
 
 		if (word < StatusAndControlWords)
 		{
-			activeChannel->data = (scrRegister[word] & (1 << bit)) != 0 ? 1 : 0;
+			mfr->activeChannel->data = (scrRegister[word] & (1 << bit)) != 0 ? 1 : 0;
 			scrRegister[word] |= (1 << bit);
 		}
 		else
 		{
-			activeChannel->data = 0;
+			mfr->activeChannel->data = 0;
 		}
 
 		break;
@@ -540,27 +544,27 @@ static void scrExecute(PpWord func)
 			scrRegister[word] = 0;
 		}
 
-		activeChannel->data = 0;
+		mfr->activeChannel->data = 0;
 		break;
 
 	case 7:
 		/*
 		**  Test all error bits and return one if any set.
 		*/
-		activeChannel->data = 0;
+		mfr->activeChannel->data = 0;
 		for (word = 0; word < 4; word++)
 		{
 			if (word == 3)
 			{
 				if ((scrRegister[word] & 017) != 0)
 				{
-					activeChannel->data = 1;
+					mfr->activeChannel->data = 1;
 					break;
 				}
 			}
 			else if (scrRegister[word] != 0)
 			{
-				activeChannel->data = 1;
+				mfr->activeChannel->data = 1;
 				break;
 			}
 		}
@@ -568,7 +572,7 @@ static void scrExecute(PpWord func)
 		break;
 	}
 
-	activeChannel->full = TRUE;
+	mfr->activeChannel->full = TRUE;
 
 #if DEBUG
 	{

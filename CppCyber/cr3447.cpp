@@ -114,10 +114,10 @@ typedef struct
 **  Private Function Prototypes
 **  ---------------------------
 */
-static FcStatus cr3447Func(PpWord funcCode);
-static void cr3447Io(void);
-static void cr3447Activate(void);
-static void cr3447Disconnect(void);
+static FcStatus cr3447Func(PpWord funcCode, u8 mfrId);
+static void cr3447Io(u8 mfrId);
+static void cr3447Activate(u8 mfrId);
+static void cr3447Disconnect(u8 mfrId);
 static void cr3447NextCard(DevSlot *up, CrContext *cc);
 static char *cr3447Func2String(PpWord funcCode);
 
@@ -241,6 +241,8 @@ void cr3447LoadCards(char *params)
 	*/
 	numParam = sscanf(params, "%o,%o,%o,%s", &mfrID, &channelNo, &equipmentNo, str);
 
+	MMainFrame *mfr = BigIron->chasis[mfrID];
+
 	/*
 	**  Check parameters.
 	*/
@@ -306,8 +308,8 @@ void cr3447LoadCards(char *params)
 	cc->status = StCr3447Ready;
 	cr3447NextCard(dp, cc);
 
-	activeDevice = channelFindDevice((u8)channelNo, DtDcc6681, mfrID);
-	dcc6681Interrupt((cc->status & cc->intmask) != 0);
+	mfr->activeDevice = channelFindDevice((u8)channelNo, DtDcc6681, mfrID);
+	dcc6681Interrupt((cc->status & cc->intmask) != 0, mfrID);
 
 	printf("CR3447 loaded with %s", str);
 }
@@ -329,10 +331,12 @@ void cr3447LoadCards(char *params)
 **  Returns:        FcStatus
 **
 **------------------------------------------------------------------------*/
-static FcStatus cr3447Func(PpWord funcCode)
+static FcStatus cr3447Func(PpWord funcCode, u8 mfrId)
 {
 	CrContext *cc;
 	FcStatus st;
+
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 #if DEBUG
 	fprintf(cr3447Log, "\n%06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
@@ -343,7 +347,7 @@ static FcStatus cr3447Func(PpWord funcCode)
 		cr3447Func2String(funcCode));
 #endif
 
-	cc = (CrContext *)active3000Device->context[0];
+	cc = (CrContext *)mfr->active3000Device->context[0];
 
 	switch (funcCode)
 	{
@@ -361,14 +365,14 @@ static FcStatus cr3447Func(PpWord funcCode)
 	case Fc6681InputToEor:
 	case Fc6681Input:
 		st = FcAccepted;
-		cc->getcardcycle = active3000Device->mfr->cycles;
+		cc->getcardcycle = mfr->active3000Device->mfr->cycles;
 		cc->status = StCr3447Ready;
-		active3000Device->fcode = funcCode;
+		mfr->active3000Device->fcode = funcCode;
 		break;
 
 	case Fc6681DevStatusReq:
 		st = FcAccepted;
-		active3000Device->fcode = funcCode;
+		mfr->active3000Device->fcode = funcCode;
 		break;
 
 	case FcCr3447Binary:
@@ -425,7 +429,7 @@ static FcStatus cr3447Func(PpWord funcCode)
 		break;
 	}
 
-	dcc6681Interrupt((cc->status & cc->intmask) != 0);
+	dcc6681Interrupt((cc->status & cc->intmask) != 0, mfrId);
 	return(st);
 }
 
@@ -437,27 +441,29 @@ static FcStatus cr3447Func(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cr3447Io(void)
+static void cr3447Io(u8 mfrId)
 {
 	CrContext *cc;
 	PpWord c;
 
-	cc = (CrContext *)active3000Device->context[0];
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	switch (active3000Device->fcode)
+	cc = (CrContext *)mfr->active3000Device->context[0];
+
+	switch (mfr->active3000Device->fcode)
 	{
 	default:
-		printf("unexpected IO for function %04o\n", active3000Device->fcode);
+		printf("unexpected IO for function %04o\n", mfr->active3000Device->fcode);
 		break;
 
 	case 0:
 		break;
 
 	case Fc6681DevStatusReq:
-		if (!activeChannel->full)
+		if (!mfr->activeChannel->full)
 		{
-			activeChannel->data = (cc->status & (cc->intmask | StCr3447NonIntStatus));
-			activeChannel->full = TRUE;
+			mfr->activeChannel->data = (cc->status & (cc->intmask | StCr3447NonIntStatus));
+			mfr->activeChannel->full = TRUE;
 #if DEBUG
 			fprintf(cr3447Log, " %04o", activeChannel->data);
 #endif
@@ -469,13 +475,13 @@ static void cr3447Io(void)
 		// Don't admit to having new data immediately after completing
 		// a card, otherwise 1CD may get stuck occasionally.
 		// So we simulate card in motion for 20 major cycles.
-		if (activeChannel->full
-			|| labs(activeChannel->mfr->cycles - cc->getcardcycle) < 20)
+		if (mfr->activeChannel->full
+			|| labs(mfr->activeChannel->mfr->cycles - cc->getcardcycle) < 20)
 		{
 			break;
 		}
 
-		if (active3000Device->fcb[0] == NULL)
+		if (mfr->active3000Device->fcb[0] == NULL)
 		{
 			cc->status = StCr3447Eof;
 			break;
@@ -485,8 +491,8 @@ static void cr3447Io(void)
 		{
 			// Read the next card.
 			// If the function is input to EOR, disconnect to indicate EOR
-			cr3447NextCard(active3000Device, cc);
-			if (activeDevice->fcode == Fc6681InputToEor)
+			cr3447NextCard(mfr->active3000Device, cc);
+			if (mfr->activeDevice->fcode == Fc6681InputToEor)
 			{
 				// End of card but we're still ready
 				cc->status |= StCr3447EoiInt | StCr3447Ready;
@@ -495,7 +501,7 @@ static void cr3447Io(void)
 					cc->status |= StCr3447ErrorInt;
 				}
 
-				activeChannel->discAfterInput = TRUE;
+				mfr->activeChannel->discAfterInput = TRUE;
 			}
 		}
 		else
@@ -503,20 +509,20 @@ static void cr3447Io(void)
 			c = cc->card[cc->col++];
 			if (cc->rawcard)
 			{
-				activeChannel->data = c;
+				mfr->activeChannel->data = c;
 			}
 			else if (cc->binary)
 			{
-				activeChannel->data = cc->table[c];
+				mfr->activeChannel->data = cc->table[c];
 			}
 			else
 			{
-				activeChannel->data = asciiToBcd[c] << 6;
+				mfr->activeChannel->data = asciiToBcd[c] << 6;
 				c = cc->card[cc->col++];
-				activeChannel->data += asciiToBcd[c];
+				mfr->activeChannel->data += asciiToBcd[c];
 			}
 
-			activeChannel->full = TRUE;
+			mfr->activeChannel->full = TRUE;
 #if DEBUG
 			fprintf(cr3447Log, " %04o", activeChannel->data);
 #endif
@@ -524,7 +530,7 @@ static void cr3447Io(void)
 		break;
 	}
 
-	dcc6681Interrupt((cc->status & cc->intmask) != 0);
+	dcc6681Interrupt((cc->status & cc->intmask) != 0, mfrId);
 }
 
 /*--------------------------------------------------------------------------
@@ -535,7 +541,7 @@ static void cr3447Io(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cr3447Activate(void)
+static void cr3447Activate(u8 mfrId)
 {
 #if DEBUG
 	fprintf(cr3447Log, "\n%06d PP:%02o CH:%02o Activate",
@@ -553,9 +559,11 @@ static void cr3447Activate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cr3447Disconnect(void)
+static void cr3447Disconnect(u8 mfrId)
 {
 	CrContext *cc;
+
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 #if DEBUG
 	fprintf(cr3447Log, "\n%06d PP:%02o CH:%02o Disconnect",
@@ -567,19 +575,19 @@ static void cr3447Disconnect(void)
 	/*
 	**  Abort pending device disconnects - the PP is doing the disconnect.
 	*/
-	activeChannel->discAfterInput = FALSE;
+	mfr->activeChannel->discAfterInput = FALSE;
 
 	/*
 	**  Advance to next card.
 	*/
-	cc = (CrContext *)active3000Device->context[0];
+	cc = (CrContext *)mfr->active3000Device->context[0];
 	if (cc != NULL)
 	{
 		cc->status |= StCr3447EoiInt;
-		dcc6681Interrupt((cc->status & cc->intmask) != 0);
-		if (active3000Device->fcb[0] != NULL && cc->col != 0)
+		dcc6681Interrupt((cc->status & cc->intmask) != 0, mfrId);
+		if (mfr->active3000Device->fcb[0] != NULL && cc->col != 0)
 		{
-			cr3447NextCard(active3000Device, cc);
+			cr3447NextCard(mfr->active3000Device, cc);
 		}
 	}
 }

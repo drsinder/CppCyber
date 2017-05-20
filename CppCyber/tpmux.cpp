@@ -247,10 +247,10 @@ typedef struct portParam
 **  Private Function Prototypes
 **  ---------------------------
 */
-static FcStatus tpMuxFunc(PpWord funcCode);
-static void tpMuxIo(void);
-static void tpMuxActivate(void);
-static void tpMuxDisconnect(void);
+static FcStatus tpMuxFunc(PpWord funcCode, u8 mfrId);
+static void tpMuxIo(u8 mfrId);
+static void tpMuxActivate(u8 mfrId);
+static void tpMuxDisconnect(u8 mfrId);
 static void tpMuxCreateThread(DevSlot *dp);
 static int tpMuxCheckInput(PortParam *mp);
 #if defined(_WIN32)
@@ -348,9 +348,10 @@ void tpMuxInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Returns:        FcStatus
 **
 **------------------------------------------------------------------------*/
-static FcStatus tpMuxFunc(PpWord funcCode)
+static FcStatus tpMuxFunc(PpWord funcCode, u8 mfrId)
 {
 	int funcParam;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 	funcParam = funcCode & 077;
 	switch (funcCode & 07700)
@@ -368,7 +369,7 @@ static FcStatus tpMuxFunc(PpWord funcCode)
 		break;
 
 	case FcTpmWriteChar:
-		activeDevice->recordLength = 0;
+		mfr->activeDevice->recordLength = 0;
 		break;
 
 	case FcTpmSetTerminal:
@@ -393,15 +394,15 @@ static FcStatus tpMuxFunc(PpWord funcCode)
 		return(FcProcessed);
 
 	case FcTpmDeSelect:
-		activeDevice->selectedUnit = -1;
+		mfr->activeDevice->selectedUnit = -1;
 		return(FcProcessed);
 
 	case FcTpmConPort:
-		activeDevice->selectedUnit = 1 - (funcParam & 1);
+		mfr->activeDevice->selectedUnit = 1 - (funcParam & 1);
 		return(FcProcessed);
 	}
 
-	activeDevice->fcode = funcCode;
+	mfr->activeDevice->fcode = funcCode;
 	return(FcAccepted);
 }
 
@@ -413,22 +414,23 @@ static FcStatus tpMuxFunc(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void tpMuxIo(void)
+static void tpMuxIo(u8 mfrId)
 {
 	PortParam *mp;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	if (activeDevice->selectedUnit < 0)
+	if (mfr->activeDevice->selectedUnit < 0)
 	{
 		return;
 	}
 
-	mp = (PortParam *)activeDevice->context[0] + activeDevice->selectedUnit;
+	mp = (PortParam *)mfr->activeDevice->context[0] + mfr->activeDevice->selectedUnit;
 
 	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
-	switch (activeDevice->fcode & 00700)
+	switch (mfr->activeDevice->fcode & 00700)
 	{
 	case FcTpmStatusSumary:
-		if (!activeChannel->full)
+		if (!mfr->activeChannel->full)
 		{
 			if (mp->active
 				&& (mp->input = tpMuxCheckInput(mp)) > 0)
@@ -440,16 +442,16 @@ static void tpMuxIo(void)
 				mp->status &= ~00010;
 			}
 
-			activeChannel->data = mp->status;
-			activeChannel->full = TRUE;
+			mfr->activeChannel->data = mp->status;
+			mfr->activeChannel->full = TRUE;
 		}
 		break;
 
 	case FcTpmReadChar:
-		if (!activeChannel->full && (mp->status & 00010) != 0)
+		if (!mfr->activeChannel->full && (mp->status & 00010) != 0)
 		{
-			activeChannel->data = (PpWord)mp->input | 06000;
-			activeChannel->full = TRUE;
+			mfr->activeChannel->data = (PpWord)mp->input | 06000;
+			mfr->activeChannel->full = TRUE;
 			mp->status &= ~00010;
 #if DEBUG
 			printf("read port %d -  %04o\n", mp->id, activeChannel->data);
@@ -458,24 +460,24 @@ static void tpMuxIo(void)
 		break;
 
 	case FcTpmWriteChar:
-		if (activeChannel->full)
+		if (mfr->activeChannel->full)
 		{
 			/*
 			**  Output data.
 			*/
-			activeChannel->full = FALSE;
+			mfr->activeChannel->full = FALSE;
 
 			if (mp->active)
 			{
 				/*
 				**  Port with active TCP connection.
 				*/
-				mp->output[activeDevice->recordLength] = (char)activeChannel->data & 0177;
-				activeDevice->recordLength++;
-				if (activeDevice->recordLength == sizeof(mp->output))
+				mp->output[mfr->activeDevice->recordLength] = (char)mfr->activeChannel->data & 0177;
+				mfr->activeDevice->recordLength++;
+				if (mfr->activeDevice->recordLength == sizeof(mp->output))
 				{
-					send(mp->connFd, mp->output, activeDevice->recordLength, 0);
-					activeDevice->recordLength = 0;
+					send(mp->connFd, mp->output, mfr->activeDevice->recordLength, 0);
+					mfr->activeDevice->recordLength = 0;
 				}
 #if DEBUG
 				printf("write port %d - %04o\n", mp->id, activeChannel->data);
@@ -494,7 +496,7 @@ static void tpMuxIo(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void tpMuxActivate(void)
+static void tpMuxActivate(u8 mfrId)
 {
 }
 
@@ -506,23 +508,24 @@ static void tpMuxActivate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void tpMuxDisconnect(void)
+static void tpMuxDisconnect(u8 mfrId)
 {
 	PortParam *mp;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	if (activeDevice->selectedUnit < 0)
+	if (mfr->activeDevice->selectedUnit < 0)
 	{
 		return;
 	}
 
-	mp = (PortParam *)activeDevice->context[0] + activeDevice->selectedUnit;
+	mp = (PortParam *)mfr->activeDevice->context[0] + mfr->activeDevice->selectedUnit;
 
-	if (activeDevice->fcode == FcTpmWriteChar)
+	if (mfr->activeDevice->fcode == FcTpmWriteChar)
 	{
 		if (mp->active)
 		{
-			send(mp->connFd, mp->output, activeDevice->recordLength, 0);
-			activeDevice->recordLength = 0;
+			send(mp->connFd, mp->output, mfr->activeDevice->recordLength, 0);
+			mfr->activeDevice->recordLength = 0;
 		}
 	}
 }

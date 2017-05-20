@@ -262,7 +262,7 @@ TipParams defaultTc7;
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuTipInit(void)
+void npuTipInit(u8 mfrId)
 {
 	int i;
 	Tcb *tp;
@@ -300,7 +300,7 @@ void npuTipInit(void)
 	/*
 	**  Initialise network.
 	*/
-	npuNetInit(TRUE);
+	npuNetInit(TRUE, mfrId);
 }
 
 /*--------------------------------------------------------------------------
@@ -311,7 +311,7 @@ void npuTipInit(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuTipReset(void)
+void npuTipReset(u8 mfrId)
 {
 	int i;
 	Tcb *tp = npuTcbs;
@@ -331,7 +331,7 @@ void npuTipReset(void)
 	/*
 	**  Re-initialise network.
 	*/
-	npuNetInit(FALSE);
+	npuNetInit(FALSE, mfrId);
 }
 
 /*--------------------------------------------------------------------------
@@ -344,7 +344,7 @@ void npuTipReset(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuTipProcessBuffer(NpuBuffer *bp, int priority)
+void npuTipProcessBuffer(NpuBuffer *bp, int priority, u8 mfrId)
 {
 	// ReSharper disable once CppEntityNeverUsed
 	static int count = 0;
@@ -372,13 +372,13 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 	{
 	case BtHTRINIT:
 		ackInitBt[BlkOffCN] = block[BlkOffCN];
-		npuBipRequestUplineCanned(ackInitBt, sizeof(ackInitBt));
+		npuBipRequestUplineCanned(ackInitBt, sizeof(ackInitBt), mfrId);
 
 		respondToInitBt[BlkOffCN] = block[BlkOffCN];
-		npuBipRequestUplineCanned(respondToInitBt, sizeof(respondToInitBt));
+		npuBipRequestUplineCanned(respondToInitBt, sizeof(respondToInitBt), mfrId);
 
 		requestInitBt[BlkOffCN] = block[BlkOffCN];
-		npuBipRequestUplineCanned(requestInitBt, sizeof(requestInitBt));
+		npuBipRequestUplineCanned(requestInitBt, sizeof(requestInitBt), mfrId);
 		break;
 
 	case BtHTCMD:
@@ -404,7 +404,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 		blockAck[BlkOffCN] = block[BlkOffCN];
 		blockAck[BlkOffBTBSN] &= BlkMaskBT;
 		blockAck[BlkOffBTBSN] |= block[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN);
-		npuBipRequestUplineCanned(blockAck, sizeof(blockAck));
+		npuBipRequestUplineCanned(blockAck, sizeof(blockAck), mfrId);
 		break;
 
 	case BtHTBLK:
@@ -412,7 +412,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 		if (tp->state == StTermHostConnected)
 		{
 			last = (block[BlkOffBTBSN] & BlkMaskBT) == BtHTMSG;
-			npuAsyncProcessDownlineData(block[BlkOffCN], bp, last);
+			npuAsyncProcessDownlineData(block[BlkOffCN], bp, last, mfrId);
 		}
 		else
 		{
@@ -423,7 +423,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 			blockAck[BlkOffCN] = block[BlkOffCN];
 			blockAck[BlkOffBTBSN] &= BlkMaskBT;
 			blockAck[BlkOffBTBSN] |= block[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN);
-			npuBipRequestUplineCanned(blockAck, sizeof(blockAck));
+			npuBipRequestUplineCanned(blockAck, sizeof(blockAck), mfrId);
 		}
 		break;
 
@@ -439,7 +439,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 			/*
 			**  Host has echoed our TERM block now send the TCN/TA/N to host.
 			*/
-			npuSvmDiscReplyTerminal(tp);
+			npuSvmDiscReplyTerminal(tp, mfrId);
 
 			/*
 			**  Finally disconnect the network.
@@ -452,7 +452,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 			**  Echo TERM block.
 			*/
 			blockTerm[BlkOffCN] = block[BlkOffCN];
-			npuBipRequestUplineCanned(blockTerm, sizeof(blockTerm));
+			npuBipRequestUplineCanned(blockTerm, sizeof(blockTerm), mfrId);
 		}
 		else
 		{
@@ -465,11 +465,11 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 		**  Interrupt command.  Discard any pending output.
 		*/
 		tp->xoff = FALSE;
-		npuTipDiscardOutputQ(tp);
+		npuTipDiscardOutputQ(tp, mfrId);
 		intrRsp[BlkOffCN] = block[BlkOffCN];
 		intrRsp[BlkOffBTBSN] &= BlkMaskBT;
 		intrRsp[BlkOffBTBSN] |= block[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN);
-		npuBipRequestUplineCanned(intrRsp, sizeof(intrRsp));
+		npuBipRequestUplineCanned(intrRsp, sizeof(intrRsp), mfrId);
 		break;
 
 	case BtHTICMR:
@@ -495,20 +495,20 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuTipTerminateConnection(Tcb *tp)
+void npuTipTerminateConnection(Tcb *tp, u8 mfrId)
 {
 	/*
 	**  Clean up flow control state and discard any pending output.
 	*/
 	tp->xoff = FALSE;
-	npuTipDiscardOutputQ(tp);
+	npuTipDiscardOutputQ(tp, mfrId);
 	tp->state = StTermHostDisconnect;
 
 	/*
 	**  Send an initial TERM block which will be echoed by the host.
 	*/
 	blockTerm[BlkOffCN] = tp->portNumber;
-	npuBipRequestUplineCanned(blockTerm, sizeof(blockTerm));
+	npuBipRequestUplineCanned(blockTerm, sizeof(blockTerm), mfrId);
 }
 
 /*--------------------------------------------------------------------------
@@ -891,7 +891,7 @@ void npuTipInputReset(Tcb *tp)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuTipSendUserBreak(Tcb *tp, u8 bt)
+void npuTipSendUserBreak(Tcb *tp, u8 bt, u8 mfrId)
 {
 	u8 *mp;
 
@@ -918,7 +918,7 @@ void npuTipSendUserBreak(Tcb *tp, u8 bt)
 	/*
 	**  Send the ICMD.
 	*/
-	npuBipRequestUplineCanned(tp->inBuf, (int)(mp - tp->inBuf));
+	npuBipRequestUplineCanned(tp->inBuf, (int)(mp - tp->inBuf), mfrId);
 
 	/*
 	**  Increment BSN.
@@ -943,12 +943,12 @@ void npuTipSendUserBreak(Tcb *tp, u8 bt)
 	/*
 	**  Send the BI/MARK.
 	*/
-	npuBipRequestUplineCanned(tp->inBuf, (int)(mp - tp->inBuf));
+	npuBipRequestUplineCanned(tp->inBuf, (int)(mp - tp->inBuf), mfrId);
 
 	/*
 	**  Purge output and send back all acknowledgments.
 	*/
-	npuTipDiscardOutputQ(tp);
+	npuTipDiscardOutputQ(tp, mfrId);
 
 	/*
 	**  Reset input buffer.
@@ -966,7 +966,7 @@ void npuTipSendUserBreak(Tcb *tp, u8 bt)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuTipDiscardOutputQ(Tcb *tp)
+void npuTipDiscardOutputQ(Tcb *tp, u8 mfrId)
 {
 	NpuBuffer *bp;
 
@@ -977,7 +977,7 @@ void npuTipDiscardOutputQ(Tcb *tp)
 			blockAck[BlkOffCN] = tp->portNumber;
 			blockAck[BlkOffBTBSN] &= BlkMaskBT;
 			blockAck[BlkOffBTBSN] |= bp->blockSeqNo;
-			npuBipRequestUplineCanned(blockAck, sizeof(blockAck));
+			npuBipRequestUplineCanned(blockAck, sizeof(blockAck), mfrId);
 		}
 
 		npuBipBufRelease(bp);
@@ -994,12 +994,12 @@ void npuTipDiscardOutputQ(Tcb *tp)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuTipNotifySent(Tcb *tp, u8 blockSeqNo)
+void npuTipNotifySent(Tcb *tp, u8 blockSeqNo, u8 mfrId)
 {
 	blockAck[BlkOffCN] = tp->portNumber;
 	blockAck[BlkOffBTBSN] &= BlkMaskBT;
 	blockAck[BlkOffBTBSN] |= blockSeqNo;
-	npuBipRequestUplineCanned(blockAck, sizeof(blockAck));
+	npuBipRequestUplineCanned(blockAck, sizeof(blockAck), mfrId);
 }
 
 /*

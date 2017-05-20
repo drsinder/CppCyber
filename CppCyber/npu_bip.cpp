@@ -371,10 +371,10 @@ bool npuBipQueueNotEmpty(NpuQueue *queue)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuBipNotifyServiceMessage(void)
+void npuBipNotifyServiceMessage(u8 mfrId)
 {
 	bipDownlineBuffer = npuBipBufGet();
-	if (npuHipDownlineBlock(bipDownlineBuffer))
+	if (npuHipDownlineBlock(bipDownlineBuffer, mfrId))
 	{
 		bipState = BipDownSvm;
 	}
@@ -394,10 +394,10 @@ void npuBipNotifyServiceMessage(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuBipNotifyData(int priority)
+void npuBipNotifyData(int priority, u8 mfrId)
 {
 	bipDownlineBuffer = npuBipBufGet();
-	if (npuHipDownlineBlock(bipDownlineBuffer))
+	if (npuHipDownlineBlock(bipDownlineBuffer, mfrId))
 	{
 		bipState = (BipState)(BipDownDataLow + priority);
 	}
@@ -416,14 +416,14 @@ void npuBipNotifyData(int priority)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuBipRetryInput(void)
+void npuBipRetryInput(u8 mfrId)
 {
 	/*
 	**  Check if any more upline buffer is pending and send if necessary.
 	*/
 	if (bipUplineBuffer != NULL)
 	{
-		npuHipUplineBlock(bipUplineBuffer);
+		npuHipUplineBlock(bipUplineBuffer, mfrId);
 	}
 }
 
@@ -435,7 +435,7 @@ void npuBipRetryInput(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuBipNotifyDownlineReceived(void)
+void npuBipNotifyDownlineReceived(u8 mfrId)
 {
 	NpuBuffer *bp = bipDownlineBuffer;
 
@@ -452,15 +452,15 @@ void npuBipNotifyDownlineReceived(void)
 	switch (bipState)
 	{
 	case BipDownSvm:
-		npuSvmProcessBuffer(bp);
+		npuSvmProcessBuffer(bp, mfrId);
 		break;
 
 	case BipDownDataLow:
-		npuTipProcessBuffer(bp, 0);
+		npuTipProcessBuffer(bp, 0, mfrId);
 		break;
 
 	case BipDownDataHigh:
-		npuTipProcessBuffer(bp, 1);
+		npuTipProcessBuffer(bp, 1, mfrId);
 		break;
 	}
 
@@ -471,7 +471,7 @@ void npuBipNotifyDownlineReceived(void)
 	*/
 	if (bipUplineBuffer != NULL)
 	{
-		npuHipUplineBlock(bipUplineBuffer);
+		npuHipUplineBlock(bipUplineBuffer, mfrId);
 	}
 }
 
@@ -483,7 +483,7 @@ void npuBipNotifyDownlineReceived(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuBipAbortDownlineReceived(void)
+void npuBipAbortDownlineReceived(u8 mfrId)
 {
 	/*
 	**  Free buffer and reset state.
@@ -497,7 +497,7 @@ void npuBipAbortDownlineReceived(void)
 	*/
 	if (bipUplineBuffer != NULL)
 	{
-		npuHipUplineBlock(bipUplineBuffer);
+		npuHipUplineBlock(bipUplineBuffer, mfrId);
 	}
 }
 
@@ -510,7 +510,7 @@ void npuBipAbortDownlineReceived(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuBipRequestUplineTransfer(NpuBuffer *bp)
+void npuBipRequestUplineTransfer(NpuBuffer *bp, u8 mfrId)
 {
 	if (bipUplineBuffer != NULL)
 	{
@@ -528,7 +528,7 @@ void npuBipRequestUplineTransfer(NpuBuffer *bp)
 
 	if (bipState == BipIdle)
 	{
-		npuHipUplineBlock(bipUplineBuffer);
+		npuHipUplineBlock(bipUplineBuffer, mfrId);
 	}
 }
 
@@ -542,7 +542,7 @@ void npuBipRequestUplineTransfer(NpuBuffer *bp)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuBipRequestUplineCanned(u8 *msg, int msgSize)
+void npuBipRequestUplineCanned(u8 *msg, int msgSize, u8 mfrId)
 {
 	NpuBuffer *bp = npuBipBufGet();
 	if (bp == NULL)
@@ -552,7 +552,7 @@ void npuBipRequestUplineCanned(u8 *msg, int msgSize)
 
 	bp->numBytes = msgSize;
 	memcpy(bp->data, msg, bp->numBytes);
-	npuBipRequestUplineTransfer(bp);
+	npuBipRequestUplineTransfer(bp, mfrId);
 }
 
 /*--------------------------------------------------------------------------
@@ -563,7 +563,7 @@ void npuBipRequestUplineCanned(u8 *msg, int msgSize)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuBipNotifyUplineSent(void)
+void npuBipNotifyUplineSent(u8 mfrId)
 {
 	/*
 	**  Transfer finished, so release the buffer.
@@ -576,7 +576,7 @@ void npuBipNotifyUplineSent(void)
 	bipUplineBuffer = npuBipQueueExtract(bipUplineQueue);
 	if (bipUplineBuffer != NULL)
 	{
-		npuHipUplineBlock(bipUplineBuffer);
+		npuHipUplineBlock(bipUplineBuffer, mfrId);
 	}
 }
 

@@ -74,16 +74,16 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
-static FcStatus consoleFunc(PpWord funcCode);
-static void consoleIo(void);
-static void consoleActivate(void);
-static void consoleDisconnect(void);
+static FcStatus consoleFunc(PpWord funcCode, u8 mfrId);
+static void consoleIo(u8 mfrId);
+static void consoleActivate(u8 mfrId);
+static void consoleDisconnect(u8 mfrId);
 
 #if MaxMainFrames == 2
-static FcStatus consoleFunc1(PpWord funcCode);
-static void consoleIo1(void);
-static void consoleActivate1(void);
-static void consoleDisconnect1(void);
+static FcStatus consoleFunc1(PpWord funcCode, u8 mfrId);
+static void consoleIo1(u8 mfrId);
+static void consoleActivate1(u8 mfrId);
+static void consoleDisconnect1(u8 mfrId);
 #endif
 /*
 **  ----------------
@@ -196,12 +196,14 @@ void consoleInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **  Returns:        FcStatus
 **
 **------------------------------------------------------------------------*/
-static FcStatus consoleFunc(PpWord funcCode)
+static FcStatus consoleFunc(PpWord funcCode, u8 mfrId)
 {
-	if (activeChannel->mfrID != 0)
-		printf("consoleFunc mfrID = %d\n", activeChannel->mfrID);
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	activeChannel->full = FALSE;
+	if (mfr->activeChannel->mfrID != 0)
+		printf("consoleFunc mfrID = %d\n", mfr->activeChannel->mfrID);
+
+	mfr->activeChannel->full = FALSE;
 
 	switch (funcCode)
 	{
@@ -260,17 +262,19 @@ static FcStatus consoleFunc(PpWord funcCode)
 		break;
 	}
 
-	activeDevice->fcode = funcCode;
+	mfr->activeDevice->fcode = funcCode;
 
 	return(FcAccepted);
 }
 #if MaxMainFrames == 2
-static FcStatus consoleFunc1(PpWord funcCode)
+static FcStatus consoleFunc1(PpWord funcCode, u8 mfrId)
 {
-	if (activeChannel->mfrID !=1)
-		printf("consoleFunc1 mfrID = %d\n", activeChannel->mfrID);
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	activeChannel->full = FALSE;
+	if (mfr->activeChannel->mfrID !=1)
+		printf("consoleFunc1 mfrID = %d\n", mfr->activeChannel->mfrID);
+
+	mfr->activeChannel->full = FALSE;
 
 	switch (funcCode)
 	{
@@ -329,7 +333,7 @@ static FcStatus consoleFunc1(PpWord funcCode)
 		break;
 	}
 
-	activeDevice->fcode = funcCode;
+	mfr->activeDevice->fcode = funcCode;
 
 	return(FcAccepted);
 }
@@ -463,14 +467,16 @@ char consoleGetKey1(void)
 }
 
 #endif
-static void consoleIo(void)
+static void consoleIo(u8 mfrId)
 {
 	u8 ch;
 
-	if (activeDevice->mfrID == 1)
-		printf("consoleIo mfrID = %d\n", activeDevice->mfrID);
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	switch (activeDevice->fcode)
+	if (mfr->activeDevice->mfrID == 1)
+		printf("consoleIo mfrID = %d\n", mfr->activeDevice->mfrID);
+
+	switch (mfr->activeDevice->fcode)
 	{
 	default:
 		break;
@@ -481,11 +487,11 @@ static void consoleIo(void)
 	case Fc6612Sel64CharRight:
 	case Fc6612Sel32CharRight:
 	case Fc6612Sel16CharRight:
-		if (activeChannel->full)
+		if (mfr->activeChannel->full)
 		{
 			emptyDrop = FALSE;
 
-			ch = (u8)((activeChannel->data >> 6) & Mask6);
+			ch = (u8)((mfr->activeChannel->data >> 6) & Mask6);
 
 			if (ch >= 060)
 			{
@@ -494,20 +500,20 @@ static void consoleIo(void)
 					/*
 					**  Vertical coordinate.
 					*/
-					windowSetY((u16)(activeChannel->data & Mask9));
+					windowSetY((u16)(mfr->activeChannel->data & Mask9));
 				}
 				else
 				{
 					/*
 					**  Horizontal coordinate.
 					*/
-					windowSetX((u16)((activeChannel->data & Mask9) + currentOffset));
+					windowSetX((u16)((mfr->activeChannel->data & Mask9) + currentOffset));
 				}
 			}
 			else
 			{
-				windowQueue(consoleToAscii[(activeChannel->data >> 6) & Mask6]);
-				windowQueue(consoleToAscii[(activeChannel->data >> 0) & Mask6]);
+				windowQueue(consoleToAscii[(mfr->activeChannel->data >> 6) & Mask6]);
+				windowQueue(consoleToAscii[(mfr->activeChannel->data >> 0) & Mask6]);
 			}
 
 			/*
@@ -519,10 +525,10 @@ static void consoleIo(void)
 				**  See if medium char size, and text matches
 				**  next word of "enter date" message.
 				*/
-				if ((activeDevice->fcode == Fc6612Sel32CharLeft ||
-					activeDevice->fcode == Fc6612Sel32CharRight) &&
-					((activeChannel->data >> 6) & Mask6) == asciiToCdc[(u8)autoDateString[autoPos]] &&
-					(activeChannel->data & Mask6) == asciiToCdc[(u8)autoDateString[autoPos + 1]])
+				if ((mfr->activeDevice->fcode == Fc6612Sel32CharLeft ||
+					mfr->activeDevice->fcode == Fc6612Sel32CharRight) &&
+					((mfr->activeChannel->data >> 6) & Mask6) == asciiToCdc[(u8)autoDateString[autoPos]] &&
+					(mfr->activeChannel->data & Mask6) == asciiToCdc[(u8)autoDateString[autoPos + 1]])
 				{
 					/*
 					**  It matches so far.  Let's see if we're done.
@@ -568,16 +574,16 @@ static void consoleIo(void)
 				}
 			}
 		}
-			activeChannel->full = FALSE;
+		mfr->activeChannel->full = FALSE;
 		break;
 
 	case Fc6612Sel512DotsLeft:
 	case Fc6612Sel512DotsRight:
-		if (activeChannel->full)
+		if (mfr->activeChannel->full)
 		{
 			emptyDrop = FALSE;
 
-			ch = (u8)((activeChannel->data >> 6) & Mask6);
+			ch = (u8)((mfr->activeChannel->data >> 6) & Mask6);
 
 			if (ch >= 060)
 			{
@@ -586,7 +592,7 @@ static void consoleIo(void)
 					/*
 					**  Vertical coordinate.
 					*/
-					windowSetY((u16)(activeChannel->data & Mask9));
+					windowSetY((u16)(mfr->activeChannel->data & Mask9));
 					windowQueue('.');
 				}
 				else
@@ -594,39 +600,41 @@ static void consoleIo(void)
 					/*
 					**  Horizontal coordinate.
 					*/
-					windowSetX((u16)((activeChannel->data & Mask9) + currentOffset));
+					windowSetX((u16)((mfr->activeChannel->data & Mask9) + currentOffset));
 				}
 			}
 
-			activeChannel->full = FALSE;
+			mfr->activeChannel->full = FALSE;
 		}
 		break;
 
 	case Fc6612SelKeyIn:
 		windowGetChar();
-		activeChannel->data = asciiToConsole[activeChannel->mfr->ppKeyIn];
-		if (activeChannel->data == 0)
+		mfr->activeChannel->data = asciiToConsole[mfr->activeChannel->mfr->ppKeyIn];
+		if (mfr->activeChannel->data == 0)
 		{
-			activeChannel->data = consoleGetKey();
+			mfr->activeChannel->data = consoleGetKey();
 		}
-		activeChannel->full = TRUE;
-		activeChannel->status = 0;
-		activeDevice->fcode = 0;
-		activeChannel->mfr->ppKeyIn = 0;
+		mfr->activeChannel->full = TRUE;
+		mfr->activeChannel->status = 0;
+		mfr->activeDevice->fcode = 0;
+		mfr->activeChannel->mfr->ppKeyIn = 0;
 		break;
 	}
 
 }
 
 #if MaxMainFrames == 2
-static void consoleIo1(void)
+static void consoleIo1(u8 mfrId)
 {
 	u8 ch;
 
-	if (activeDevice->mfrID == 0)
-		printf("consoleIo1 mfrID = %d\n", activeDevice->mfrID);
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	switch (activeDevice->fcode)
+	if (mfr->activeDevice->mfrID == 0)
+		printf("consoleIo1 mfrID = %d\n", mfr->activeDevice->mfrID);
+
+	switch (mfr->activeDevice->fcode)
 	{
 	default:
 		break;
@@ -637,11 +645,11 @@ static void consoleIo1(void)
 	case Fc6612Sel64CharRight:
 	case Fc6612Sel32CharRight:
 	case Fc6612Sel16CharRight:
-		if (activeChannel->full)
+		if (mfr->activeChannel->full)
 		{
 			emptyDrop1 = FALSE;
 
-			ch = (u8)((activeChannel->data >> 6) & Mask6);
+			ch = (u8)((mfr->activeChannel->data >> 6) & Mask6);
 
 			if (ch >= 060)
 			{
@@ -650,20 +658,20 @@ static void consoleIo1(void)
 					/*
 					**  Vertical coordinate.
 					*/
-					windowSetY1((u16)(activeChannel->data & Mask9));
+					windowSetY1((u16)(mfr->activeChannel->data & Mask9));
 				}
 				else
 				{
 					/*
 					**  Horizontal coordinate.
 					*/
-					windowSetX1((u16)((activeChannel->data & Mask9) + currentOffset1));
+					windowSetX1((u16)((mfr->activeChannel->data & Mask9) + currentOffset1));
 				}
 			}
 			else
 			{
-				windowQueue1(consoleToAscii[(activeChannel->data >> 6) & Mask6]);
-				windowQueue1(consoleToAscii[(activeChannel->data >> 0) & Mask6]);
+				windowQueue1(consoleToAscii[(mfr->activeChannel->data >> 6) & Mask6]);
+				windowQueue1(consoleToAscii[(mfr->activeChannel->data >> 0) & Mask6]);
 			}
 
 			/*
@@ -675,10 +683,10 @@ static void consoleIo1(void)
 				**  See if medium char size, and text matches
 				**  next word of "enter date" message.
 				*/
-				if ((activeDevice->fcode == Fc6612Sel32CharLeft ||
-					activeDevice->fcode == Fc6612Sel32CharRight) &&
-					((activeChannel->data >> 6) & Mask6) == asciiToCdc[(u8)autoDateString[autoPos1]] &&
-					(activeChannel->data & Mask6) == asciiToCdc[(u8)autoDateString[autoPos1 + 1]])
+				if ((mfr->activeDevice->fcode == Fc6612Sel32CharLeft ||
+					mfr->activeDevice->fcode == Fc6612Sel32CharRight) &&
+					((mfr->activeChannel->data >> 6) & Mask6) == asciiToCdc[(u8)autoDateString[autoPos1]] &&
+					(mfr->activeChannel->data & Mask6) == asciiToCdc[(u8)autoDateString[autoPos1 + 1]])
 				{
 					/*
 					**  It matches so far.  Let's see if we're done.
@@ -724,17 +732,17 @@ static void consoleIo1(void)
 				}
 			}
 
-			activeChannel->full = FALSE;
+			mfr->activeChannel->full = FALSE;
 		}
 		break;
 
 	case Fc6612Sel512DotsLeft:
 	case Fc6612Sel512DotsRight:
-		if (activeChannel->full)
+		if (mfr->activeChannel->full)
 		{
 			emptyDrop1 = FALSE;
 
-			ch = (u8)((activeChannel->data >> 6) & Mask6);
+			ch = (u8)((mfr->activeChannel->data >> 6) & Mask6);
 
 			if (ch >= 060)
 			{
@@ -743,7 +751,7 @@ static void consoleIo1(void)
 					/*
 					**  Vertical coordinate.
 					*/
-					windowSetY1((u16)(activeChannel->data & Mask9));
+					windowSetY1((u16)(mfr->activeChannel->data & Mask9));
 					windowQueue1('.');
 				}
 				else
@@ -751,25 +759,25 @@ static void consoleIo1(void)
 					/*
 					**  Horizontal coordinate.
 					*/
-					windowSetX1((u16)((activeChannel->data & Mask9) + currentOffset1));
+					windowSetX1((u16)((mfr->activeChannel->data & Mask9) + currentOffset1));
 				}
 			}
 
-			activeChannel->full = FALSE;
+			mfr->activeChannel->full = FALSE;
 		}
 		break;
 
 	case Fc6612SelKeyIn:
 		windowGetChar1();
-		activeChannel->data = asciiToConsole[activeChannel->mfr->ppKeyIn];
-		if (activeChannel->data == 0)
+		mfr->activeChannel->data = asciiToConsole[mfr->activeChannel->mfr->ppKeyIn];
+		if (mfr->activeChannel->data == 0)
 		{
-			activeChannel->data = consoleGetKey1();
+			mfr->activeChannel->data = consoleGetKey1();
 		}
-		activeChannel->full = TRUE;
-		activeChannel->status = 0;
-		activeDevice->fcode = 0;
-		activeChannel->mfr->ppKeyIn = 0;
+		mfr->activeChannel->full = TRUE;
+		mfr->activeChannel->status = 0;
+		mfr->activeDevice->fcode = 0;
+		mfr->activeChannel->mfr->ppKeyIn = 0;
 		break;
 	}
 }
@@ -782,12 +790,12 @@ static void consoleIo1(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void consoleActivate(void)
+static void consoleActivate(u8 mfrId)
 {
 	emptyDrop = TRUE;
 }
 #if MaxMainFrames == 2
-static void consoleActivate1(void)
+static void consoleActivate1(u8 mfrId)
 {
 	emptyDrop1 = TRUE;
 }
@@ -800,7 +808,7 @@ static void consoleActivate1(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void consoleDisconnect(void)
+static void consoleDisconnect(u8 mfrId)
 {
 	if (emptyDrop)
 	{
@@ -809,7 +817,7 @@ static void consoleDisconnect(void)
 	}
 }
 #if MaxMainFrames == 2
-static void consoleDisconnect1(void)
+static void consoleDisconnect1(u8 mfrId)
 {
 	if (emptyDrop1)
 	{

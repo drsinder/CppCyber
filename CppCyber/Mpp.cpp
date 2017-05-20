@@ -232,7 +232,7 @@ void Mpp::Step(void)
 		}
 
 #if CcDebug == 1
-		if (!activePpu->busy)
+		if (!mfr->activePpu->busy)
 		{
 			/*
 			**  Trace result.
@@ -948,9 +948,9 @@ void Mpp::OpAJM(void)     // 64  Jump if Channel ACTIVE
 	opD &= 037;
 	if (opD < mfr->channelCount)
 	{
-		activeChannel = mfr->channel + opD;
-		channelCheckIfActive();
-		if (activeChannel->active)
+		mfr->activeChannel = mfr->channel + opD;
+		channelCheckIfActive(mfrID);
+		if (mfr->activeChannel->active)
 		{
 			ppu.regP = location;
 		}
@@ -986,9 +986,9 @@ void Mpp::OpIJM(void)     // 65 Jump if Channel INACTIVE
 	}
 	else
 	{
-		activeChannel = mfr->channel + opD;
-		channelCheckIfActive();
-		if (!activeChannel->active)
+		mfr->activeChannel = mfr->channel + opD;
+		channelCheckIfActive(mfrID);
+		if (!mfr->activeChannel->active)
 		{
 			ppu.regP = location;
 		}
@@ -1013,10 +1013,10 @@ void Mpp::OpFJM(void)     // 66 Jump if Channel FULL
 	opD &= 037;
 	if (opD < mfr->channelCount)
 	{
-		activeChannel = mfr->channel + opD;
-		channelIo();
-		channelCheckIfFull();
-		if (activeChannel->full)
+		mfr->activeChannel = mfr->channel + opD;
+		channelIo(mfrID);
+		channelCheckIfFull(mfrID);
+		if (mfr->activeChannel->full)
 		{
 			ppu.regP = location;
 		}
@@ -1051,10 +1051,10 @@ void Mpp::OpEJM(void)     // 67 Jump if Channel EMPTY
 	}
 	else
 	{
-		activeChannel = mfr->channel + opD;
-		channelIo();
-		channelCheckIfFull();
-		if (!activeChannel->full)
+		mfr->activeChannel = mfr->channel + opD;
+		channelIo(mfrID);
+		channelCheckIfFull(mfrID);
+		if (!mfr->activeChannel->full)
 		{
 			ppu.regP = location;
 		}
@@ -1067,15 +1067,15 @@ void Mpp::OpIAN(void)     // 70 Input one word to A
 	{
 		ppu.opF = opF;
 		ppu.opD = opD;
-		activeChannel->delayStatus = 0;
+		mfr->activeChannel->delayStatus = 0;
 	}
 
 	noHang = (ppu.opD & 040) != 0;
-	activeChannel = mfr->channel + (ppu.opD & 037);
+	mfr->activeChannel = mfr->channel + (ppu.opD & 037);
 	ppu.busy = TRUE;
 
-	channelCheckIfActive();
-	if (!activeChannel->active && activeChannel->id != ChClock)
+	channelCheckIfActive(mfrID);
+	if (!mfr->activeChannel->active && mfr->activeChannel->id != ChClock)
 	{
 		if (noHang)
 		{
@@ -1086,31 +1086,31 @@ void Mpp::OpIAN(void)     // 70 Input one word to A
 		return;
 	}
 
-	channelCheckIfFull();
-	if (!activeChannel->full)
+	channelCheckIfFull(mfrID);
+	if (!mfr->activeChannel->full)
 	{
 		/*
 		**  Handle possible input.
 		*/
-		channelIo();
+		channelIo(mfrID);
 	}
 
-	if (activeChannel->full || activeChannel->id == ChClock)
+	if (mfr->activeChannel->full || mfr->activeChannel->id == ChClock)
 	{
 		/*
 		**  Handle input (note that the clock channel has always data pending,
 		**  but appears full on some models, empty on others).
 		*/
-		channelIn();
-		channelSetEmpty();
-		ppu.regA = activeChannel->data & Mask12;
-		activeChannel->inputPending = FALSE;
-		if (activeChannel->discAfterInput)
+		channelIn(mfrID);
+		channelSetEmpty(mfrID);
+		ppu.regA = mfr->activeChannel->data & Mask12;
+		mfr->activeChannel->inputPending = FALSE;
+		if (mfr->activeChannel->discAfterInput)
 		{
-			activeChannel->discAfterInput = FALSE;
-			activeChannel->delayDisconnect = 0;
-			activeChannel->active = FALSE;
-			activeChannel->ioDevice = NULL;
+			mfr->activeChannel->discAfterInput = FALSE;
+			mfr->activeChannel->delayDisconnect = 0;
+			mfr->activeChannel->active = FALSE;
+			mfr->activeChannel->ioDevice = NULL;
 		}
 
 		ppu.busy = FALSE;
@@ -1124,34 +1124,34 @@ void Mpp::OpIAM(void)     // 71 Input (A) words to (m)
 		ppu.opF = opF;
 		ppu.opD = opD;
 
-		activeChannel = mfr->channel + (ppu.opD & 037);
+		mfr->activeChannel = mfr->channel + (ppu.opD & 037);
 		ppu.busy = TRUE;
 
 		ppu.mem[0] = ppu.regP;
 		ppu.regP = ppu.mem[ppu.regP] & Mask12;
-		activeChannel->delayStatus = 0;
+		mfr->activeChannel->delayStatus = 0;
 	}
 	else
 	{
-		activeChannel = mfr->channel + (ppu.opD & 037);
+		mfr->activeChannel = mfr->channel + (ppu.opD & 037);
 	}
 
-	channelCheckIfActive();
-	if (!activeChannel->active)
+	channelCheckIfActive(mfrID);
+	if (!mfr->activeChannel->active)
 	{
 		/*
 		**  Disconnect device except for hardwired devices.
 		*/
-		if (!activeChannel->hardwired)
+		if (!mfr->activeChannel->hardwired)
 		{
-			activeChannel->ioDevice = NULL;
+			mfr->activeChannel->ioDevice = NULL;
 		}
 
 		/*
 		**  Channel becomes empty (must not call channelSetEmpty(), otherwise we
 		**  get a spurious empty pulse).
 		*/
-		activeChannel->full = FALSE;
+		mfr->activeChannel->full = FALSE;
 
 		/*
 		**  Terminate transfer and set next location to zero.
@@ -1163,34 +1163,34 @@ void Mpp::OpIAM(void)     // 71 Input (A) words to (m)
 		return;
 	}
 
-	channelCheckIfFull();
-	if (!activeChannel->full)
+	channelCheckIfFull(mfrID);
+	if (!mfr->activeChannel->full)
 	{
 		/*
 		**  Handle possible input.
 		*/
-		channelIo();
+		channelIo(mfrID);
 	}
 
-	if (activeChannel->full || activeChannel->id == ChClock)
+	if (mfr->activeChannel->full || mfr->activeChannel->id == ChClock)
 	{
 		/*
 		**  Handle input (note that the clock channel has always data pending,
 		**  but appears full on some models, empty on others).
 		*/
-		channelIn();
-		channelSetEmpty();
-		ppu.mem[ppu.regP] = activeChannel->data & Mask12;
+		channelIn(mfrID);
+		channelSetEmpty(mfrID);
+		ppu.mem[ppu.regP] = mfr->activeChannel->data & Mask12;
 		ppu.regP = (ppu.regP + 1) & Mask12;
 		ppu.regA = (ppu.regA - 1) & Mask18;
-		activeChannel->inputPending = FALSE;
+		mfr->activeChannel->inputPending = FALSE;
 
-		if (activeChannel->discAfterInput)
+		if (mfr->activeChannel->discAfterInput)
 		{
-			activeChannel->discAfterInput = FALSE;
-			activeChannel->delayDisconnect = 0;
-			activeChannel->active = FALSE;
-			activeChannel->ioDevice = NULL;
+			mfr->activeChannel->discAfterInput = FALSE;
+			mfr->activeChannel->delayDisconnect = 0;
+			mfr->activeChannel->active = FALSE;
+			mfr->activeChannel->ioDevice = NULL;
 			if (ppu.regA != 0)
 			{
 				ppu.mem[ppu.regP] = 0;
@@ -1214,15 +1214,15 @@ void Mpp::OpOAN(void)     // 72 Output one word from A
 	{
 		ppu.opF = opF;
 		ppu.opD = opD;
-		activeChannel->delayStatus = 0;
+		mfr->activeChannel->delayStatus = 0;
 	}
 
 	noHang = (ppu.opD & 040) != 0;
-	activeChannel = mfr->channel + (ppu.opD & 037);
+	mfr->activeChannel = mfr->channel + (ppu.opD & 037);
 	ppu.busy = TRUE;
 
-	channelCheckIfActive();
-	if (!activeChannel->active)
+	channelCheckIfActive(mfrID);
+	if (!mfr->activeChannel->active)
 	{
 		if (noHang)
 		{
@@ -1231,19 +1231,19 @@ void Mpp::OpOAN(void)     // 72 Output one word from A
 		return;
 	}
 
-	channelCheckIfFull();
-	if (!activeChannel->full)
+	channelCheckIfFull(mfrID);
+	if (!mfr->activeChannel->full)
 	{
-		activeChannel->data = (PpWord)ppu.regA & Mask12;
-		channelOut();
-		channelSetFull();
+		mfr->activeChannel->data = (PpWord)ppu.regA & Mask12;
+		channelOut(mfrID);
+		channelSetFull(mfrID);
 		ppu.busy = FALSE;
 	}
 
 	/*
 	**  Handle possible output.
 	*/
-	channelIo();
+	channelIo(mfrID);
 }
 
 void Mpp::OpOAM(void)     // 73 Output (A) words from (m)
@@ -1253,34 +1253,34 @@ void Mpp::OpOAM(void)     // 73 Output (A) words from (m)
 		ppu.opF = opF;
 		ppu.opD = opD;
 
-		activeChannel = mfr->channel + (ppu.opD & 037);
+		mfr->activeChannel = mfr->channel + (ppu.opD & 037);
 		ppu.busy = TRUE;
 
 		ppu.mem[0] = ppu.regP;
 		ppu.regP = ppu.mem[ppu.regP] & Mask12;
-		activeChannel->delayStatus = 0;
+		mfr->activeChannel->delayStatus = 0;
 	}
 	else
 	{
-		activeChannel = mfr->channel + (ppu.opD & 037);
+		mfr->activeChannel = mfr->channel + (ppu.opD & 037);
 	}
 
-	channelCheckIfActive();
-	if (!activeChannel->active)
+	channelCheckIfActive(mfrID);
+	if (!mfr->activeChannel->active)
 	{
 		/*
 		**  Disconnect device except for hardwired devices.
 		*/
-		if (!activeChannel->hardwired)
+		if (!mfr->activeChannel->hardwired)
 		{
-			activeChannel->ioDevice = NULL;
+			mfr->activeChannel->ioDevice = NULL;
 		}
 
 		/*
 		**  Channel becomes empty (must not call channelSetEmpty(), otherwise we
 		**  get a spurious empty pulse).
 		*/
-		activeChannel->full = FALSE;
+		mfr->activeChannel->full = FALSE;
 
 		/*
 		**  Terminate transfer.
@@ -1291,14 +1291,14 @@ void Mpp::OpOAM(void)     // 73 Output (A) words from (m)
 		return;
 	}
 
-	channelCheckIfFull();
-	if (!activeChannel->full)
+	channelCheckIfFull(mfrID);
+	if (!mfr->activeChannel->full)
 	{
-		activeChannel->data = ppu.mem[ppu.regP] & Mask12;
+		mfr->activeChannel->data = ppu.mem[ppu.regP] & Mask12;
 		ppu.regP = (ppu.regP + 1) & Mask12;
 		ppu.regA = (ppu.regA - 1) & Mask18;
-		channelOut();
-		channelSetFull();
+		channelOut(mfrID);
+		channelSetFull(mfrID);
 
 		if (ppu.regA == 0)
 		{
@@ -1311,7 +1311,7 @@ void Mpp::OpOAM(void)     // 73 Output (A) words from (m)
 	/*
 	**  Handle possible output.
 	*/
-	channelIo();
+	channelIo(mfrID);
 }
 
 void Mpp::OpACN(void)     // 74 ACTIVATE Channel
@@ -1323,10 +1323,10 @@ void Mpp::OpACN(void)     // 74 ACTIVATE Channel
 	}
 
 	noHang = (ppu.opD & 040) != 0;
-	activeChannel = mfr->channel + (ppu.opD & 037);
+	mfr->activeChannel = mfr->channel + (ppu.opD & 037);
 
-	channelCheckIfActive();
-	if (activeChannel->active)
+	channelCheckIfActive(mfrID);
+	if (mfr->activeChannel->active)
 	{
 		if (!noHang)
 		{
@@ -1335,7 +1335,7 @@ void Mpp::OpACN(void)     // 74 ACTIVATE Channel
 		return;
 	}
 
-	channelActivate();
+	channelActivate(mfrID);
 	ppu.busy = FALSE;
 }
 
@@ -1348,28 +1348,28 @@ void Mpp::OpDCN(void)     // 75 DEACTIVATE Channel
 	}
 
 	noHang = (ppu.opD & 040) != 0;
-	activeChannel = mfr->channel + (ppu.opD & 037);
+	mfr->activeChannel = mfr->channel + (ppu.opD & 037);
 
 	/*
 	**  RTC, Interlock and S/C register channel can not be deactivated.
 	*/
-	if (activeChannel->id == ChClock)
+	if (mfr->activeChannel->id == ChClock)
 	{
 		return;
 	}
 
-	if (activeChannel->id == ChInterlock && (features & HasInterlockReg) != 0)
+	if (mfr->activeChannel->id == ChInterlock && (features & HasInterlockReg) != 0)
 	{
 		return;
 	}
 
-	if (activeChannel->id == ChStatusAndControl && (features & HasStatusAndControlReg) != 0)
+	if (mfr->activeChannel->id == ChStatusAndControl && (features & HasStatusAndControlReg) != 0)
 	{
 		return;
 	}
 
-	channelCheckIfActive();
-	if (!activeChannel->active)
+	channelCheckIfActive(mfrID);
+	if (!mfr->activeChannel->active)
 	{
 		if (!noHang)
 		{
@@ -1378,7 +1378,7 @@ void Mpp::OpDCN(void)     // 75 DEACTIVATE Channel
 		return;
 	}
 
-	channelDisconnect();
+	channelDisconnect(mfrID);
 	ppu.busy = FALSE;
 }
 
@@ -1391,18 +1391,18 @@ void Mpp::OpFAN(void)     // 76 Function from A
 	}
 
 	noHang = (ppu.opD & 040) != 0;
-	activeChannel = mfr->channel + (ppu.opD & 037);
+	mfr->activeChannel = mfr->channel + (ppu.opD & 037);
 
 	/*
 	**  Interlock register channel ignores functions.
 	*/
-	if (activeChannel->id == ChInterlock && (features & HasInterlockReg) != 0)
+	if (mfr->activeChannel->id == ChInterlock && (features & HasInterlockReg) != 0)
 	{
 		return;
 	}
 
-	channelCheckIfActive();
-	if (activeChannel->active)
+	channelCheckIfActive(mfrID);
+	if (mfr->activeChannel->active)
 	{
 		if (!noHang)
 		{
@@ -1411,7 +1411,7 @@ void Mpp::OpFAN(void)     // 76 Function from A
 		return;
 	}
 
-	channelFunction((PpWord)(ppu.regA & Mask12));
+	channelFunction((PpWord)(ppu.regA & Mask12), mfrID);
 	ppu.busy = FALSE;
 }
 
@@ -1424,18 +1424,18 @@ void Mpp::OpFNC(void)     // 77 Function from m
 	}
 
 	noHang = (ppu.opD & 040) != 0;
-	activeChannel = mfr->channel + (ppu.opD & 037);
+	mfr->activeChannel = mfr->channel + (ppu.opD & 037);
 
 	/*
 	**  Interlock register channel ignores functions.
 	*/
-	if (activeChannel->id == ChInterlock && (features & HasInterlockReg) != 0)
+	if (mfr->activeChannel->id == ChInterlock && (features & HasInterlockReg) != 0)
 	{
 		return;
 	}
 
-	channelCheckIfActive();
-	if (activeChannel->active)
+	channelCheckIfActive(mfrID);
+	if (mfr->activeChannel->active)
 	{
 		if (!noHang)
 		{
@@ -1444,7 +1444,7 @@ void Mpp::OpFNC(void)     // 77 Function from m
 		return;
 	}
 
-	channelFunction((PpWord)(ppu.mem[ppu.regP] & Mask12));
+	channelFunction((PpWord)(ppu.mem[ppu.regP] & Mask12), mfrID);
 	Increment(ppu.regP);
 	ppu.busy = FALSE;
 }

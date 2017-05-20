@@ -59,10 +59,10 @@
 */
 static void npuAsyncDoFeBefore(u8 fe);
 static void npuAsyncDoFeAfter(u8 fe);
-static void npuAsyncProcessUplineTransparent(Tcb *tp);
-static void npuAsyncProcessUplineAscii(Tcb *tp);
-static void npuAsyncProcessUplineSpecial(Tcb *tp);
-static void npuAsyncProcessUplineNormal(Tcb *tp);
+static void npuAsyncProcessUplineTransparent(Tcb *tp, u8 mfrId);
+static void npuAsyncProcessUplineAscii(Tcb *tp, u8 mfrId);
+static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId);
+static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId);
 
 /*
 **  ----------------
@@ -112,7 +112,7 @@ static int echoLen;
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last)
+void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId)
 {
 	u8 *blk = bp->data + BlkOffData;
 	int len = bp->numBytes - BlkOffData;
@@ -143,7 +143,7 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last)
 	if ((dbc & DbcTransparent) != 0)
 	{
 		npuNetSend(npuTp, blk, len);
-		npuNetQueueAck(npuTp, (u8)(bp->data[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN)));
+		npuNetQueueAck(npuTp, (u8)(bp->data[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN)), mfrId);
 		return;
 	}
 
@@ -213,7 +213,7 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last)
 		len -= textlen + 1;
 	}
 
-	npuNetQueueAck(npuTp, (u8)(bp->data[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN)));
+	npuNetQueueAck(npuTp, (u8)(bp->data[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN)), mfrId);
 }
 
 /*--------------------------------------------------------------------------
@@ -225,25 +225,25 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuAsyncProcessUplineData(Tcb *tp)
+void npuAsyncProcessUplineData(Tcb *tp, u8 mfrId)
 {
 	echoPtr = echoBuffer;
 
 	if (tp->params.fvXInput)
 	{
-		npuAsyncProcessUplineTransparent(tp);
+		npuAsyncProcessUplineTransparent(tp, mfrId);
 	}
 	else if (tp->params.fvFullASCII)
 	{
-		npuAsyncProcessUplineAscii(tp);
+		npuAsyncProcessUplineAscii(tp, mfrId);
 	}
 	else if (tp->params.fvSpecialEdit)
 	{
-		npuAsyncProcessUplineSpecial(tp);
+		npuAsyncProcessUplineSpecial(tp, mfrId);
 	}
 	else
 	{
-		npuAsyncProcessUplineNormal(tp);
+		npuAsyncProcessUplineNormal(tp, mfrId);
 	}
 
 	/*
@@ -268,7 +268,7 @@ void npuAsyncProcessUplineData(Tcb *tp)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuAsyncFlushUplineTransparent(Tcb *tp)
+void npuAsyncFlushUplineTransparent(Tcb *tp, u8 mfrId)
 {
 	if (!tp->params.fvXStickyTimeout)
 	{
@@ -282,7 +282,7 @@ void npuAsyncFlushUplineTransparent(Tcb *tp)
 	**  Send the upline data.
 	*/
 	tp->inBuf[BlkOffDbc] = DbcTransparent;
-	npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+	npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
 	npuTipInputReset(tp);
 	tp->xInputTimerRunning = FALSE;
 }
@@ -425,11 +425,13 @@ static void npuAsyncDoFeAfter(u8 fe)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void npuAsyncProcessUplineTransparent(Tcb *tp)
+static void npuAsyncProcessUplineTransparent(Tcb *tp, u8 mfrId)
 {
 	u8 *dp;
 	int len;
 	u8 ch;
+
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 	dp = tp->inputData;
 	len = tp->inputCount;
@@ -465,14 +467,14 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
 			**  Send the upline data.
 			*/
 			tp->inBuf[BlkOffDbc] = DbcTransparent;
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
 			npuTipInputReset(tp);
 		}
 		else if (ch == tp->params.fvUserBreak2 && tp->params.fvEnaXUserBreak)
 		{
 			*tp->inBufPtr++ = ch;
 			tp->inBuf[BlkOffDbc] = DbcTransparent;
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
 			npuTipInputReset(tp);
 		}
 		else
@@ -493,7 +495,7 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
 				**  Send the upline data.
 				*/
 				tp->inBuf[BlkOffDbc] = DbcTransparent;
-				npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+				npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
 				npuTipInputReset(tp);
 			}
 		}
@@ -504,7 +506,7 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
 	*/
 	if (tp->params.fvXTimeout && tp->inBufStart != tp->inBufPtr)
 	{
-		tp->xStartCycle = activeChannel->mfr->cycles;  // DRS??!!
+		tp->xStartCycle = mfr->activeChannel->mfr->cycles;  // DRS??!!
 		tp->xInputTimerRunning = TRUE;
 	}
 }
@@ -518,7 +520,7 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void npuAsyncProcessUplineAscii(Tcb *tp)
+static void npuAsyncProcessUplineAscii(Tcb *tp, u8 mfrId)
 {
 	u8 *dp;
 	int len;
@@ -582,7 +584,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
 			**  EOL or Cancel entered - send the input upline.
 			*/
 			*tp->inBufPtr++ = ch;
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
 			npuTipInputReset(tp);
 
 			/*
@@ -658,7 +660,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
 			**  Send long lines.
 			*/
 			tp->inBuf[BlkOffBTBSN] = BtHTBLK | (tp->uplineBsn << BlkShiftBSN);
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
 			npuTipInputReset(tp);
 		}
 	}
@@ -673,7 +675,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void npuAsyncProcessUplineSpecial(Tcb *tp)
+static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId)
 {
 	u8 *dp;
 	int len;
@@ -778,7 +780,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
 			**  Send the line, but signal the cancel character.
 			*/
 			tp->inBuf[BlkOffDbc] = DbcCancel;
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
 
 			/*
 			**  Reset input and echoplex buffers.
@@ -793,7 +795,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
 			/*
 			**  User break 1 (typically Ctrl-I).
 			*/
-			npuTipSendUserBreak(tp, 1);
+			npuTipSendUserBreak(tp, 1, mfrId);
 			continue;
 		}
 
@@ -802,7 +804,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
 			/*
 			**  User break 2 (typically Ctrl-T).
 			*/
-			npuTipSendUserBreak(tp, 2);
+			npuTipSendUserBreak(tp, 2, mfrId);
 			continue;
 		}
 
@@ -816,7 +818,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
 			/*
 			**  EOL entered - send the input upline.
 			*/
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
 			npuTipInputReset(tp);
 
 			/*
@@ -886,7 +888,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
 			**  Send long lines.
 			*/
 			tp->inBuf[BlkOffBTBSN] = BtHTBLK | (tp->uplineBsn << BlkShiftBSN);
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
 			npuTipInputReset(tp);
 		}
 	}
@@ -901,7 +903,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void npuAsyncProcessUplineNormal(Tcb *tp)
+static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId)
 {
 	u8 *dp;
 	int len;
@@ -994,7 +996,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
 			**  Send the line, but signal the cancel character.
 			*/
 			tp->inBuf[BlkOffDbc] = DbcCancel;
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
 
 			/*
 			**  Reset input and echoplex buffers.
@@ -1009,7 +1011,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
 			/*
 			**  User break 1 (typically Ctrl-I).
 			*/
-			npuTipSendUserBreak(tp, 1);
+			npuTipSendUserBreak(tp, 1, mfrId);
 			continue;
 		}
 
@@ -1018,7 +1020,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
 			/*
 			**  User break 2 (typically Ctrl-T).
 			*/
-			npuTipSendUserBreak(tp, 2);
+			npuTipSendUserBreak(tp, 2, mfrId);
 			continue;
 		}
 
@@ -1032,7 +1034,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
 			/*
 			**  EOL entered - send the input upline.
 			*/
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
 			npuTipInputReset(tp);
 			tp->lastOpWasInput = TRUE;
 
@@ -1125,7 +1127,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp)
 			**  Send long lines.
 			*/
 			tp->inBuf[BlkOffBTBSN] = BtHTBLK | (tp->uplineBsn << BlkShiftBSN);
-			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf));
+			npuBipRequestUplineCanned(tp->inBuf, (int)(tp->inBufPtr - tp->inBuf), mfrId);
 			npuTipInputReset(tp);
 		}
 	}

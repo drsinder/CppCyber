@@ -78,10 +78,10 @@ typedef struct cr405Context
 **  Private Function Prototypes
 **  ---------------------------
 */
-static FcStatus cr405Func(PpWord funcCode);
-static void cr405Io(void);
-static void cr405Activate(void);
-static void cr405Disconnect(void);
+static FcStatus cr405Func(PpWord funcCode, u8 mfrId);
+static void cr405Io(u8 mfrId);
+static void cr405Activate(u8 mfrId);
+static void cr405Disconnect(u8 mfrId);
 static void cr405NextCard(DevSlot *dp);
 
 /*
@@ -279,8 +279,9 @@ void cr405LoadCards(char *params)
 **  Returns:        FcStatus
 **
 **------------------------------------------------------------------------*/
-static FcStatus cr405Func(PpWord funcCode)
+static FcStatus cr405Func(PpWord funcCode, u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 	switch (funcCode)
 	{
 	default:
@@ -288,12 +289,12 @@ static FcStatus cr405Func(PpWord funcCode)
 
 	case FcCr405Deselect:
 	case FcCr405GateToSec:
-		activeDevice->fcode = 0;
+		mfr->activeDevice->fcode = 0;
 		return(FcProcessed);
 
 	case FcCr405ReadNonStop:
 	case FcCr405StatusReq:
-		activeDevice->fcode = funcCode;
+		mfr->activeDevice->fcode = funcCode;
 		break;
 	}
 
@@ -308,11 +309,13 @@ static FcStatus cr405Func(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cr405Io(void)
+static void cr405Io(u8 mfrId)
 {
-	Cr405Context *cc = (Cr405Context*)activeDevice->context[0];
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	switch (activeDevice->fcode)
+	Cr405Context *cc = (Cr405Context*)mfr->activeDevice->context[0];
+
+	switch (mfr->activeDevice->fcode)
 	{
 	default:
 	case FcCr405Deselect:
@@ -320,37 +323,37 @@ static void cr405Io(void)
 		break;
 
 	case FcCr405StatusReq:
-		if (activeDevice->fcb[0] == NULL && cc->col >= 80)
+		if (mfr->activeDevice->fcb[0] == NULL && cc->col >= 80)
 		{
-			activeChannel->data = StCr405NotReady;
+			mfr->activeChannel->data = StCr405NotReady;
 		}
 		else
 		{
-			activeChannel->data = StCr405Ready;
+			mfr->activeChannel->data = StCr405Ready;
 		}
-		activeChannel->full = TRUE;
+		mfr->activeChannel->full = TRUE;
 		break;
 
 	case FcCr405ReadNonStop:
 		/*
 		**  Simulate card in motion for 20 major cycles.
 		*/
-		if (labs(activeChannel->mfr->cycles - cc->getCardCycle) < 20)
+		if (labs(mfr->activeChannel->mfr->cycles - cc->getCardCycle) < 20)
 		{
 			break;
 		}
 
-		if (activeChannel->full)
+		if (mfr->activeChannel->full)
 		{
 			break;
 		}
 
-		activeChannel->data = cc->card[cc->col++] & Mask12;
-		activeChannel->full = TRUE;
+		mfr->activeChannel->data = cc->card[cc->col++] & Mask12;
+		mfr->activeChannel->full = TRUE;
 
 		if (cc->col >= 80)
 		{
-			cr405NextCard(activeDevice);
+			cr405NextCard(mfr->activeDevice);
 		}
 
 		break;
@@ -365,7 +368,7 @@ static void cr405Io(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cr405Activate(void)
+static void cr405Activate(u8 mfrId)
 {
 }
 
@@ -377,7 +380,7 @@ static void cr405Activate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cr405Disconnect(void)
+static void cr405Disconnect(u8 mfrId)
 {
 }
 

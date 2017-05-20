@@ -112,10 +112,10 @@ typedef struct
 **  Private Function Prototypes
 **  ---------------------------
 */
-static FcStatus cp3446Func(PpWord funcCode);
-static void cp3446Io(void);
-static void cp3446Activate(void);
-static void cp3446Disconnect(void);
+static FcStatus cp3446Func(PpWord funcCode, u8 mfrId);
+static void cp3446Io(u8 mfrId);
+static void cp3446Activate(u8 mfrId);
+static void cp3446Disconnect(u8 mfrId);
 static void cp3446FlushCard(DevSlot *up, CpContext *cc);
 static char *cp3446Func2String(PpWord funcCode);
 
@@ -366,10 +366,12 @@ void cp3446RemoveCards(char *params)
 **  Returns:        FcStatus
 **
 **------------------------------------------------------------------------*/
-static FcStatus cp3446Func(PpWord funcCode)
+static FcStatus cp3446Func(PpWord funcCode, u8 mfrId)
 {
 	CpContext *cc;
 	FcStatus st;
+
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 #if DEBUG
 	fprintf(cp3446Log, "\n%06d PP:%02o CH:%02o f:%04o T:%-25s  >   ",
@@ -380,7 +382,7 @@ static FcStatus cp3446Func(PpWord funcCode)
 		cp3446Func2String(funcCode));
 #endif
 
-	cc = (CpContext *)active3000Device->context[0];
+	cc = (CpContext *)mfr->active3000Device->context[0];
 
 	switch (funcCode)
 	{
@@ -399,12 +401,12 @@ static FcStatus cp3446Func(PpWord funcCode)
 
 	case Fc6681Output:
 		cc->status = StCp3446Ready;
-		active3000Device->fcode = funcCode;
+		mfr->active3000Device->fcode = funcCode;
 		st = FcAccepted;
 		break;
 
 	case Fc6681DevStatusReq:
-		active3000Device->fcode = funcCode;
+		mfr->active3000Device->fcode = funcCode;
 		st = FcAccepted;
 		break;
 
@@ -462,7 +464,7 @@ static FcStatus cp3446Func(PpWord funcCode)
 		break;
 	}
 
-	dcc6681Interrupt((cc->status & cc->intmask) != 0);
+	dcc6681Interrupt((cc->status & cc->intmask) != 0, mfrId);
 	return(st);
 }
 
@@ -474,28 +476,30 @@ static FcStatus cp3446Func(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cp3446Io(void)
+static void cp3446Io(u8 mfrId)
 {
 	CpContext *cc;
 	char c;
 	PpWord p;
 
-	cc = (CpContext *)active3000Device->context[0];
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	switch (active3000Device->fcode)
+	cc = (CpContext *)mfr->active3000Device->context[0];
+
+	switch (mfr->active3000Device->fcode)
 	{
 	default:
-		printf("unexpected IO for function %04o\n", active3000Device->fcode);
+		printf("unexpected IO for function %04o\n", mfr->active3000Device->fcode);
 		break;
 
 	case 0:
 		break;
 
 	case Fc6681DevStatusReq:
-		if (!activeChannel->full)
+		if (!mfr->activeChannel->full)
 		{
-			activeChannel->data = (cc->status & (cc->intmask | StCp3446NonIntStatus));
-			activeChannel->full = TRUE;
+			mfr->activeChannel->data = (cc->status & (cc->intmask | StCp3446NonIntStatus));
+			mfr->activeChannel->full = TRUE;
 #if DEBUG
 			fprintf(cp3446Log, " %04o", activeChannel->data);
 #endif
@@ -508,24 +512,24 @@ static void cp3446Io(void)
 		**  a card, otherwise 1CD may get stuck occasionally.
 		**  So we simulate card in motion for 20 major cycles.
 		*/
-		if (!activeChannel->full
-			|| labs(activeChannel->mfr->cycles - cc->getcardcycle) < 20)
+		if (!mfr->activeChannel->full
+			|| labs(mfr->activeChannel->mfr->cycles - cc->getcardcycle) < 20)
 		{
 			break;
 		}
 
 		if (!cc->rawcard && cc->col >= 80)
 		{
-			cp3446FlushCard(active3000Device, cc);
+			cp3446FlushCard(mfr->active3000Device, cc);
 		}
 		else if (cc->rawcard && cc->col >= (80 * 4))
 		{
-			cp3446FlushCard(active3000Device, cc);
+			cp3446FlushCard(mfr->active3000Device, cc);
 		}
 		else
 		{
-			p = activeChannel->data & Mask12;
-			activeChannel->full = FALSE;
+			p = mfr->activeChannel->data & Mask12;
+			mfr->activeChannel->full = FALSE;
 
 #if DEBUG
 			fprintf(cp3446Log, " %04o", activeChannel->data);
@@ -592,7 +596,7 @@ static void cp3446Io(void)
 		break;
 	}
 
-	dcc6681Interrupt((cc->status & cc->intmask) != 0);
+	dcc6681Interrupt((cc->status & cc->intmask) != 0, mfrId);
 }
 
 /*--------------------------------------------------------------------------
@@ -603,7 +607,7 @@ static void cp3446Io(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cp3446Activate(void)
+static void cp3446Activate(u8 mfrId)
 {
 #if DEBUG
 	fprintf(cp3446Log, "\n%06d PP:%02o CH:%02o Activate",
@@ -621,9 +625,11 @@ static void cp3446Activate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void cp3446Disconnect(void)
+static void cp3446Disconnect(u8 mfrId)
 {
 	CpContext *cc;
+
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 #if DEBUG
 	fprintf(cp3446Log, "\n%06d PP:%02o CH:%02o Disconnect",
@@ -632,14 +638,14 @@ static void cp3446Disconnect(void)
 		activeDevice->channel->id);
 #endif
 
-	cc = (CpContext *)active3000Device->context[0];
+	cc = (CpContext *)mfr->active3000Device->context[0];
 	if (cc != NULL)
 	{
 		cc->status |= StCp3446EoiInt;
-		dcc6681Interrupt((cc->status & cc->intmask) != 0);
-		if (active3000Device->fcb[0] != NULL && cc->col != 0)
+		dcc6681Interrupt((cc->status & cc->intmask) != 0, mfrId);
+		if (mfr->active3000Device->fcb[0] != NULL && cc->col != 0)
 		{
-			cp3446FlushCard(active3000Device, cc);
+			cp3446FlushCard(mfr->active3000Device, cc);
 		}
 	}
 }

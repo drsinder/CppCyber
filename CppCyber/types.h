@@ -123,10 +123,10 @@ typedef struct devSlot
     struct devSlot  *next;              /* next device attached to this channel or converter */
     struct chSlot   *channel;           /* channel this device is attached to */
     FILE            *fcb[MaxUnits2];    /* unit data file control block */
-    void            (*activate)();  /* channel activation function */        
-    void            (*disconnect)();/* channel deactivation function */
-    FcStatus        (*func)(PpWord);    /* function request handler */
-    void            (*io)();        /* I/O request handler */
+    void            (*activate)(u8);  /* channel activation function */        
+    void            (*disconnect)(u8);/* channel deactivation function */
+    FcStatus        (*func)(PpWord, u8);    /* function request handler */
+    void            (*io)(u8);        /* I/O request handler */
     PpWord          (*in)();        /* PCI channel input request */
     void            (*out)(PpWord);     /* PCI channel output request */
     void            (*full)();      /* PCI channel full request */

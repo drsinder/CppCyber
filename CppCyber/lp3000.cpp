@@ -177,10 +177,10 @@ typedef struct lpContext
 **  ---------------------------
 */
 static void lp3000Init(u8 mfrID, u8 unitNo, u8 eqNo, u8 channelNo, int flags);
-static FcStatus lp3000Func(PpWord funcCode);
-static void lp3000Io(void);
-static void lp3000Activate(void);
-static void lp3000Disconnect(void);
+static FcStatus lp3000Func(PpWord funcCode, u8 mfrId);
+static void lp3000Io(u8 mfrId);
+static void lp3000Activate(u8 mfrId);
+static void lp3000Disconnect(u8 mfrId);
 static void lp3000DebugData(void);
 static char *lp3000Func2String(PpWord funcCode);
 
@@ -506,14 +506,16 @@ void lp3000RemovePaper(char *params)
 **  Returns:        FcStatus
 **
 **------------------------------------------------------------------------*/
-static FcStatus lp3000Func(PpWord funcCode)
+static FcStatus lp3000Func(PpWord funcCode, u8 mfrId)
 {
 	FILE *fcb;
 	LpContext *lc;
 	char packer[100];
 
-	fcb = active3000Device->fcb[0];
-	lc = (LpContext *)active3000Device->context[0];
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	fcb = mfr->active3000Device->fcb[0];
+	lc = (LpContext *)mfr->active3000Device->context[0];
 
 	/*
 	**  Note that we don't emulate the VFU, so all VFU control codes
@@ -549,8 +551,8 @@ static FcStatus lp3000Func(PpWord funcCode)
 			fflush(fcb);
 			if (BigIron->autoRemovePaper != 0)
 			{
-				u8 mfrID = active3000Device->mfrID;
-				sprintf(packer, "%i,%i,%i", mfrID, active3000Device->channel->id, active3000Device->eqNo);
+				u8 mfrID = mfr->active3000Device->mfrID;
+				sprintf(packer, "%i,%i,%i", mfrID, mfr->active3000Device->channel->id, mfr->active3000Device->eqNo);
 				lp3000RemovePaper(packer);
 			}
 			lc->printed = FALSE;
@@ -605,12 +607,12 @@ static FcStatus lp3000Func(PpWord funcCode)
 		}
 
 		// Update interrupt summary flag in unit block
-		dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
-		active3000Device->fcode = funcCode;
+		dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0, mfrId);
+		mfr->active3000Device->fcode = funcCode;
 		return(FcAccepted);
 
 	case Fc6681DevStatusReq:
-		active3000Device->fcode = funcCode;
+		mfr->active3000Device->fcode = funcCode;
 		return(FcAccepted);
 	}
 
@@ -684,13 +686,13 @@ static FcStatus lp3000Func(PpWord funcCode)
 				lc->flags &= ~Lp3000IntReady;
 			}
 			// Update interrupt summary flag in unit block
-			dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
+			dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0, mfrId);
 			return(FcProcessed);
 
 		case Fc3555RelIntReady:
 			lc->flags &= ~(Lp3000IntReadyEna | Lp3000IntReady);
 			// Update interrupt summary flag in unit block
-			dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
+			dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0, mfrId);
 			return(FcProcessed);
 
 		case Fc3555SelIntEnd:
@@ -704,13 +706,13 @@ static FcStatus lp3000Func(PpWord funcCode)
 				lc->flags &= ~Lp3000IntEnd;
 			}
 			// Update interrupt summary flag in unit block
-			dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
+			dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0, mfrId);
 			return(FcProcessed);
 
 		case Fc3555RelIntEnd:
 			lc->flags &= ~(Lp3000IntEndEna | Lp3000IntEnd);
 			// Update interrupt summary flag in unit block
-			dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
+			dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0, mfrId);
 			return(FcProcessed);
 		}
 	}
@@ -759,13 +761,13 @@ static FcStatus lp3000Func(PpWord funcCode)
 				lc->flags &= ~Lp3000IntReady;
 			}
 			// Update interrupt summary flag in unit block
-			dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
+			dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0, mfrId);
 			return(FcProcessed);
 
 		case Fc3152RelIntReady:
 			lc->flags &= ~(Lp3000IntReadyEna | Lp3000IntReady);
 			// Update interrupt summary flag in unit block
-			dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
+			dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0, mfrId);
 			return(FcProcessed);
 
 		case Fc3152SelIntEnd:
@@ -779,19 +781,19 @@ static FcStatus lp3000Func(PpWord funcCode)
 				lc->flags &= ~Lp3000IntEnd;
 			}
 			// Update interrupt summary flag in unit block
-			dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
+			dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0, mfrId);
 			return(FcProcessed);
 
 		case Fc3152RelIntEnd:
 			lc->flags &= ~(Lp3000IntEndEna | Lp3000IntEnd);
 			// Update interrupt summary flag in unit block
-			dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0);
+			dcc6681Interrupt((lc->flags & (Lp3000IntReady | Lp3000IntEnd)) != 0, mfrId);
 			return(FcProcessed);
 		}
 	}
 
 	// ReSharper disable once CppUnreachableCode
-	active3000Device->fcode = funcCode;
+	mfr->active3000Device->fcode = funcCode;
 	return(FcAccepted);
 }
 
@@ -803,25 +805,26 @@ static FcStatus lp3000Func(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void lp3000Io(void)
+static void lp3000Io(u8 mfrId)
 {
 	FILE *fcb;
 	LpContext *lc;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	fcb = active3000Device->fcb[0];
-	lc = (LpContext *)active3000Device->context[0];
+	fcb = mfr->active3000Device->fcb[0];
+	lc = (LpContext *)mfr->active3000Device->context[0];
 
 	/*
 	**  Process printer I/O.
 	*/
-	switch (active3000Device->fcode)
+	switch (mfr->active3000Device->fcode)
 	{
 	default:
-		activeChannel->full = FALSE;
+		mfr->activeChannel->full = FALSE;
 		break;
 
 	case Fc6681Output:
-		if (activeChannel->full)
+		if (mfr->activeChannel->full)
 		{
 #if DEBUG
 			if (linePos < MaxLine)
@@ -833,15 +836,15 @@ static void lp3000Io(void)
 			if (lc->flags & Lp3000Type501)
 			{
 				// 501 printer, output display code
-				fputc(bcdToAscii[(activeChannel->data >> 6) & Mask6], fcb);
-				fputc(bcdToAscii[activeChannel->data & Mask6], fcb);
+				fputc(bcdToAscii[(mfr->activeChannel->data >> 6) & Mask6], fcb);
+				fputc(bcdToAscii[mfr->activeChannel->data & Mask6], fcb);
 			}
 			else
 			{
 				// 512 printer, output ASCII
-				fputc(activeChannel->data & 0377, fcb);
+				fputc(mfr->activeChannel->data & 0377, fcb);
 			}
-			activeChannel->full = FALSE;
+			mfr->activeChannel->full = FALSE;
 			lc->printed = TRUE;
 			lc->keepInt = TRUE;
 		}
@@ -849,16 +852,16 @@ static void lp3000Io(void)
 
 	case Fc6681Output + 1:
 		// Fill image memory, just ignore that data
-		activeChannel->full = FALSE;
+		mfr->activeChannel->full = FALSE;
 		break;
 
 	case Fc6681DevStatusReq:
 		// Indicate ready plus whatever interrupts are enabled
-		activeChannel->data = StPrintReady |
+		mfr->activeChannel->data = StPrintReady |
 			(lc->flags &
 			(StPrintIntReady | StPrintIntEnd));
-		activeChannel->full = TRUE;
-		active3000Device->fcode = 0;
+		mfr->activeChannel->full = TRUE;
+		mfr->active3000Device->fcode = 0;
 		break;
 	}
 }
@@ -871,7 +874,7 @@ static void lp3000Io(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void lp3000Activate(void)
+static void lp3000Activate(u8 mfrId)
 {
 }
 
@@ -883,18 +886,20 @@ static void lp3000Activate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void lp3000Disconnect(void)
+static void lp3000Disconnect(u8 mfrId)
 {
-	FILE *fcb = active3000Device->fcb[0];
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	if (active3000Device->fcode == Fc6681Output)
+	FILE *fcb = mfr->active3000Device->fcb[0];
+
+	if (mfr->active3000Device->fcode == Fc6681Output)
 	{
 		// Rule is "space after the line is printed" so do that here
 		fputc('\n', fcb);
 #if DEBUG
 		lp3000DebugData();
 #endif
-		active3000Device->fcode = 0;
+		mfr->active3000Device->fcode = 0;
 	}
 }
 

@@ -1110,10 +1110,12 @@ u8 traceDisassembleOpcode(char *str, PpWord *pm)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void traceChannelFunction(PpWord funcCode)
+void traceChannelFunction(PpWord funcCode, u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	fprintf(devF2, "%06d [%02o]    ", traceSequenceNo & Mask31, BigIron->chasis[0]->activePpu->id);
-	fprintf(devF2, "Unclaimed function code %04o on CH%02o\n", funcCode, activeChannel->id);
+	fprintf(devF2, "Unclaimed function code %04o on CH%02o\n", funcCode, mfr->activeChannel->id);
 }
 
 /*--------------------------------------------------------------------------

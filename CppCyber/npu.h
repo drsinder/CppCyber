@@ -398,8 +398,8 @@ typedef struct tcb
 /*
 **  npu_hip.c
 */
-bool npuHipUplineBlock(NpuBuffer *bp);
-bool npuHipDownlineBlock(NpuBuffer *bp);
+bool npuHipUplineBlock(NpuBuffer *bp, u8 mfrId);
+bool npuHipDownlineBlock(NpuBuffer *bp, u8 mfrId);
 void npuLogMessage(char *format, ...);
 
 /*
@@ -414,59 +414,59 @@ void npuBipQueuePrepend(NpuBuffer *bp, NpuQueue *queue);
 NpuBuffer *npuBipQueueExtract(NpuQueue *queue);
 NpuBuffer *npuBipQueueGetLast(NpuQueue *queue);
 bool npuBipQueueNotEmpty(NpuQueue *queue);
-void npuBipNotifyServiceMessage(void);
-void npuBipNotifyData(int priority);
-void npuBipRetryInput(void);
-void npuBipNotifyDownlineReceived(void);
-void npuBipAbortDownlineReceived(void);
-void npuBipRequestUplineTransfer(NpuBuffer *bp);
-void npuBipRequestUplineCanned(u8 *msg, int msgSize);
-void npuBipNotifyUplineSent(void);
+void npuBipNotifyServiceMessage(u8 mfrId);
+void npuBipNotifyData(int priority, u8 mfrId);
+void npuBipRetryInput(u8 mfrId);
+void npuBipNotifyDownlineReceived(u8 mfrId);
+void npuBipAbortDownlineReceived(u8 mfrId);
+void npuBipRequestUplineTransfer(NpuBuffer *bp, u8 mfrId);
+void npuBipRequestUplineCanned(u8 *msg, int msgSize, u8 mfrId);
+void npuBipNotifyUplineSent(u8 mfrId);
 
 /*
 **  npu_svm.c
 */
 void npuSvmInit(void);
 void npuSvmReset(void);
-void npuSvmNotifyHostRegulation(u8 regLevel);
-void npuSvmProcessBuffer(NpuBuffer *bp);
-bool npuSvmConnectTerminal(Tcb *tp);
-void npuSvmDiscRequestTerminal(Tcb *tp);
-void npuSvmDiscReplyTerminal(Tcb *tp);
+void npuSvmNotifyHostRegulation(u8 regLevel, u8 mfrId);
+void npuSvmProcessBuffer(NpuBuffer *bp, u8 mfrId);
+bool npuSvmConnectTerminal(Tcb *tp, u8 mfrId);
+void npuSvmDiscRequestTerminal(Tcb *tp, u8 mfrId);
+void npuSvmDiscReplyTerminal(Tcb *tp, u8 mfrId);
 bool npuSvmIsReady(void);
 
 /*
 **  npu_tip.c
 */
-void npuTipInit(void);
-void npuTipReset(void);
-void npuTipProcessBuffer(NpuBuffer *bp, int priority);
-void npuTipTerminateConnection(Tcb *tp);
+void npuTipInit(u8 mfrId);
+void npuTipReset(u8 mfrId);
+void npuTipProcessBuffer(NpuBuffer *bp, int priority, u8 mfrId);
+void npuTipTerminateConnection(Tcb *tp, u8 mfrId);
 void npuTipSetupTerminalClass(Tcb *tp, u8 tc);
 bool npuTipParseFnFv(u8 *mp, int len, Tcb *tp);
 void npuTipInputReset(Tcb *tp);
-void npuTipSendUserBreak(Tcb *tp, u8 bt);
-void npuTipDiscardOutputQ(Tcb *tp);
-void npuTipNotifySent(Tcb *tp, u8 blockSeqNo);
+void npuTipSendUserBreak(Tcb *tp, u8 bt, u8 mfrId);
+void npuTipDiscardOutputQ(Tcb *tp, u8 mfrId);
+void npuTipNotifySent(Tcb *tp, u8 blockSeqNo, u8 mfrId);
 
 /*
 **  npu_net.c
 */
 int npuNetRegister(int tcpPort, int numConns, int connType);
-void npuNetInit(bool startup);
-void npuNetReset(void);
+void npuNetInit(bool startup, u8 mfrID);
+void npuNetReset(u8 mfrId);
 void npuNetConnected(Tcb *tp);
 void npuNetDisconnected(Tcb *tp);
 void npuNetSend(Tcb *tp, u8 *data, int len);
-void npuNetQueueAck(Tcb *tp, u8 blockSeqNo);
-void npuNetCheckStatus(void);
+void npuNetQueueAck(Tcb *tp, u8 blockSeqNo, u8 mfrId);
+void npuNetCheckStatus(u8 mfrId);
 
 /*
 **  npu_async.c
 */
-void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last);
-void npuAsyncProcessUplineData(Tcb *tp);
-void npuAsyncFlushUplineTransparent(Tcb *tp);
+void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId);
+void npuAsyncProcessUplineData(Tcb *tp, u8 mfrId);
+void npuAsyncFlushUplineTransparent(Tcb *tp, u8 mfrId);
 
 /*
 **  --------------------

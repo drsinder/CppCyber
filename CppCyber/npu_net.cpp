@@ -85,15 +85,17 @@ typedef struct npuConnType
 **  Private Function Prototypes
 **  ---------------------------
 */
-static void npuNetCreateThread(void);
+static void npuNetCreateThread(u8 mfrID);
 #if defined(_WIN32)
 static void npuNetThread(void *param);
+static void npuNetThread1(void *param);
 #else
 static void *npuNetThread(void *param);
+static void *npuNetThread1(void *param);
 #endif
-static void npuNetProcessNewConnection(int acceptFd, NpuConnType *ct);
+static void npuNetProcessNewConnection(int acceptFd, NpuConnType *ct, u8 mfrId);
 static void npuNetQueueOutput(Tcb *tp, u8 *data, int len);
-static void npuNetTryOutput(Tcb *tp);
+static void npuNetTryOutput(Tcb *tp, u8 mfrId);
 
 /*
 **  ----------------
@@ -186,7 +188,7 @@ int npuNetRegister(int tcpPort, int numConns, int connType)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuNetInit(bool startup)
+void npuNetInit(bool startup, u8 mfrId)
 {
 	int i;
 	int j;
@@ -240,7 +242,7 @@ void npuNetInit(bool startup)
 		/*
 		**  Create the thread which will deal with TCP connections.
 		*/
-		npuNetCreateThread();
+		npuNetCreateThread(mfrId);
 	}
 }
 
@@ -253,7 +255,7 @@ void npuNetInit(bool startup)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuNetReset(void)
+void npuNetReset(u8 mfrId)
 {
 	int i;
 	Tcb *tp = npuTcbs;
@@ -402,7 +404,7 @@ void npuNetSend(Tcb *tp, u8 *data, int len)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuNetQueueAck(Tcb *tp, u8 blockSeqNo)
+void npuNetQueueAck(Tcb *tp, u8 blockSeqNo, u8 mfrId)
 {
 	NpuBuffer *bp;
 
@@ -425,7 +427,7 @@ void npuNetQueueAck(Tcb *tp, u8 blockSeqNo)
 	/*
 	**  Try to output the data on the network connection.
 	*/
-	npuNetTryOutput(tp);
+	npuNetTryOutput(tp, mfrId);
 }
 
 /*--------------------------------------------------------------------------
@@ -436,11 +438,13 @@ void npuNetQueueAck(Tcb *tp, u8 blockSeqNo)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuNetCheckStatus(void)
+void npuNetCheckStatus(u8 mfrId)
 {
 	static fd_set readFds;
 	static fd_set writeFds;
 	struct timeval timeout;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	// ReSharper disable once CppInitializedValueIsAlwaysRewritten
 	int readySockets = 0;
 	Tcb *tp;
@@ -460,9 +464,9 @@ void npuNetCheckStatus(void)
 		/*
 		**  Handle transparent input timeout.
 		*/
-		if (tp->xInputTimerRunning && labs(activeChannel->mfr->cycles - tp->xStartCycle) >= Ms200)
+		if (tp->xInputTimerRunning && labs(mfr->activeChannel->mfr->cycles - tp->xStartCycle) >= Ms200)
 		{
-			npuAsyncFlushUplineTransparent(tp);
+			npuAsyncFlushUplineTransparent(tp, mfrId);
 		}
 
 		/*
@@ -483,7 +487,7 @@ void npuNetCheckStatus(void)
 			/*
 			**  Send data if any is pending.
 			*/
-			npuNetTryOutput(tp);
+			npuNetTryOutput(tp, mfrId);
 		}
 
 		if (FD_ISSET(tp->connFd, &readFds))
@@ -508,14 +512,14 @@ void npuNetCheckStatus(void)
 				/*
 				**  Notify SVM.
 				*/
-				npuSvmDiscRequestTerminal(tp);
+				npuSvmDiscRequestTerminal(tp, mfrId);
 			}
 			else if (tp->state == StTermHostConnected)
 			{
 				/*
 				**  Hand up to the ASYNC TIP.
 				*/
-				npuAsyncProcessUplineData(tp);
+				npuAsyncProcessUplineData(tp, mfrId);
 			}
 
 			/*
@@ -547,7 +551,7 @@ void npuNetCheckStatus(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void npuNetCreateThread(void)
+static void npuNetCreateThread(u8 mfrId)
 {
 #if defined(_WIN32)
 	DWORD dwThreadId;
@@ -559,8 +563,8 @@ static void npuNetCreateThread(void)
 	hThread = CreateThread(
 		NULL,                                       // no security attribute 
 		0,                                          // default stack size 
-		(LPTHREAD_START_ROUTINE)npuNetThread,
-		(LPVOID)NULL,                               // thread parameter 
+		(LPTHREAD_START_ROUTINE) (mfrId==0 ? npuNetThread : npuNetThread1),
+		(LPVOID)mfrId,                               // thread parameter 
 		0,                                          // not suspended 
 		&dwThreadId);                               // returns thread ID 
 
@@ -602,6 +606,8 @@ static void npuNetThread(void *param)
 static void *npuNetThread(void *param)
 #endif
 {
+	u8 mfrId = (u8)param;
+
 	int rc;
 	static fd_set selectFds;
 	static fd_set acceptFds;
@@ -729,7 +735,7 @@ static void *npuNetThread(void *param)
 					continue;
 				}
 
-				npuNetProcessNewConnection((int)acceptFd, connTypes + i);
+				npuNetProcessNewConnection((int)acceptFd, connTypes + i, mfrId);
 			}
 		}
 	}
@@ -738,6 +744,152 @@ static void *npuNetThread(void *param)
 	return(NULL);
 #endif
 }
+
+#if defined(_WIN32)
+static void npuNetThread1(void *param)
+#else
+static void *npuNetThread1(void *param)
+#endif
+{
+	u8 mfrId = (u8)param;
+
+	int rc;
+	static fd_set selectFds;
+	static fd_set acceptFds;
+	SOCKET listenFd[MaxConnTypes];
+	SOCKET acceptFd;
+	SOCKET maxFd = 0;
+	struct sockaddr_in server;
+	struct sockaddr_in from;
+	int i;
+	int optEnable = 1;
+#if defined(_WIN32)
+	int fromLen;
+	u_long blockEnable = 1;
+#else
+	socklen_t fromLen;
+#endif
+
+	FD_ZERO(&selectFds);
+	/*
+	**  Create a listening socket for every configured connection type.
+	*/
+	for (i = 0; i < numConnTypes; i++)
+	{
+		/*
+		**  Create TCP socket and bind to specified port.
+		*/
+		listenFd[i] = socket(AF_INET, SOCK_STREAM, 0);
+		if (listenFd[i] < 0)
+			// ReSharper disable once CppUnreachableCode
+		{
+			fprintf(stderr, "npuNet: Can't create socket\n");
+#if defined(_WIN32)
+			return;
+#else
+			return(NULL);
+#endif
+		}
+
+		/*
+		**  Accept will block if client drops connection attempt between select and accept.
+		**  We can't block so make listening socket non-blocking to avoid this condition.
+		*/
+#if defined(_WIN32)
+		ioctlsocket(listenFd[i], FIONBIO, &blockEnable);
+#else
+		fcntl(listenFd[i], F_SETFL, O_NONBLOCK);
+#endif
+
+		/*
+		**  Bind to configured TCP port number
+		*/
+		setsockopt(listenFd[i], SOL_SOCKET, SO_REUSEADDR, (const char *)&optEnable, sizeof(optEnable));
+		memset(&server, 0, sizeof(server));
+		server.sin_family = AF_INET;
+		server.sin_addr.s_addr = inet_addr("0.0.0.0");
+		server.sin_port = htons(connTypes[i].tcpPort);
+
+		if (bind(listenFd[i], (struct sockaddr *)&server, sizeof(server)) < 0)
+		{
+			fprintf(stderr, "npuNet: Can't bind to socket\n");
+#if defined(_WIN32)
+			return;
+#else
+			return(NULL);
+#endif
+		}
+
+		/*
+		**  Start listening for new connections on this TCP port number
+		*/
+		if (listen(listenFd[i], 5) < 0)
+		{
+			fprintf(stderr, "npuNet: Can't listen\n");
+#if defined(_WIN32)
+			return;
+#else
+			return(NULL);
+#endif
+		}
+
+		/*
+		**  Determine highest FD for later select
+		*/
+		if (maxFd < listenFd[i])
+		{
+			maxFd = listenFd[i];
+		}
+
+		/*
+		**  Add to set of listening FDs for later select
+		*/
+		FD_SET(listenFd[i], &selectFds);
+	}
+
+	for (;;)
+	{
+		/*
+		**  Wait for a connection on all sockets for the configured connection types.
+		*/
+		memcpy(&acceptFds, &selectFds, sizeof(selectFds));
+		rc = select((int)maxFd + 1, &acceptFds, NULL, NULL, NULL);
+		if (rc <= 0)
+		{
+			fprintf(stderr, "npuNetThread: select returned unexpected %d\n", rc);
+#if defined(_WIN32)
+			Sleep(1000);
+#else
+			sleep(1);
+#endif
+			continue;
+		}
+
+		/*
+		**  Find the listening socket(s) with pending connections and accept them.
+		*/
+		for (i = 0; i < numConnTypes; i++)
+		{
+			if (FD_ISSET(listenFd[i], &acceptFds))
+			{
+				fromLen = sizeof(from);
+				acceptFd = accept(listenFd[i], (struct sockaddr *)&from, &fromLen);
+				if (acceptFd == -1)
+				{
+					printf("npuNetThread: spurious connection attempt\n");
+					continue;
+				}
+
+				npuNetProcessNewConnection((int)acceptFd, connTypes + i, mfrId);
+			}
+		}
+	}
+
+#if !defined(_WIN32)
+	return(NULL);
+#endif
+}
+
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Process new TCP connection
@@ -748,7 +900,7 @@ static void *npuNetThread(void *param)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void npuNetProcessNewConnection(int acceptFd, NpuConnType *ct)
+static void npuNetProcessNewConnection(int acceptFd, NpuConnType *ct, u8 mfrId)
 {
 	u8 i;
 	Tcb *tp;
@@ -849,7 +1001,7 @@ static void npuNetProcessNewConnection(int acceptFd, NpuConnType *ct)
 	/*
 	**  Attempt connection to host.
 	*/
-	if (!npuSvmConnectTerminal(tp))
+	if (!npuSvmConnectTerminal(tp, mfrId))
 	{
 		/*
 		**  No buffers, notify user.
@@ -936,7 +1088,7 @@ static void npuNetQueueOutput(Tcb *tp, u8 *data, int len)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void npuNetTryOutput(Tcb *tp)
+static void npuNetTryOutput(Tcb *tp, u8 mfrId)
 {
 	NpuBuffer *bp;
 	u8 *data;
@@ -977,7 +1129,7 @@ static void npuNetTryOutput(Tcb *tp)
 			*/
 			if (bp->blockSeqNo != 0)
 			{
-				npuTipNotifySent(tp, bp->blockSeqNo);
+				npuTipNotifySent(tp, bp->blockSeqNo, mfrId);
 			}
 
 			npuBipBufRelease(bp);

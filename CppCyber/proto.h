@@ -86,16 +86,16 @@ ChSlot *channelInit(u8 count, MMainFrame *mfr);
 void channelTerminate(u8 mfrID);
 DevSlot *channelFindDevice(u8 channelNo, u8 devType, u8 mfrID);
 DevSlot *channelAttach(u8 channelNo, u8 eqNo, u8 devType, u8 mfrID);
-void channelFunction(PpWord funcCode);
-void channelActivate(void);
-void channelDisconnect(void);
-void channelIo(void);
-void channelCheckIfActive(void);
-void channelCheckIfFull(void);
-void channelOut(void);
-void channelIn(void);
-void channelSetFull(void);
-void channelSetEmpty(void);
+void channelFunction(PpWord funcCode, u8 mfrId);
+void channelActivate(u8 mfrId);
+void channelDisconnect(u8 mfrId);
+void channelIo(u8 mfrId);
+void channelCheckIfActive(u8 mfrId);
+void channelCheckIfFull(u8 mfrId);
+void channelOut(u8 mfrId);
+void channelIn(u8 mfrId);
+void channelSetFull(u8 mfrId);
+void channelSetEmpty(u8 mfrId);
 void channelStep(u8 mfrID);
 
 /*
@@ -186,7 +186,7 @@ void dd8xxDumpDisk(char *params);		// DRS
 **  dcc6681.c
 */
 void dcc6681Terminate(DevSlot *dp);
-void dcc6681Interrupt(bool status);
+void dcc6681Interrupt(bool status, u8 mfrId);
 
 /*
 **  ddp.c
@@ -328,11 +328,6 @@ extern MSystem *BigIron;
 /*
 ** The rest of these were harder and left for now.
 */
-
-//extern PpSlot *activePpu;
-extern ChSlot *activeChannel;
-extern DevSlot *activeDevice;
-extern DevSlot *active3000Device;
 
 extern u32 traceMask;
 extern u32 traceSequenceNo;

@@ -118,9 +118,9 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
-static bool npuSvmRequestTerminalConfig(Tcb *tp);
+static bool npuSvmRequestTerminalConfig(Tcb *tp, u8 mfrId);
 static bool npuSvmProcessTerminalConfig(Tcb *tp, NpuBuffer *bp);
-static bool npuSvmRequestTerminalConnection(Tcb *tp);
+static bool npuSvmRequestTerminalConnection(Tcb *tp, u8 mfrId);
 
 /*
 **  ----------------
@@ -261,18 +261,18 @@ void npuSvmReset(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuSvmNotifyHostRegulation(u8 regLevel)
+void npuSvmNotifyHostRegulation(u8 regLevel, u8 mfrId)
 {
 	if (svmState == StIdle || regLevel != oldRegLevel)
 	{
 		oldRegLevel = regLevel;
 		linkRegulation[BlkOffP3] = regLevel;
-		npuBipRequestUplineCanned(linkRegulation, sizeof(linkRegulation));
+		npuBipRequestUplineCanned(linkRegulation, sizeof(linkRegulation), mfrId);
 	}
 
 	if (svmState == StIdle && (regLevel & RegLvlCsAvailable) != 0)
 	{
-		npuBipRequestUplineCanned(requestSupervision, sizeof(requestSupervision));
+		npuBipRequestUplineCanned(requestSupervision, sizeof(requestSupervision), mfrId);
 		svmState = StWaitSupervision;
 	}
 }
@@ -286,9 +286,9 @@ void npuSvmNotifyHostRegulation(u8 regLevel)
 **  Returns:        TRUE if sequence started, FALSE otherwise.
 **
 **------------------------------------------------------------------------*/
-bool npuSvmConnectTerminal(Tcb *tp)
+bool npuSvmConnectTerminal(Tcb *tp, u8 mfrId)
 {
-	if (npuSvmRequestTerminalConfig(tp))
+	if (npuSvmRequestTerminalConfig(tp, mfrId))
 	{
 		tp->state = StTermRequestConfig;
 		return(TRUE);
@@ -306,7 +306,7 @@ bool npuSvmConnectTerminal(Tcb *tp)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuSvmProcessBuffer(NpuBuffer *bp)
+void npuSvmProcessBuffer(NpuBuffer *bp, u8 mfrId)
 {
 	u8 *block = bp->data;
 	Tcb *tp;
@@ -325,7 +325,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
 			**  as a SVM - forward it to the TIP which is better equipped
 			**  to deal with this.
 			*/
-			npuTipProcessBuffer(bp, 0);
+			npuTipProcessBuffer(bp, 0, mfrId);
 			return;
 		}
 
@@ -424,7 +424,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
 	case PfcNPS:
 		if (block[BlkOffSfc] == SfcNP)
 		{
-			npuBipRequestUplineCanned(responseNpuStatus, sizeof(responseNpuStatus));
+			npuBipRequestUplineCanned(responseNpuStatus, sizeof(responseNpuStatus), mfrId);
 		}
 		else
 		{
@@ -451,7 +451,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
 			// ReSharper disable once CppDeclaratorMightNotBeInitialized
 			if (npuSvmProcessTerminalConfig(tp, bp)
 				// ReSharper disable once CppDeclaratorMightNotBeInitialized
-				&& npuSvmRequestTerminalConnection(tp))
+				&& npuSvmRequestTerminalConnection(tp, mfrId))
 			{
 				// ReSharper disable once CppDeclaratorMightNotBeInitialized
 				tp->state = StTermRequestConnection;
@@ -516,7 +516,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
 			**  Terminate connection from host.
 			*/
 			// ReSharper disable once CppDeclaratorMightNotBeInitialized
-			npuTipTerminateConnection(tp);
+			npuTipTerminateConnection(tp, mfrId);
 		}
 		else if (block[BlkOffSfc] == (SfcTA | SfcResp))
 		{
@@ -553,7 +553,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-void npuSvmDiscRequestTerminal(Tcb *tp)
+void npuSvmDiscRequestTerminal(Tcb *tp, u8 mfrId)
 {
 	if (tp->state == StTermHostConnected)
 	{
@@ -561,14 +561,14 @@ void npuSvmDiscRequestTerminal(Tcb *tp)
 		**  Clean up flow control state and discard any pending output.
 		*/
 		tp->xoff = FALSE;
-		npuTipDiscardOutputQ(tp);
+		npuTipDiscardOutputQ(tp, mfrId);
 		tp->state = StTermNpuDisconnect;
 
 		/*
 		**  Send the TCN/TA/R message.
 		*/
 		requestTerminateConnection[BlkOffP3] = tp->portNumber;
-		npuBipRequestUplineCanned(requestTerminateConnection, sizeof(requestTerminateConnection));
+		npuBipRequestUplineCanned(requestTerminateConnection, sizeof(requestTerminateConnection), mfrId);
 	}
 	else
 	{
@@ -588,10 +588,10 @@ void npuSvmDiscRequestTerminal(Tcb *tp)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-void npuSvmDiscReplyTerminal(Tcb *tp)
+void npuSvmDiscReplyTerminal(Tcb *tp, u8 mfrId)
 {
 	responseTerminateConnection[BlkOffP3] = tp->portNumber;
-	npuBipRequestUplineCanned(responseTerminateConnection, sizeof(responseTerminateConnection));
+	npuBipRequestUplineCanned(responseTerminateConnection, sizeof(responseTerminateConnection), mfrId);
 }
 
 /*--------------------------------------------------------------------------
@@ -625,7 +625,7 @@ bool npuSvmIsReady(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static bool npuSvmRequestTerminalConfig(Tcb *tp)
+static bool npuSvmRequestTerminalConfig(Tcb *tp, u8 mfrId)
 {
 	NpuBuffer *bp;
 	u8 *mp;
@@ -656,7 +656,7 @@ static bool npuSvmRequestTerminalConfig(Tcb *tp)
 	/*
 	**  Send the request.
 	*/
-	npuBipRequestUplineTransfer(bp);
+	npuBipRequestUplineTransfer(bp, mfrId);
 
 	return(TRUE);
 }
@@ -753,7 +753,7 @@ static bool npuSvmProcessTerminalConfig(Tcb *tp, NpuBuffer *bp)
 **  Returns:        TRUE if request sent, FALSE otherwise.
 **
 **------------------------------------------------------------------------*/
-static bool npuSvmRequestTerminalConnection(Tcb *tp)
+static bool npuSvmRequestTerminalConnection(Tcb *tp, u8 mfrId)
 {
 	NpuBuffer *bp;
 	u8 *mp;
@@ -813,7 +813,7 @@ static bool npuSvmRequestTerminalConnection(Tcb *tp)
 	/*
 	**  Send the request.
 	*/
-	npuBipRequestUplineTransfer(bp);
+	npuBipRequestUplineTransfer(bp, mfrId);
 
 	return(TRUE);
 }

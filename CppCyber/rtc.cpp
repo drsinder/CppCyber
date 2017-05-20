@@ -63,10 +63,10 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
-static FcStatus rtcFunc(PpWord funcCode);
-static void rtcIo(void);
-static void rtcActivate(void);
-static void rtcDisconnect(void);
+static FcStatus rtcFunc(PpWord funcCode, u8 mfrId);
+static void rtcIo(u8 mfrId);
+static void rtcActivate(u8 mfrId);
+static void rtcDisconnect(u8 mfrId);
 static bool rtcInitTick(void);
 static u64 rtcGetTick(void);
 
@@ -116,6 +116,7 @@ void rtcInit(u8 increment, u32 setMHz, u8 mfrID)
 	DevSlot *dp;
 
 	(void)setMHz;
+	MMainFrame *mfr = BigIron->chasis[mfrID];
 
 	dp = channelAttach(ChClock, 0, DtRtc, mfrID);
 
@@ -125,10 +126,10 @@ void rtcInit(u8 increment, u32 setMHz, u8 mfrID)
 	dp->io = rtcIo;
 	dp->selectedUnit = 0;
 
-	activeChannel->ioDevice = dp;
-	activeChannel->hardwired = TRUE;
+	mfr->activeChannel->ioDevice = dp;
+	mfr->activeChannel->hardwired = TRUE;
 
-	activeChannel->mfrID = mfrID;
+	mfr->activeChannel->mfrID = mfrID;
 
 	if (increment == 0)
 	{
@@ -146,8 +147,8 @@ void rtcInit(u8 increment, u32 setMHz, u8 mfrID)
 	**  depending on model.
 	*/
 	rtcFull = (features & HasFullRTC) != 0;
-	activeChannel->full = rtcFull;
-	activeChannel->active = (features & HasFullRTC) != 0;
+	mfr->activeChannel->full = rtcFull;
+	mfr->activeChannel->active = (features & HasFullRTC) != 0;
 }
 
 /*--------------------------------------------------------------------------
@@ -284,7 +285,7 @@ void rtcReadUsCounter(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static FcStatus rtcFunc(PpWord funcCode)
+static FcStatus rtcFunc(PpWord funcCode, u8 mfrId)
 {
 	(void)funcCode;
 
@@ -299,11 +300,13 @@ static FcStatus rtcFunc(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void rtcIo(void)
+static void rtcIo(u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	rtcReadUsCounter();
-	activeChannel->full = rtcFull;
-	activeChannel->data = (PpWord)rtcClock & Mask12;
+	mfr->activeChannel->full = rtcFull;
+	mfr->activeChannel->data = (PpWord)rtcClock & Mask12;
 }
 
 /*--------------------------------------------------------------------------
@@ -314,7 +317,7 @@ static void rtcIo(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void rtcActivate(void)
+static void rtcActivate(u8 mfrId)
 {
 }
 
@@ -326,7 +329,7 @@ static void rtcActivate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void rtcDisconnect(void)
+static void rtcDisconnect(u8 mfrId)
 {
 }
 

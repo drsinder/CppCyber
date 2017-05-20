@@ -238,8 +238,9 @@ DevSlot *channelAttach(u8 channelNo, u8 eqNo, u8 devType, u8 mfrID)
 {
 	DevSlot *device;
 
-	activeChannel = BigIron->chasis[mfrID]->channel + channelNo;
-	device = activeChannel->firstDevice;
+	MMainFrame *mfr = BigIron->chasis[mfrID];
+	mfr->activeChannel = BigIron->chasis[mfrID]->channel + channelNo;
+	device = mfr->activeChannel->firstDevice;
 
 	/*
 	**  Try to locate existing device control block.
@@ -269,9 +270,9 @@ DevSlot *channelAttach(u8 channelNo, u8 eqNo, u8 devType, u8 mfrID)
 	/*
 	**  Link device control block into the chain of devices hanging of this channel.
 	*/
-	device->next = activeChannel->firstDevice;
-	activeChannel->firstDevice = device;
-	device->channel = activeChannel;
+	device->next = mfr->activeChannel->firstDevice;
+	mfr->activeChannel->firstDevice = device;
+	device->channel = mfr->activeChannel;
 	device->devType = devType;
 	device->eqNo = eqNo;
 	device->mfrID = mfrID;
@@ -289,20 +290,22 @@ DevSlot *channelAttach(u8 channelNo, u8 eqNo, u8 devType, u8 mfrID)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void channelFunction(PpWord funcCode)
+void channelFunction(PpWord funcCode, u8 mfrId)
 {
 	FcStatus status = FcDeclined;
 
-	activeChannel->full = FALSE;
-	for (activeDevice = activeChannel->firstDevice; activeDevice != NULL; activeDevice = activeDevice->next)
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	mfr->activeChannel->full = FALSE;
+	for (mfr->activeDevice = mfr->activeChannel->firstDevice; mfr->activeDevice != NULL; mfr->activeDevice = mfr->activeDevice->next)
 	{
-		status = activeDevice->func(funcCode);
+		status = mfr->activeDevice->func(funcCode, mfrId);
 		if (status == FcAccepted)
 		{
 			/*
 			**  Device has claimed function code - select it for I/O.
 			*/
-			activeChannel->ioDevice = activeDevice;
+			mfr->activeChannel->ioDevice = mfr->activeDevice;
 			break;
 		}
 
@@ -311,20 +314,20 @@ void channelFunction(PpWord funcCode)
 			/*
 			**  Device has processed function code - no need for I/O.
 			*/
-			activeChannel->ioDevice = NULL;
+			mfr->activeChannel->ioDevice = NULL;
 			break;
 		}
 	}
 
-	if (activeDevice == NULL || status == FcDeclined)
+	if (mfr->activeDevice == NULL || status == FcDeclined)
 	{
 		/*
 		**  No device has claimed the function code - keep channel active
 		**  and full, but disconnect device.
 		*/
-		activeChannel->ioDevice = NULL;
-		activeChannel->full = TRUE;
-		activeChannel->active = TRUE;
+		mfr->activeChannel->ioDevice = NULL;
+		mfr->activeChannel->full = TRUE;
+		mfr->activeChannel->active = TRUE;
 	}
 }
 
@@ -336,14 +339,16 @@ void channelFunction(PpWord funcCode)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void channelActivate(void)
+void channelActivate(u8 mfrId)
 {
-	activeChannel->active = TRUE;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	if (activeChannel->ioDevice != NULL)
+	mfr->activeChannel->active = TRUE;
+
+	if (mfr->activeChannel->ioDevice != NULL)
 	{
-		activeDevice = activeChannel->ioDevice;
-		activeDevice->activate();
+		mfr->activeDevice = mfr->activeChannel->ioDevice;
+		mfr->activeDevice->activate(mfrId);
 	}
 }
 
@@ -355,18 +360,20 @@ void channelActivate(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void channelDisconnect(void)
+void channelDisconnect(u8 mfrId)
 {
-	activeChannel->active = FALSE;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	if (activeChannel->ioDevice != NULL)
+	mfr->activeChannel->active = FALSE;
+
+	if (mfr->activeChannel->ioDevice != NULL)
 	{
-		activeDevice = activeChannel->ioDevice;
-		activeDevice->disconnect();
+		mfr->activeDevice = mfr->activeChannel->ioDevice;
+		mfr->activeDevice->disconnect(mfrId);
 	}
 	else
 	{
-		activeChannel->full = FALSE;
+		mfr->activeChannel->full = FALSE;
 	}
 }
 
@@ -378,16 +385,18 @@ void channelDisconnect(void)
 **  Returns:        Nothing
 **
 **------------------------------------------------------------------------*/
-void channelIo(void)
+void channelIo(u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	/*
 	**  Perform request.
 	*/
-	if ((activeChannel->active || activeChannel->id == ChClock)
-		&& activeChannel->ioDevice != NULL)
+	if ((mfr->activeChannel->active || mfr->activeChannel->id == ChClock)
+		&& mfr->activeChannel->ioDevice != NULL)
 	{
-		activeDevice = activeChannel->ioDevice;
-		activeDevice->io();
+		mfr->activeDevice = mfr->activeChannel->ioDevice;
+		mfr->activeDevice->io(mfrId);
 	}
 }
 
@@ -399,15 +408,17 @@ void channelIo(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void channelCheckIfActive(void)
+void channelCheckIfActive(u8 mfrId)
 {
-	if (activeChannel->ioDevice != NULL)
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	if (mfr->activeChannel->ioDevice != NULL)
 	{
-		activeDevice = activeChannel->ioDevice;
-		if (activeDevice->devType == DtPciChannel)
+		mfr->activeDevice = mfr->activeChannel->ioDevice;
+		if (mfr->activeDevice->devType == DtPciChannel)
 		{
-			u16 flags = activeDevice->flags();
-			activeChannel->active = (flags & MaskActive) != 0;
+			u16 flags = mfr->activeDevice->flags();
+			mfr->activeChannel->active = (flags & MaskActive) != 0;
 		}
 	}
 }
@@ -420,18 +431,20 @@ void channelCheckIfActive(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void channelCheckIfFull(void)
+void channelCheckIfFull(u8 mfrId)
 {
-	if (activeChannel->ioDevice != NULL)
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	if (mfr->activeChannel->ioDevice != NULL)
 	{
-		activeDevice = activeChannel->ioDevice;
-		if (activeDevice == nullptr)
+		mfr->activeDevice = mfr->activeChannel->ioDevice;
+		if (mfr->activeDevice == nullptr)
 			return;
 
-		if (activeDevice->devType == DtPciChannel)
+		if (mfr->activeDevice->devType == DtPciChannel)
 		{
-			u16 flags = activeDevice->flags();
-			activeChannel->full = (flags & MaskFull) != 0;
+			u16 flags = mfr->activeDevice->flags();
+			mfr->activeChannel->full = (flags & MaskFull) != 0;
 		}
 	}
 }
@@ -444,14 +457,16 @@ void channelCheckIfFull(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void channelOut(void)
+void channelOut(u8 mfrId)
 {
-	if (activeChannel->ioDevice != NULL)
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	if (mfr->activeChannel->ioDevice != NULL)
 	{
-		activeDevice = activeChannel->ioDevice;
-		if (activeDevice->devType == DtPciChannel)
+		mfr->activeDevice = mfr->activeChannel->ioDevice;
+		if (mfr->activeDevice->devType == DtPciChannel)
 		{
-			activeDevice->out(activeChannel->data);
+			mfr->activeDevice->out(mfr->activeChannel->data);
 			return;
 		}
 	}
@@ -465,14 +480,16 @@ void channelOut(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void channelIn(void)
+void channelIn(u8 mfrId)
 {
-	if (activeChannel->ioDevice != 0 )  //NULL)
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	if (mfr->activeChannel->ioDevice != 0 )  //NULL)
 	{
-		activeDevice = activeChannel->ioDevice;
-		if (activeDevice->devType == DtPciChannel)
+		mfr->activeDevice = mfr->activeChannel->ioDevice;
+		if (mfr->activeDevice->devType == DtPciChannel)
 		{
-			activeChannel->data = activeDevice->in();
+			mfr->activeChannel->data = mfr->activeDevice->in();
 			return;
 		}
 	}
@@ -486,18 +503,20 @@ void channelIn(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void channelSetFull(void)
+void channelSetFull(u8 mfrId)
 {
-	if (activeChannel->ioDevice != NULL)
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	if (mfr->activeChannel->ioDevice != NULL)
 	{
-		activeDevice = activeChannel->ioDevice;
-		if (activeDevice->devType == DtPciChannel)
+		mfr->activeDevice = mfr->activeChannel->ioDevice;
+		if (mfr->activeDevice->devType == DtPciChannel)
 		{
-			activeDevice->full();
+			mfr->activeDevice->full();
 		}
 	}
 
-	activeChannel->full = TRUE;
+	mfr->activeChannel->full = TRUE;
 }
 
 /*--------------------------------------------------------------------------
@@ -508,21 +527,23 @@ void channelSetFull(void)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void channelSetEmpty(void)
+void channelSetEmpty(u8 mfrId)
 {
-	if (activeChannel->ioDevice != NULL)
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	if (mfr->activeChannel->ioDevice != NULL)
 	{
-		activeDevice = activeChannel->ioDevice;
-		if (activeDevice == nullptr)
+		mfr->activeDevice = mfr->activeChannel->ioDevice;
+		if (mfr->activeDevice == nullptr)
 			goto out;
 
-		if (activeDevice->devType == DtPciChannel)
+		if (mfr->activeDevice->devType == DtPciChannel)
 		{
-			activeDevice->empty();
+			mfr->activeDevice->empty();
 		}
 	}
 	out:
-	activeChannel->full = FALSE;
+	mfr->activeChannel->full = FALSE;
 }
 
 /*--------------------------------------------------------------------------

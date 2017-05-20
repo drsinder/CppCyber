@@ -101,13 +101,6 @@ MSystem *BigIron;
 ** The rest of these were harder and left for now.
 */
 
-//MCpu *Acpu[MaxCpus];
-
-//PpSlot *activePpu;
-ChSlot *activeChannel;
-DevSlot *activeDevice;
-DevSlot *active3000Device;
-
 char persistDir[256];
 char printDir[256];	
 char printApp[256];	
