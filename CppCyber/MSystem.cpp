@@ -860,10 +860,6 @@ void MSystem::InitEquipment()
 			exit(1);
 		}
 
-		///////////////////////////////
-		// ReSharper disable once CppInitializedValueIsAlwaysRewritten
-		int mainframeNo = 0;
-
 #if MaxMainFrames == 2
 		/*
 		**  Parse mainfame number.
@@ -876,7 +872,7 @@ void MSystem::InitEquipment()
 			exit(1);
 		}
 
-		mainframeNo = strtol(token, nullptr, 8);
+		int mainframeNo = strtol(token, nullptr, 8);
 
 		if (mainframeNo < 0 || mainframeNo >= initMainFrames)
 		{
@@ -885,8 +881,6 @@ void MSystem::InitEquipment()
 			exit(1);
 		}
 #endif
-		//////////////////////////////
-
 		/*
 		**  Parse optional file name.
 		*/
