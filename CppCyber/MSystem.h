@@ -38,7 +38,7 @@ public:
 	void CreateMainFrames();
 
 	void InitDeadstart(u8 mfrId);
-	void InitNpuConnections();
+	void InitNpuConnections(u8 mfrId);
 	void InitEquipment();
 	static u32 ConvertEndian(u32 value);
 

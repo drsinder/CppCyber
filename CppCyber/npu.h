@@ -343,6 +343,7 @@ typedef struct tcb
     */
     TermConnState       state;
     u8                  portNumber;
+	u8					mfrId;
     bool                active;
     bool                hostDisconnect;
     bool                breakPending;
@@ -452,7 +453,7 @@ void npuTipNotifySent(Tcb *tp, u8 blockSeqNo, u8 mfrId);
 /*
 **  npu_net.c
 */
-int npuNetRegister(int tcpPort, int numConns, int connType);
+int npuNetRegister(int tcpPort, int numConns, int connType, u8 mdrId);
 void npuNetInit(bool startup, u8 mfrID);
 void npuNetReset(u8 mfrId);
 void npuNetConnected(Tcb *tp);

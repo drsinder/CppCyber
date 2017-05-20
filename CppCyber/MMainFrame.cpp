@@ -168,6 +168,7 @@ void MMainFrame::Init(u8 id, long memory)
 	}
 
 	BigIron->InitDeadstart(mainFrameID);
+	BigIron->InitNpuConnections(mainFrameID);
 
 	if (mainFrameID == BigIron->initMainFrames - 1)
 	{

@@ -77,6 +77,7 @@ typedef struct npuConnType
 	u16                 tcpPort;
 	int                 numConns;
 	u8                  connType;
+	u8					mfrId;
 	Tcb                 *startTcb;
 } NpuConnType;
 
@@ -143,7 +144,7 @@ static int pollIndex = 0;
 **                  NpuNetRegDupl: duplicate TCP port specified
 **
 **------------------------------------------------------------------------*/
-int npuNetRegister(int tcpPort, int numConns, int connType)
+int npuNetRegister(int tcpPort, int numConns, int connType, u8 mfrId)
 {
 	/*
 	** Check for too many registrations.
@@ -170,6 +171,7 @@ int npuNetRegister(int tcpPort, int numConns, int connType)
 	connTypes[numConnTypes].tcpPort = tcpPort;
 	connTypes[numConnTypes].numConns = numConns;
 	connTypes[numConnTypes].connType = connType;
+	connTypes[numConnTypes].mfrId = mfrId;
 	numConnTypes += 1;
 	npuNetTcpConns += numConns;
 
@@ -190,37 +192,42 @@ void npuNetInit(bool startup, u8 mfrId)
 {
 	int i;
 
-	/*
-	**  Initialise network part of TCBs.
-	*/
-	Tcb *tp = npuTcbs;
-	for (i = 0; i < npuNetTcpConns; i++, tp++)
+	if (mfrId == 0)
 	{
-		tp->state = StTermIdle;
-		tp->connFd = 0;
-	}
 
-	/*
-	** Initialise connection type specific TCB values.
-	*/
-	tp = npuTcbs;
-	for (i = 0; i < numConnTypes; i++)
-	{
-		connTypes[i].startTcb = tp;
-		int numConns = connTypes[i].numConns;
-		u8 connType = connTypes[i].connType;
-
-		for (int j = 0; j < numConns; j++, tp++)
+		/*
+		**  Initialise network part of TCBs.
+		*/
+		Tcb *tp = npuTcbs;
+		for (i = 0; i < npuNetTcpConns; i++, tp++)
 		{
-			tp->connType = connType;
+			tp->state = StTermIdle;
+			tp->connFd = 0;
 		}
+
+		/*
+		** Initialise connection type specific TCB values.
+		*/
+		tp = npuTcbs;
+		for (i = 0; i < numConnTypes; i++)
+		{
+			connTypes[i].startTcb = tp;
+			int numConns = connTypes[i].numConns;
+			u8 connType = connTypes[i].connType;
+
+			for (int j = 0; j < numConns; j++, tp++)
+			{
+				tp->connType = connType;
+				tp->mfrId = connTypes[i].mfrId;
+			}
+		}
+
+		/*
+		**  Setup for input data processing.
+		*/
+		pollIndex = npuNetTcpConns;
+
 	}
-
-	/*
-	**  Setup for input data processing.
-	*/
-	pollIndex = npuNetTcpConns;
-
 	/*
 	**  Only do the following when the emulator starts up.
 	*/
@@ -572,7 +579,7 @@ static void npuNetCreateThread(u8 mfrId)
 	**  Create POSIX thread with default attributes.
 	*/
 	pthread_attr_init(&attr);
-	rc = pthread_create(&thread, &attr, npuNetThread, NULL);
+	rc = pthread_create(&thread, &attr, (mfrId == 0 ? npuNetThread : npuNetThread1), NULL);
 	if (rc < 0)
 	{
 		fprintf(stderr, "Failed to create npuNet thread\n");
@@ -620,6 +627,8 @@ static void *npuNetThread(void *param)
 	*/
 	for (i = 0; i < numConnTypes; i++)
 	{
+		if (mfrId == 1)
+			continue;
 		/*
 		**  Create TCP socket and bind to specified port.
 		*/
@@ -714,6 +723,8 @@ static void *npuNetThread(void *param)
 		*/
 		for (i = 0; i < numConnTypes; i++)
 		{
+			if (mfrId != connTypes[i].mfrId)
+				continue;
 			if (FD_ISSET(listenFd[i], &acceptFds))
 			{
 				// ReSharper disable once CppJoinDeclarationAndAssignment
@@ -767,6 +778,9 @@ static void *npuNetThread1(void *param)
 	*/
 	for (i = 0; i < numConnTypes; i++)
 	{
+		if (mfrId == 0)
+			continue;
+
 		/*
 		**  Create TCP socket and bind to specified port.
 		*/
@@ -840,6 +854,8 @@ static void *npuNetThread1(void *param)
 
 	for (;;)
 	{
+		if (mfrId != connTypes[i].mfrId)
+			continue;
 		/*
 		**  Wait for a connection on all sockets for the configured connection types.
 		*/

@@ -378,7 +378,7 @@ static void scrExecute(PpWord func, u8 mfrId)
 		if (BigIron->chasis[mfr->activeDevice->mfrID]->Acpu[0]->cpu.cpuStopped
 			|| (BigIron->initCpus > 1 && BigIron->chasis[mfr->activeDevice->mfrID]->Acpu[1]->cpu.cpuStopped)) //DRS??!!
 #else
-		if (BigIron->chasis[activeDevice->mfrID]->Acpu[0]->cpu.cpuStopped)
+		if (BigIron->chasis[mfrId]->Acpu[0]->cpu.cpuStopped)
 #endif
 		{
 			scrSetBit(scrRegister, 0300);

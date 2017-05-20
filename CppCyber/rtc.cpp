@@ -241,7 +241,7 @@ void rtcReadUsCounter()
 	if (static_cast<i64>(newt) < static_cast<i64>(old))
 	{
 		/* Ignore ticks if they go backward */
-		printf("Ignored clock tick\n");
+		//printf("Ignored clock tick\n");
 		old = newt;
 		return;
 	}

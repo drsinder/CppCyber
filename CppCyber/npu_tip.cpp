@@ -267,33 +267,35 @@ void npuTipInit(u8 mfrId)
 	/*
 	**  Allocate TCBs.
 	*/
-	npuTcbCount = npuNetTcpConns;
-	npuTcbs = static_cast<Tcb*>(calloc(npuTcbCount, sizeof(Tcb)));
-	if (npuTcbs == nullptr)
+	if (mfrId == 0)
 	{
-		fprintf(stderr, "Failed to allocate NPU TCBs\n");
-		exit(1);
+		npuTcbCount = npuNetTcpConns;
+		npuTcbs = static_cast<Tcb*>(calloc(npuTcbCount, sizeof(Tcb)));
+		if (npuTcbs == nullptr)
+		{
+			fprintf(stderr, "Failed to allocate NPU TCBs\n");
+			exit(1);
+		}
+
+		/*
+		**  Initialize default terminal class parameters.
+		*/
+		npuTipSetupDefaultTc2();
+		npuTipSetupDefaultTc3();
+		npuTipSetupDefaultTc7();
+
+		/*
+		**  Initialise TCBs.
+		*/
+		Tcb *tp = npuTcbs;
+		for (int i = 0; i < npuNetTcpConns; i++, tp++)
+		{
+			tp->portNumber = i + 1;
+			tp->params = defaultTc3;
+			tp->tipType = TtASYNC;
+			npuTipInputReset(tp);
+		}
 	}
-
-	/*
-	**  Initialize default terminal class parameters.
-	*/
-	npuTipSetupDefaultTc2();
-	npuTipSetupDefaultTc3();
-	npuTipSetupDefaultTc7();
-
-	/*
-	**  Initialise TCBs.
-	*/
-	Tcb *tp = npuTcbs;
-	for (int i = 0; i < npuNetTcpConns; i++, tp++)
-	{
-		tp->portNumber = i + 1;
-		tp->params = defaultTc3;
-		tp->tipType = TtASYNC;
-		npuTipInputReset(tp);
-	}
-
 	/*
 	**  Initialise network.
 	*/
@@ -310,20 +312,23 @@ void npuTipInit(u8 mfrId)
 **------------------------------------------------------------------------*/
 void npuTipReset(u8 mfrId)
 {
-	Tcb *tp = npuTcbs;
-
-	/*
-	**  Iterate through all TCBs.
-	*/
-	for (int i = 0; i < npuNetTcpConns; i++, tp++)
+	if (mfrId == 0)
 	{
-		memset(tp, 0, sizeof(Tcb));
-		tp->portNumber = i + 1;
-		tp->params = defaultTc3;
-		tp->tipType = TtASYNC;
-		npuTipInputReset(tp);
-	}
 
+		Tcb *tp = npuTcbs;
+
+		/*
+		**  Iterate through all TCBs.
+		*/
+		for (int i = 0; i < npuNetTcpConns; i++, tp++)
+		{
+			memset(tp, 0, sizeof(Tcb));
+			tp->portNumber = i + 1;
+			tp->params = defaultTc3;
+			tp->tipType = TtASYNC;
+			npuTipInputReset(tp);
+		}
+	}
 	/*
 	**  Re-initialise network.
 	*/

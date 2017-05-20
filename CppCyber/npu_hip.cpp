@@ -205,7 +205,7 @@ void npuInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 {
 
 	if (mfrID == 1)
-		return;	// do not init two instances!  DRS??!!
+		return;	// do not init two instances for now!  DRS??!!
 
 	MMainFrame *mfr = BigIron->chasis[mfrID];
 
@@ -247,8 +247,11 @@ void npuInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	/*
 	**  Initialise BIP, SVC and TIP.
 	*/
-	npuBipInit();
-	npuSvmInit();
+	if (mfrID == 0)
+	{
+		npuBipInit();
+		npuSvmInit();
+	}
 	npuTipInit(mfrID);
 
 	/*

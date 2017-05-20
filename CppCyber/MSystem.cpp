@@ -178,9 +178,6 @@ void MSystem::InitStartup(char *config)
 	printf("Starting initialisation\n");
 
 	InitCyber(config);
-	//InitDeadstart();
-	InitNpuConnections();
-
 }
 
 void MSystem::FinishInitFile() const
@@ -631,7 +628,7 @@ void MSystem::InitDeadstart(u8 mfrId)
 **  Returns : Nothing.
 **
 **------------------------------------------------------------------------*/
-void MSystem::InitNpuConnections()
+void MSystem::InitNpuConnections(u8 mfrId)
 {
 	char *line;
 	u8 connType;
@@ -641,9 +638,12 @@ void MSystem::InitNpuConnections()
 		/*
 		**  Default is the classic port 6610, 10 connections and raw TCP connection.
 		*/
-		npuNetRegister(6610, 10, ConnTypeRaw);
+		npuNetRegister(6610+ mfrId, 10, ConnTypeRaw, mfrId);
 		return;
 	}
+
+	if (mfrId == 1)
+		strcat(npuConnections, "1");
 
 	if (!initOpenSection(npuConnections))
 	{
@@ -735,7 +735,7 @@ void MSystem::InitNpuConnections()
 		/*
 		**  Setup NPU connection type.
 		*/
-		int rc = npuNetRegister(tcpPort, numConns, connType);
+		int rc = npuNetRegister(tcpPort, numConns, connType, mfrId);
 		switch (rc)
 		{
 		case NpuNetRegOk:
@@ -860,6 +860,8 @@ void MSystem::InitEquipment()
 			exit(1);
 		}
 
+		int mainframeNo = 0;
+
 #if MaxMainFrames == 2
 		/*
 		**  Parse mainfame number.
@@ -872,7 +874,7 @@ void MSystem::InitEquipment()
 			exit(1);
 		}
 
-		int mainframeNo = strtol(token, nullptr, 8);
+		mainframeNo = strtol(token, nullptr, 8);
 
 		if (mainframeNo < 0 || mainframeNo >= initMainFrames)
 		{
