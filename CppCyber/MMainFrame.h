@@ -50,6 +50,9 @@ public:
 	DevSlot *activeDevice;
 	DevSlot *active3000Device;
 
+	u16 deadstartPanel[MaxDeadStart];
+	u8 deadstartCount;
+
 	//u16 mux6676TelnetPort;
 	//u16 mux6676TelnetConns;
 	//u16 npuNetTelnetPort;

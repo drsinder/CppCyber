@@ -332,17 +332,17 @@ extern MSystem *BigIron;
 extern u32 traceMask;
 extern u32 traceSequenceNo;
 
-extern DevDesc deviceDesc[];
-extern u8 deviceCount;
-
-extern volatile bool opActive;
 extern u16 mux6676TelnetPort;
 extern u16 mux6676TelnetConns;
 extern u16 npuNetTcpConns;
 
+
+// leave these below global
+extern volatile bool opActive;
+extern DevDesc deviceDesc[];
+extern u8 deviceCount;
 extern u32 features;
 extern u32 rtcClock;
-//extern double clockx;
 
 extern bool autoDate;		// enter date/time automatically - year 98
 extern bool autoDate1;		// enter date/time automatically - year 98
@@ -354,7 +354,7 @@ extern char printDir[];
 extern char printApp[];
 
 /*
-** Charset translation maps  - charset.cpp
+** Charset translation maps  - charset.cpp - leave global!
 */
 extern const u8 asciiToCdc[256];
 extern const char cdcToAscii[64];

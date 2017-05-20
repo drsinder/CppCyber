@@ -37,7 +37,7 @@ public:
 	void FinishInitFile();
 	void CreateMainFrames();
 
-	void InitDeadstart();
+	void InitDeadstart(u8 mfrId);
 	void InitNpuConnections();
 	void InitEquipment();
 	static u32 ConvertEndian(u32 value);
@@ -68,8 +68,8 @@ public:
 	long esmBanks;
 	long pps;
 
-	u16 deadstartPanel[MaxDeadStart];
-	u8 deadstartCount;
+	//u16 deadstartPanel[MaxDeadStart];
+	//u8 deadstartCount;
 
 	CpWord *extMem;
 	u32 extMaxMemory;

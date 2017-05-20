@@ -85,6 +85,7 @@ void MSystem::CreateMainFrames()
 		chasis[i]->Init(i, memory);
 	}
 
+
 	// allocate ecs/ems here
 	switch (ecsBanks != 0 ? ECS : ESM)
 	{
@@ -182,16 +183,9 @@ void MSystem::InitStartup(char *config)
 	printf("Starting initialisation\n");
 
 	InitCyber(config);
-	InitDeadstart();
+	//InitDeadstart();
 	InitNpuConnections();
-	//InitEquipment();
 
-	//fclose(fcb);
-
-	//if ((features & HasMaintenanceChannel) != 0)
-	//{
-	//	mchInit(0, 0, ChMaintenance, NULL);
-	//}
 }
 
 void MSystem::FinishInitFile()
@@ -593,12 +587,16 @@ void MSystem::InitCyber(char *config)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void MSystem::InitDeadstart(void)
+void MSystem::InitDeadstart(u8 mfrId)
 {
 	char *line;
 	char *token;
 	u8 lineNo;
 
+	if(mfrId == 1)
+	{
+		strcat(deadstart, "1");
+	}
 
 	if (!initOpenSection(deadstart))
 	{
@@ -627,10 +625,10 @@ void MSystem::InitDeadstart(void)
 			exit(1);
 		}
 
-		deadstartPanel[lineNo++] = (u16)strtol(token, NULL, 8);
+		this->chasis[mfrId]->deadstartPanel[lineNo++] = (u16)strtol(token, NULL, 8);
 	}
 
-	deadstartCount = lineNo + 1;
+	this->chasis[mfrId]->deadstartCount = lineNo + 1;
 }
 
 /*--------------------------------------------------------------------------
@@ -789,7 +787,6 @@ void MSystem::InitEquipment()
 	int eqNo;
 	int unitNo;
 	int channelNo;
-	int mainframeNo;
 	u8 deviceIndex;
 	int lineNo;
 
@@ -882,7 +879,8 @@ void MSystem::InitEquipment()
 		}
 
 		///////////////////////////////
-		mainframeNo = 0;
+		// ReSharper disable once CppInitializedValueIsAlwaysRewritten
+		int mainframeNo = 0;
 
 #if MaxMainFrames == 2
 		/*
@@ -917,8 +915,6 @@ void MSystem::InitEquipment()
 		*/
 		deviceDesc[deviceIndex].init((u8)mainframeNo, (u8)eqNo, (u8)unitNo, (u8)channelNo, deviceName);
 	}
-
-	FinishInitFile();
 }
 
 void MSystem::Terminate(void)

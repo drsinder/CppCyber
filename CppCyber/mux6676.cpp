@@ -136,6 +136,10 @@ void mux6676Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	PortParam *mp;
 	u8 i;
 
+	if (mfrID == 1)
+		return;	// do not init two instances!  DRS??!!
+
+
 	(void)unitNo;
 	(void)deviceName;
 

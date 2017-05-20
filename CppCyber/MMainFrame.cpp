@@ -170,8 +170,13 @@ void MMainFrame::Init(u8 id, long memory)
 		Acpu[i]->Init(BigIron->model, this);
 	}
 
+	BigIron->InitDeadstart(mainFrameID);
+
 	if (mainFrameID == BigIron->initMainFrames - 1)
+	{
 		BigIron->InitEquipment();
+		BigIron->FinishInitFile();
+	}
 
 }
 

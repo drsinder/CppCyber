@@ -205,13 +205,13 @@ static void deadIo(u8 mfrId)
 
 	if (!mfr->activeChannel->full)
 	{
-		if (dsSequence == BigIron->deadstartCount)
+		if (dsSequence == mfr->deadstartCount)
 		{
 			mfr->activeChannel->active = FALSE;
 		}
 		else
 		{
-			mfr->activeChannel->data = BigIron->deadstartPanel[dsSequence++] & Mask12;
+			mfr->activeChannel->data = mfr->deadstartPanel[dsSequence++] & Mask12;
 			mfr->activeChannel->full = TRUE;
 			//printf("\ndeadIo on mfr %d data %4o # %d", activeChannel->mfrID, activeChannel->data, dsSequence-1);
 		}
@@ -226,13 +226,13 @@ static void deadIo1(u8 mfrId)
 	//printf("deadIo on mfr %d\n", activeChannel->mfrID);
 	if (!mfr->activeChannel->full)
 	{
-		if (dsSequence1 == BigIron->deadstartCount)
+		if (dsSequence1 == mfr->deadstartCount)
 		{
 			mfr->activeChannel->active = FALSE;
 		}
 		else
 		{
-			mfr->activeChannel->data = BigIron->deadstartPanel[dsSequence1++] & Mask12;
+			mfr->activeChannel->data = mfr->deadstartPanel[dsSequence1++] & Mask12;
 			mfr->activeChannel->full = TRUE;
 			//printf("\ndeadIo1 on mfr %d data %4o # %d", activeChannel->mfrID, activeChannel->data, dsSequence1-1);
 		}
