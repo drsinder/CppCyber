@@ -201,8 +201,6 @@ void MSystem::InitCyber(char *config)
 	long mask;
 	long port;
 	long conns;
-	//long clockIncrement;
-	//long setMHz;
 
 	autoRemovePaper = 0;
 	initCpus = 1;
@@ -766,11 +764,14 @@ void MSystem::InitNpuConnections(u8 mfrId)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void MSystem::InitEquipment()
+void MSystem::InitEquipment(u8 mfrId)
 {
 	char *line;
 	char *token;
 	u8 deviceIndex;
+
+	if (mfrId == 1)
+		strcat(equipment, "1");
 
 	if (!initOpenSection(equipment))
 	{
@@ -860,29 +861,6 @@ void MSystem::InitEquipment()
 			exit(1);
 		}
 
-		int mainframeNo = 0;
-
-#if MaxMainFrames == 2
-		/*
-		**  Parse mainfame number.
-		*/
-		token = strtok_s(nullptr, ", ", &next_token1);
-		if (token == nullptr || strlen(token) != 1 || !isoctal(token[0]))
-		{
-			fprintf(stderr, "Section [%s], relative line %d, invalid mainframe no %s in %s\n",
-				equipment, lineNo, token == nullptr ? "NULL" : token, startupFile);
-			exit(1);
-		}
-
-		mainframeNo = strtol(token, nullptr, 8);
-
-		if (mainframeNo < 0 || mainframeNo >= initMainFrames)
-		{
-			fprintf(stderr, "Section [%s], relative line %d, mainframe no %s not permitted in %s\n",
-				equipment, lineNo, token == nullptr ? "NULL" : token, startupFile);
-			exit(1);
-		}
-#endif
 		/*
 		**  Parse optional file name.
 		*/
@@ -891,7 +869,7 @@ void MSystem::InitEquipment()
 		/*
 		**  Initialise device.
 		*/
-		deviceDesc[deviceIndex].init(static_cast<u8>(mainframeNo), static_cast<u8>(eqNo), static_cast<u8>(unitNo), static_cast<u8>(channelNo), deviceName);
+		deviceDesc[deviceIndex].init(static_cast<u8>(mfrId), static_cast<u8>(eqNo), static_cast<u8>(unitNo), static_cast<u8>(channelNo), deviceName);
 	}
 }
 

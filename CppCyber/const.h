@@ -25,12 +25,40 @@
 **
 **--------------------------------------------------------------------------
 */
-
 /*
 **  ----------------
 **  Public Constants
 **  ----------------
 */
+/*
+**--------------------------------------------------------------
+**	DUAL CPU /Dual Mainframe support
+**
+**	Note that some sections of code are duplicated for
+**	Dual CPU and Dual Mainframe due to concerns with
+**	lack of thread safety in C code sections.  It would
+**	be nice to make these classes, however, member
+**	functions generally can not be used as function
+**	pointers which kills the idea here where function
+**	pointers in channels and devices abound.
+**
+**	IMPORTANT:
+**	Also Note that use of MaxMainFrames = 2 requires
+**	an extra parameter for each line in the cyber.ini
+**	equipment section to assign equipment to mainframes
+**	0 or 1.  This comes as the last required parameter,
+**	after channel.
+**
+**	You can change MaxCpus to 1 or 2 as appropriate.
+**	You can change MaxMainFrames to 1 or 2 as appropriate.
+**-----------------------------------------------------------
+*/
+
+#define	MaxCpus					1		// CPUs per mainframe
+#define	MaxMainFrames			1		// Mainframes
+
+/*=========================================================*/
+
 #define DtCyberVersion          "Desktop CYBER++ 5.5.2"
 #define DtCyberCopyright        "Copyright (C) Tom Hunter"
 #define DtCyberLicense          "Licensed under the terms of the GNU General Public License version 3"
@@ -69,34 +97,7 @@
 */
 #define CcDumpDisk              0	// DRS
 
-/*
-**--------------------------------------------------------------
-**	DUAL CPU /Mainframe support
-**
-**	Note that some sections of code are duplicated for
-**	Dual CPU and Dual Mainframe due to concerns with
-**	lack of thread safety in C code sections.  It would
-**	be nice to make these classes, however, member
-**	functions generally can not be used as function
-**	pointers which kills the idea here where function
-**	pointers in channels and devices abound.
-**
-**	IMPORTANT:
-**	Also Note that use of MaxMainFrames = 2 requires
-**	an extra parameter for each line in the cyber.ini
-**	equipment section to assign equipment to mainframes
-**	0 or 1.  This comes as the last required parameter,
-**	after channel.
-**
-**	You can change MaxCpus to 1 or 2 as appropriate.
-**	You can change MaxMainFrames to 1 or 2 as appropriate.
-**-----------------------------------------------------------
-*/
 
-#define	MaxCpus					1		// CPUs per mainframe
-#define	MaxMainFrames			1		// Mainframes
-
-/*=========================================================*/
 /*
 **  Measure cycle time
 */

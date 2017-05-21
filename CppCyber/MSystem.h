@@ -39,7 +39,7 @@ public:
 
 	void InitDeadstart(u8 mfrId);
 	void InitNpuConnections(u8 mfrId);
-	void InitEquipment();
+	void InitEquipment(u8 mfrId);
 	static u32 ConvertEndian(u32 value);
 
 	bool bigEndian;

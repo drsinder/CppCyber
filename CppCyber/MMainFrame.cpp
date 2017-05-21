@@ -41,6 +41,7 @@ void MMainFrame::Init(u8 id, long memory)
 {
 	mainFrameID = id;
 	traceMask = traceMaskx;
+	traceSequenceNo = 0;
 
 #if MaxMainFrames == 2 || MaxCpus == 2
 	INIT_MUTEX(&PpuMutex, 0x0400000);
@@ -169,10 +170,10 @@ void MMainFrame::Init(u8 id, long memory)
 
 	BigIron->InitDeadstart(mainFrameID);
 	BigIron->InitNpuConnections(mainFrameID);
+	BigIron->InitEquipment(mainFrameID);
 
 	if (mainFrameID == BigIron->initMainFrames - 1)
 	{
-		BigIron->InitEquipment();
 		BigIron->FinishInitFile();
 	}
 
