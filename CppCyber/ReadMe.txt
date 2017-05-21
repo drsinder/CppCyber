@@ -113,24 +113,27 @@ A number of other features were added - cyber.ini
 6)  Set date and time automatically (year 1998)
 	autodate=enter date
 
-If the program has been compiled with 2 mainframe support an
-additional parameter is required for each line in the
-cyber.ini [equipment] section:  The mainframe to which to
-attach the equipment.  The parameter, 0 or 1, goes after 
-the channel number.
+If the program has been compiled with 2 mainframe support 
+sections other than [cyber] require two copies.  The usual
+for mainframe 0 and another with a name same as the MF 0 
+section but with a "1" appended:
 
 Example cyber.ini:
 
 ;------------------------------------------------------------------------
 ;
 ;   Copyright (c) 2016, Tom Hunter (see license.txt)
-;   Dual CPU and Dual Mainframe support by Dale Sinder 2017
 ;
 ;
 ;   Name: cyber.ini
 ;
 ;   Description:
 ;       Define emulation and deadstart parameters.
+;
+;   Single/Dual CPU and Single/Dual Mainframe compatible.
+;   For dual MF start MF 1 first and wait 30 sec before starting 0.
+;   Then run Cybis on MF 0 only.  MF 1 can do other things.
+;   Dale Sinder
 ;
 ;   Supported OSs:
 ;       NOS 2.8.7 PSR 871 with CYBIS
@@ -143,7 +146,7 @@ Example cyber.ini:
 [cyber]
 model=CYBER865
 deadstart=deadstart.cybis
-equipment=equipment.cybis2mf
+equipment=equipment.cybis
 npuConnections=npu.cybis
 clock=0
 memory=4000000
@@ -154,8 +157,9 @@ printDir=Prints/
 printApp=D:\Applications\CybisRelease1\Mail2.exe
 autoRemovePaper=1
 cpuratio=4
+priority=above_normal
 autodate=enter date
-;  trace=017777777777    
+autodateyear=98
 
 [npu.cybis]
 ; tcp-port,num-conns,type
@@ -163,8 +167,11 @@ autodate=enter date
 8005,30,pterm
 6620,2,rs232
 
+[npu.cybis1]
+; tcp-port,num-conns,type
+; 6611,32,raw
+
 [equipment.cybis]
-; single mainframe compile section
 ; type,eqNo,unitNo,channel,path
 DD885,0,0,01,Disks/DM01_SYSTFA
 DD885,0,0,02,Disks/DM02_SYSTFA
@@ -191,56 +198,32 @@ TPM,0,0,15
 NPU,7,0,05
 ;  
 
-[equipment.cybis2mf]
-; dual mainframe compile section
-; type,eqNo,unitNo,channel,mainframe,path
-DD885,0,0,01,0,Disks/DM01_SYSTFA
-DD885,0,0,02,0,Disks/DM02_SYSTFA
-DD885,0,0,03,0,Disks/DM03_CYBDEV 
-DD885,0,0,04,0,Disks/DM04_BINARY 
-DD885,0,1,01,0,Disks/DM11_DEV0   
-DD885,0,1,02,0,Disks/DM12_CYB0   
-DD885,0,1,03,0,Disks/DM13_CYB1   
-DD885,0,1,04,0,Disks/DM14_CYB2   
-DD885,0,2,01,0,Disks/DM21_UOL    
-DD885,0,2,02,0,Disks/DM22_PUB0   
-DD885,0,2,03,0,Disks/DM23_PUB1   
-DD885,0,2,04,0,Disks/DM24_CYB3
-; DD885,0,3,01,0,Disks/DM31_DRS
-CO6612,0,0,10,0
-LP512,7,0,07,0,3555
-CR3447,7,0,11,0
-CP3446,6,0,11,0
-MT679,0,0,13,0,Deadstart/CYBIS_15DS.tap 
-MT679,0,1,13,0
-MT679,0,2,13,0
-MT679,0,3,13,0
-TPM,0,0,15,0
-NPU,7,0,05,0
+[equipment.cybis1]
+; type,eqNo,unitNo,channel,path
+DD885,0,0,01,Disks/DM01_SYSTFA
+DD885,0,0,02,Disks/DM02_SYSTFA
+DD885,0,0,03,Disks/DM03_CYBDEV 
+DD885,0,0,04,Disks/DM04_BINARY 
+DD885,0,1,01,Disks/DM11_DEV0   
+DD885,0,1,02,Disks/DM12_CYB0   
+DD885,0,1,03,Disks/DM13_CYB1   
+DD885,0,1,04,Disks/DM14_CYB2   
+DD885,0,2,01,Disks/DM21_UOL    
+DD885,0,2,02,Disks/DM22_PUB0   
+DD885,0,2,03,Disks/DM23_PUB1   
+DD885,0,2,04,Disks/DM24_CYB3
+; DD885,0,3,01,Disks/DM31_DRS
+CO6612,0,0,10
+LP512,7,0,07,3555
+CR3447,7,0,11
+CP3446,6,0,11
+MT679,0,0,13,Deadstart/CYBIS_15DS.tap 
+MT679,0,1,13
+MT679,0,2,13
+MT679,0,3,13
+; TPM,0,0,15
+; NPU,7,0,05
 ;  
-DD885,0,0,01,1,Disks/DM01_SYSTFA
-DD885,0,0,01,1,Disks/DM01_SYSTFA
-DD885,0,0,02,1,Disks/DM02_SYSTFA
-DD885,0,0,03,1,Disks/DM03_CYBDEV
-DD885,0,0,04,1,Disks/DM04_BINARY
-DD885,0,1,01,1,Disks/DM11_DEV0
-DD885,0,1,02,1,Disks/DM12_CYB0
-DD885,0,1,03,1,Disks/DM13_CYB1
-DD885,0,1,04,1,Disks/DM14_CYB2
-DD885,0,2,01,1,Disks/DM21_UOL
-DD885,0,2,02,1,Disks/DM22_PUB0
-DD885,0,2,03,1,Disks/DM23_PUB1
-DD885,0,2,04,1,Disks/DM24_CYB3
-CO6612,0,1,10,1
-MT679,0,0,13,1,Deadstart/CYBIS_15DS-1.tap
-MT679,0,1,13,1
-MT679,0,2,13,1
-MT679,0,3,13,1
-LP512,7,0,07,1,3555
-CR3447,7,0,11,1
-CP3446,6,0,11,1
-TPM,0,0,15,1
-NPU,7,0,05,1
 
 [deadstart.cybis]
 0000
@@ -253,10 +236,24 @@ NPU,7,0,05,1
 7113 IAM 13,
 7301        7301
 0000
-1001 wxyy w=level, x=display, yy=cmrdeck
+0001 wxyy w=level, x=display, yy=cmrdeck
 0000
 
----------------------------------------------------------------------
+[deadstart.cybis1]
+0000
+0000
+0000
+7553 DCN 13
+7713 FCN 13, 
+0120        0120 for ATS
+7413 ACN 13
+7113 IAM 13,
+7301        7301
+0000
+0001 wxyy w=level, x=display, yy=cmrdeck
+0000
+
+;---------------------------  End Of File  ------------------------------
 
 Channels, Devices, and PPUs have been made "mainframe aware" by placing 
 both a mainfram ID and a mainframe object pointer in the Channel Slot 
