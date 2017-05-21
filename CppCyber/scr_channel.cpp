@@ -375,8 +375,8 @@ static void scrExecute(PpWord func, u8 mfrId)
 		//printf("SCR 0300 %d %d\n", BigIron->chasis[activeDevice->mfrID]->Acpu[0]->cpu.cpuStopped,
 		//	BigIron->chasis[activeDevice->mfrID]->Acpu[1]->cpu.cpuStopped);
 #if MaxCpus == 2
-		if (BigIron->chasis[mfr->activeDevice->mfrID]->Acpu[0]->cpu.cpuStopped
-			|| (BigIron->initCpus > 1 && BigIron->chasis[mfr->activeDevice->mfrID]->Acpu[1]->cpu.cpuStopped)) //DRS??!!
+		if (BigIron->chasis[mfrId]->Acpu[0]->cpu.cpuStopped
+			|| (BigIron->initCpus > 1 && BigIron->chasis[mfrId]->Acpu[1]->cpu.cpuStopped)) //DRS??!!
 #else
 		if (BigIron->chasis[mfrId]->Acpu[0]->cpu.cpuStopped)
 #endif
