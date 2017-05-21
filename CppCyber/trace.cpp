@@ -384,7 +384,7 @@ void traceInit()
 	{
 		for (u8 pp = 0; pp < BigIron->pps; pp++)
 		{
-			sprintf(ppTraceName, "ppu%02o-%d.trcx", pp, k);
+			sprintf(ppTraceName, "ppu-%d-%02o.trcx", k, pp);
 			ppuF[pp + k*024] = fopen(ppTraceName, "wt");
 			if (ppuF[pp] == nullptr)
 			{

@@ -90,7 +90,7 @@ Mpp::Mpp(u8 id, u8 mfrID)
 		*/
 
 		char shortfile[80];
-		sprintf(shortfile, "/ppStore-%d-%d", id, mfrID);
+		sprintf(shortfile, "/ppStore-%d-%d", mfrID, id);
 
 		strcpy(fileName, persistDir);
 		strcat(fileName, shortfile);
