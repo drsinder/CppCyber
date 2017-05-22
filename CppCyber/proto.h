@@ -321,13 +321,11 @@ void logError(char *file, int line, char *fmt, ...);
 */
 
 /*
-** Tried to put most Global things in the one and only MSystem instance.
+** Tried to put most Global things in the one and only MSystem instance:
+** MSystem.h
+** Mainframe specific things in MMainFrame.h
 */
 extern MSystem *BigIron;
-
-extern u16 mux6676TelnetPort;
-extern u16 mux6676TelnetConns;
-
 
 // leave these below global
 extern volatile bool opActive;

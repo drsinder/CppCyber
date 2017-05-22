@@ -42,6 +42,8 @@ void MMainFrame::Init(u8 id, long memory)
 	mainFrameID = id;
 	traceMask = traceMaskx;
 	traceSequenceNo = 0;
+	mux6676TelnetPort = BigIron->mux6676TelnetPortx;
+	mux6676TelnetConns = BigIron->mux6676TelnetConnsx;
 
 #if MaxMainFrames == 2 || MaxCpus == 2
 	INIT_MUTEX(&PpuMutex, 0x0400000);

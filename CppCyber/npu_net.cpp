@@ -899,7 +899,7 @@ static void *npuNetThread1(void *param)
 **------------------------------------------------------------------------*/
 static void npuNetProcessNewConnection(int acceptFd, NpuConnType *ct, u8 mfrId)
 {
-	MMainFrame *mfr = BigIron->chasis[mfrId];
+	//MMainFrame *mfr = BigIron->chasis[mfrId];
 
 	u8 i;
 	int optEnable = 1;

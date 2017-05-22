@@ -711,9 +711,6 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 {
 	MMainFrame *mfr = BigIron->chasis[0];
 
-	// ReSharper disable once CppEntityAssignedButNoRead
-	// ReSharper disable once CppJoinDeclarationAndAssignment
-	int wmEvent;
 	// ReSharper disable once CppJoinDeclarationAndAssignment
 	int wmId;;
 	LOGFONT lfTmp;
@@ -727,9 +724,6 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 	case WM_COMMAND:
 		// ReSharper disable once CppJoinDeclarationAndAssignment
 		wmId = LOWORD(wParam);
-		// ReSharper disable once CppJoinDeclarationAndAssignment
-		// ReSharper disable once CppAssignedValueIsNeverUsed
-		wmEvent = HIWORD(wParam);
 
 		switch (wmId)
 		{

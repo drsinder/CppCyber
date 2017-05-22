@@ -77,6 +77,7 @@
 typedef struct portParam
 {
 	u8          id;
+	u8			mfrId;
 	bool        active;
 	SOCKET         connFd;
 } PortParam;
@@ -135,6 +136,8 @@ static void *mux6676Thread1(void *param);
 **------------------------------------------------------------------------*/
 void mux6676Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrID];
+
 	(void)unitNo;
 	(void)deviceName;
 
@@ -154,7 +157,7 @@ void mux6676Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 		exit(1);
 	}
 
-	PortParam *mp = static_cast<PortParam*>(calloc(1, sizeof(PortParam) * mux6676TelnetConns));
+	PortParam *mp = static_cast<PortParam*>(calloc(1, sizeof(PortParam) * mfr->mux6676TelnetConns));
 	if (mp == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate MUX6676 context block\n");
@@ -166,8 +169,9 @@ void mux6676Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	/*
 	**  Initialise port control blocks.
 	*/
-	for (u8 i = 0; i < mux6676TelnetConns; i++)
+	for (u8 i = 0; i < mfr->mux6676TelnetConns; i++)
 	{
+		mp->mfrId = mfrID;
 		mp->active = false;
 		mp->connFd = 0;
 		mp->id = i;
@@ -259,7 +263,7 @@ static void mux6676Io(u8 mfrId)
 			*/
 			mfr->activeChannel->full = false;
 			portNumber = static_cast<u8>(mfr->activeDevice->recordLength++);
-			if (portNumber < mux6676TelnetConns)
+			if (portNumber < mfr->mux6676TelnetConns)
 			{
 				mp = cp + portNumber;
 				if (mp->active)
@@ -306,7 +310,7 @@ static void mux6676Io(u8 mfrId)
 			mfr->activeChannel->data = 0;
 			mfr->activeChannel->full = true;
 			portNumber = static_cast<u8>(mfr->activeDevice->recordLength++);
-			if (portNumber < mux6676TelnetConns)
+			if (portNumber < mfr->mux6676TelnetConns)
 			{
 				mp = cp + portNumber;
 				if (mp->active)
@@ -431,6 +435,7 @@ static void *mux6676Thread(void *param)
 #endif
 {
 	DevSlot *dp = static_cast<DevSlot *>(param);
+	MMainFrame *mfr =  BigIron->chasis[dp->mfrID];
 	struct sockaddr_in server;
 	struct sockaddr_in from;
 	u8 i;
@@ -459,7 +464,7 @@ static void *mux6676Thread(void *param)
 	memset(&server, 0, sizeof(server));
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = inet_addr("0.0.0.0");
-	server.sin_port = htons(mux6676TelnetPort + dp->mfrID);
+	server.sin_port = htons(mfr->mux6676TelnetPort + dp->mfrID);
 
 	if (bind(listenFd, reinterpret_cast<struct sockaddr *>(&server), sizeof(server)) < 0)
 	{
@@ -487,7 +492,7 @@ static void *mux6676Thread(void *param)
 		**  Find a free port control block.
 		*/
 		PortParam *mp = static_cast<PortParam *>(dp->context[dp->selectedUnit]);
-		for (i = 0; i < mux6676TelnetConns; i++)
+		for (i = 0; i < mfr->mux6676TelnetConns; i++)
 		{
 			if (!mp->active)
 			{
@@ -496,7 +501,7 @@ static void *mux6676Thread(void *param)
 			mp += 1;
 		}
 
-		if (i == mux6676TelnetConns)
+		if (i == mfr->mux6676TelnetConns)
 		{
 			/*
 			**  No free port found - wait a bit and try again.
@@ -534,6 +539,7 @@ static void *mux6676Thread1(void *param)
 #endif
 {
 	DevSlot *dp = static_cast<DevSlot *>(param);
+	MMainFrame *mfr = BigIron->chasis[dp->mfrID];
 	struct sockaddr_in server;
 	struct sockaddr_in from;
 	u8 i;
@@ -562,7 +568,7 @@ static void *mux6676Thread1(void *param)
 	memset(&server, 0, sizeof(server));
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = inet_addr("0.0.0.0");
-	server.sin_port = htons(mux6676TelnetPort + dp->mfrID);
+	server.sin_port = htons(mfr->mux6676TelnetPort + dp->mfrID);
 
 	if (bind(listenFd, reinterpret_cast<struct sockaddr *>(&server), sizeof(server)) < 0)
 	{
@@ -590,7 +596,7 @@ static void *mux6676Thread1(void *param)
 		**  Find a free port control block.
 		*/
 		PortParam *mp = static_cast<PortParam *>(dp->context[dp->selectedUnit]);
-		for (i = 0; i < mux6676TelnetConns; i++)
+		for (i = 0; i < mfr->mux6676TelnetConns; i++)
 		{
 			if (!mp->active)
 			{
@@ -599,7 +605,7 @@ static void *mux6676Thread1(void *param)
 			mp += 1;
 		}
 
-		if (i == mux6676TelnetConns)
+		if (i == mfr->mux6676TelnetConns)
 		{
 			/*
 			**  No free port found - wait a bit and try again.
@@ -713,7 +719,7 @@ static bool mux6676InputRequired(u8 mfrId)
 
 	FD_ZERO(&readFds);
 	FD_ZERO(&exceptFds);
-	for (int i = 0; i < mux6676TelnetConns; i++)
+	for (int i = 0; i < mfr->mux6676TelnetConns; i++)
 	{
 		mp = cp + i;
 		if (mp->active)

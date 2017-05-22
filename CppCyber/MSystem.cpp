@@ -557,13 +557,13 @@ void MSystem::InitCyber(char *config)
 	**  Get optional Telnet port number. If not specified, use default value.
 	*/
 	initGetInteger("telnetport", 5000, &port);
-	mux6676TelnetPort = static_cast<u16>(port);
+	mux6676TelnetPortx = static_cast<u16>(port);
 
 	/*
 	**  Get optional max Telnet connections. If not specified, use default value.
 	*/
 	initGetInteger("telnetconns", 4, &conns);
-	mux6676TelnetConns = static_cast<u16>(conns);
+	mux6676TelnetConnsx = static_cast<u16>(conns);
 
 }
 

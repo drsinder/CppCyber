@@ -107,6 +107,7 @@ void MCpu::Init(char *model, MMainFrame *mainfr)
 	extMaxMemory = BigIron->extMaxMemory;
 	mainFrameID = mfr->mainFrameID;
 
+
 	/*
 	**  Print a friendly message.
 	*/

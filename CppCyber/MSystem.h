@@ -42,6 +42,9 @@ public:
 	void InitEquipment(u8 mfrId);
 	static u32 ConvertEndian(u32 value);
 
+	u16 mux6676TelnetPortx;
+	u16 mux6676TelnetConnsx;
+
 	bool bigEndian;
 	bool emulationActive;
 

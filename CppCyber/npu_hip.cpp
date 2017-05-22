@@ -182,10 +182,6 @@ static int npuLogCol = 0;
 **------------------------------------------------------------------------*/
 void npuInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 {
-
-	//if (mfrID == 1)
-	//	return;	// do not init two instances for now!  DRS??!!
-
 	MMainFrame *mfr = BigIron->chasis[mfrID];
 
 	(void)unitNo;

@@ -93,12 +93,11 @@ static void CPUThread1X(LPVOID p);
 */
 
 /*
-** Tried to put most things in the one and only MSystem instance.
+** Tried to put System wide things in the one and only MSystem instance:
+** MSystem.h
+** Mainframe specific things in MMainFrame.h
 */
 MSystem *BigIron;
-
-u16 mux6676TelnetPort;
-u16 mux6676TelnetConns;
 
 // leave these below global
 
