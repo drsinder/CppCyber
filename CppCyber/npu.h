@@ -505,8 +505,6 @@ void npuAsyncFlushUplineTransparent(Tcb *tp, u8 mfrId);
 **  Global NPU variables
 **  --------------------
 */
-//extern Tcb *npuTcbs;
-//extern int npuTcbCount;
 
 /*
 **  -----------------

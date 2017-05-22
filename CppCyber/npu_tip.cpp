@@ -185,8 +185,6 @@ static void npuTipSetupDefaultTc7();
 **  Public Variables
 **  ----------------
 */
-//Tcb *npuTcbs;
-//int npuTcbCount;
 
 /*
 **  -----------------
@@ -241,7 +239,6 @@ static u8 intrRsp[4] =
 	BtHTICMR,           // BT/BSN/PRIO
 };
 
-//TipParams work;
 TipParams defaultTc2;
 TipParams defaultTc3;
 TipParams defaultTc7;

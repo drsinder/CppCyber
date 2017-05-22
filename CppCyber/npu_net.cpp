@@ -118,11 +118,6 @@ static const char networkDownMsg[] = "Network going down - connection aborted\r\
 static const char notReadyMsg[] = "\r\nHost not ready to accept connections - please try again later.\r\n";
 static const char noPortsAvailMsg[] = "\r\nNo free ports available - please try again later.\r\n";
 
-//static NpuConnType connTypes[MaxConnTypes];
-//static int numConnTypes = 0;
-//
-//static int pollIndex = 0;
-
 /*
 **--------------------------------------------------------------------------
 **

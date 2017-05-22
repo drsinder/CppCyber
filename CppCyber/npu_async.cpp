@@ -75,7 +75,6 @@ static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId);
 **  Private Variables
 **  -----------------
 */
-static Tcb *npuTp;
 
 static u8 fcSingleSpace[] = "\r\n";
 static u8 fcDoubleSpace[] = "\r\n\n";
@@ -89,9 +88,6 @@ static u8 netBEL[] = { ChrBEL };
 static u8 netLF[] = { ChrLF };
 static u8 netCR[] = { ChrCR };
 static u8 netCRLF[] = { ChrCR, ChrLF };
-//static u8 echoBuffer[1000];
-//static u8 *echoPtr;
-//static int echoLen;
 
 /*
 **--------------------------------------------------------------------------
@@ -129,20 +125,20 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId)
 		return;
 	}
 
-	npuTp = mfr->npuTcbs + cn - 1;
+	mfr->npuTp = mfr->npuTcbs + cn - 1;
 
 	/*
 	**  Extract Data Block Clarifier settings.
 	*/
 	u8 dbc = *blk++;
 	len -= 1;
-	npuTp->dbcNoEchoplex = (dbc & DbcEchoplex) != 0;
-	npuTp->dbcNoCursorPos = (dbc & DbcNoCursorPos) != 0;
+	mfr->npuTp->dbcNoEchoplex = (dbc & DbcEchoplex) != 0;
+	mfr->npuTp->dbcNoCursorPos = (dbc & DbcNoCursorPos) != 0;
 
 	if ((dbc & DbcTransparent) != 0)
 	{
-		npuNetSend(npuTp, blk, len, mfrId);
-		npuNetQueueAck(npuTp, static_cast<u8>(bp->data[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN)), mfrId);
+		npuNetSend(mfr->npuTp, blk, len, mfrId);
+		npuNetQueueAck(mfr->npuTp, static_cast<u8>(bp->data[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN)), mfrId);
 		return;
 	}
 
@@ -187,7 +183,7 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId)
 			**  No US byte in the rest of the buffer, so send the entire
 			**  rest to the terminal.
 			*/
-			npuNetSend(npuTp, blk, len, mfrId);
+			npuNetSend(mfr->npuTp, blk, len, mfrId);
 			break;
 		}
 
@@ -195,7 +191,7 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId)
 		**  Send the line.
 		*/
 		int textlen = static_cast<int>(ptrUS - blk);
-		npuNetSend(npuTp, blk, textlen, mfrId);
+		npuNetSend(mfr->npuTp, blk, textlen, mfrId);
 
 		/*
 		**  Process trailing format effector.
@@ -212,7 +208,7 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId)
 		len -= textlen + 1;
 	}
 
-	npuNetQueueAck(npuTp, static_cast<u8>(bp->data[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN)), mfrId);
+	npuNetQueueAck(mfr->npuTp, static_cast<u8>(bp->data[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN)), mfrId);
 }
 
 /*--------------------------------------------------------------------------
@@ -307,78 +303,80 @@ void npuAsyncFlushUplineTransparent(Tcb *tp, u8 mfrId)
 **------------------------------------------------------------------------*/
 static void npuAsyncDoFeBefore(u8 fe, u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (fe)
 	{
 	case ' ':
-		if (npuTp->lastOpWasInput)
+		if (mfr->npuTp->lastOpWasInput)
 		{
-			npuNetSend(npuTp, fcBol, sizeof(fcBol) - 1, mfrId);
+			npuNetSend(mfr->npuTp, fcBol, sizeof(fcBol) - 1, mfrId);
 		}
 		else
 		{
-			npuNetSend(npuTp, fcSingleSpace, sizeof(fcSingleSpace) - 1, mfrId);
+			npuNetSend(mfr->npuTp, fcSingleSpace, sizeof(fcSingleSpace) - 1, mfrId);
 		}
 		break;
 
 	case '0':
-		if (npuTp->lastOpWasInput)
+		if (mfr->npuTp->lastOpWasInput)
 		{
-			npuNetSend(npuTp, fcSingleSpace, sizeof(fcSingleSpace) - 1, mfrId);
+			npuNetSend(mfr->npuTp, fcSingleSpace, sizeof(fcSingleSpace) - 1, mfrId);
 		}
 		else
 		{
-			npuNetSend(npuTp, fcDoubleSpace, sizeof(fcDoubleSpace) - 1, mfrId);
+			npuNetSend(mfr->npuTp, fcDoubleSpace, sizeof(fcDoubleSpace) - 1, mfrId);
 		}
 		break;
 
 	case '-':
-		if (npuTp->lastOpWasInput)
+		if (mfr->npuTp->lastOpWasInput)
 		{
-			npuNetSend(npuTp, fcDoubleSpace, sizeof(fcDoubleSpace) - 1, mfrId);
+			npuNetSend(mfr->npuTp, fcDoubleSpace, sizeof(fcDoubleSpace) - 1, mfrId);
 		}
 		else
 		{
-			npuNetSend(npuTp, fcTripleSpace, sizeof(fcTripleSpace) - 1, mfrId);
+			npuNetSend(mfr->npuTp, fcTripleSpace, sizeof(fcTripleSpace) - 1, mfrId);
 		}
 		break;
 
 	case '+':
-		npuNetSend(npuTp, fcBol, sizeof(fcBol) - 1, mfrId);
+		npuNetSend(mfr->npuTp, fcBol, sizeof(fcBol) - 1, mfrId);
 		break;
 
 	case '*':
-		if (npuTp->params.fvTC == TcX364)
+		if (mfr->npuTp->params.fvTC == TcX364)
 		{
 			/*
 			**  Cursor Home (using ANSI/VT100 control sequences) for VT100.
 			*/
-			npuNetSend(npuTp, fcTofAnsi, sizeof(fcTofAnsi) - 1, mfrId);
+			npuNetSend(mfr->npuTp, fcTofAnsi, sizeof(fcTofAnsi) - 1, mfrId);
 		}
 		else
 		{
 			/*
 			**  Formfeed for any other terminal.
 			*/
-			npuNetSend(npuTp, fcTof, sizeof(fcTof) - 1, mfrId);
+			npuNetSend(mfr->npuTp, fcTof, sizeof(fcTof) - 1, mfrId);
 		}
 
 		break;
 
 	case '1':
-		if (npuTp->params.fvTC == TcX364)
+		if (mfr->npuTp->params.fvTC == TcX364)
 		{
 			/*
 			**  Cursor Home and Clear (using ANSI/VT100 control sequences) for VT100.
 			*/
-			npuNetSend(npuTp, fcClearHomeAnsi, sizeof(fcClearHomeAnsi) - 1, mfrId);
+			npuNetSend(mfr->npuTp, fcClearHomeAnsi, sizeof(fcClearHomeAnsi) - 1, mfrId);
 		}
 		else
 		{
 			/*
 			**  Formfeed for any other terminal.
 			*/
-			npuNetSend(npuTp, fcTof, sizeof(fcTof) - 1, mfrId);
+			npuNetSend(mfr->npuTp, fcTof, sizeof(fcTof) - 1, mfrId);
 		}
 
 		break;
@@ -390,7 +388,7 @@ static void npuAsyncDoFeBefore(u8 fe, u8 mfrId)
 		break;
 	}
 
-	npuTp->lastOpWasInput = false;
+	mfr->npuTp->lastOpWasInput = false;
 }
 
 /*--------------------------------------------------------------------------
@@ -404,15 +402,17 @@ static void npuAsyncDoFeBefore(u8 fe, u8 mfrId)
 **------------------------------------------------------------------------*/
 static void npuAsyncDoFeAfter(u8 fe, u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (fe)
 	{
 	case '.':
-		npuNetSend(npuTp, fcSingleSpace, sizeof(fcSingleSpace) - 1, mfrId);
+		npuNetSend(mfr->npuTp, fcSingleSpace, sizeof(fcSingleSpace) - 1, mfrId);
 		break;
 
 	case '/':
-		npuNetSend(npuTp, fcBol, sizeof(fcBol) - 1, mfrId);
+		npuNetSend(mfr->npuTp, fcBol, sizeof(fcBol) - 1, mfrId);
 		break;
 	}
 }

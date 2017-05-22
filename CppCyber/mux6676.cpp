@@ -95,8 +95,11 @@ static int mux6676CheckInput(PortParam *mp);
 static bool mux6676InputRequired(u8 mfrId);
 #if defined(_WIN32)
 static void mux6676Thread(void *param);
+static void mux6676Thread1(void *param);
 #else
 static void *mux6676Thread(void *param);
+static void *mux6676Thread1(void *param);
+
 #endif
 
 /*
@@ -132,10 +135,6 @@ static void *mux6676Thread(void *param);
 **------------------------------------------------------------------------*/
 void mux6676Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 {
-	//if (mfrID == 1)
-	//	return;	// do not init two instances!  DRS??!!
-
-
 	(void)unitNo;
 	(void)deviceName;
 
@@ -183,7 +182,7 @@ void mux6676Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	/*
 	**  Print a friendly message.
 	*/
-	printf("MUX6676 initialised on channel %o equipment %o\n", channelNo, eqNo);
+	printf("MUX6676 initialised on channel %o equipment %o mainframe %o\n", channelNo, eqNo, mfrID);
 }
 
 /*--------------------------------------------------------------------------
@@ -388,7 +387,7 @@ static void mux6676CreateThread(DevSlot *dp)
 	HANDLE hThread = CreateThread(
 		nullptr,                                       // no security attribute 
 		0,                                          // default stack size 
-		reinterpret_cast<LPTHREAD_START_ROUTINE>(mux6676Thread),
+		reinterpret_cast<LPTHREAD_START_ROUTINE>(dp->mfrID==0 ? mux6676Thread : mux6676Thread1),
 		static_cast<LPVOID>(dp),                                 // thread parameter 
 		0,                                          // not suspended 
 		&dwThreadId);                               // returns thread ID 
@@ -460,7 +459,7 @@ static void *mux6676Thread(void *param)
 	memset(&server, 0, sizeof(server));
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = inet_addr("0.0.0.0");
-	server.sin_port = htons(mux6676TelnetPort);
+	server.sin_port = htons(mux6676TelnetPort + dp->mfrID);
 
 	if (bind(listenFd, reinterpret_cast<struct sockaddr *>(&server), sizeof(server)) < 0)
 	{
@@ -527,6 +526,111 @@ static void *mux6676Thread(void *param)
 	return(NULL);
 #endif
 }
+
+#if defined(_WIN32)
+static void mux6676Thread1(void *param)
+#else
+static void *mux6676Thread1(void *param)
+#endif
+{
+	DevSlot *dp = static_cast<DevSlot *>(param);
+	struct sockaddr_in server;
+	struct sockaddr_in from;
+	u8 i;
+	int reuse = 1;
+#if defined(_WIN32)
+#else
+	socklen_t fromLen;
+#endif
+
+	/*
+	**  Create TCP socket and bind to specified port.
+	*/
+	SOCKET listenFd = socket(AF_INET, SOCK_STREAM, 0);
+	if (listenFd < 0)
+		// ReSharper disable once CppUnreachableCode
+	{
+		printf("mux6676: Can't create socket\n");
+#if defined(_WIN32)
+		return;
+#else
+		return(NULL);
+#endif
+	}
+
+	setsockopt(listenFd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&reuse), sizeof(reuse));
+	memset(&server, 0, sizeof(server));
+	server.sin_family = AF_INET;
+	server.sin_addr.s_addr = inet_addr("0.0.0.0");
+	server.sin_port = htons(mux6676TelnetPort + dp->mfrID);
+
+	if (bind(listenFd, reinterpret_cast<struct sockaddr *>(&server), sizeof(server)) < 0)
+	{
+		printf("mux6676: Can't bind to socket\n");
+#if defined(_WIN32)
+		return;
+#else
+		return(NULL);
+#endif
+	}
+
+	if (listen(listenFd, 5) < 0)
+	{
+		printf("mux6676: Can't listen\n");
+#if defined(_WIN32)
+		return;
+#else
+		return(NULL);
+#endif
+	}
+
+	while (true)
+	{
+		/*
+		**  Find a free port control block.
+		*/
+		PortParam *mp = static_cast<PortParam *>(dp->context[dp->selectedUnit]);
+		for (i = 0; i < mux6676TelnetConns; i++)
+		{
+			if (!mp->active)
+			{
+				break;
+			}
+			mp += 1;
+		}
+
+		if (i == mux6676TelnetConns)
+		{
+			/*
+			**  No free port found - wait a bit and try again.
+			*/
+#if defined(_WIN32)
+			Sleep(1000);
+#else
+			sleep(1);
+#endif
+			continue;
+		}
+
+		/*
+		**  Wait for a connection.
+		*/
+		int fromLen = sizeof(from);
+		mp->connFd = accept(listenFd, reinterpret_cast<struct sockaddr *>(&from), &fromLen);
+
+		/*
+		**  Mark connection as active.
+		*/
+		mp->active = true;
+		printf("mux6676: Received connection on port %d\n", mp->id);
+	}
+
+#if !defined(_WIN32)
+	return(NULL);
+#endif
+}
+
+
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Check for input.

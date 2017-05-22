@@ -124,15 +124,6 @@
 **  Private Typedef and Structure Definitions
 **  -----------------------------------------
 */
-//typedef struct npuParam
-//{
-//	PpWord      regCouplerStatus;
-//	PpWord      regNpuStatus;
-//	PpWord      regOrder;
-//	NpuBuffer   *buffer;
-//	u8          *npuData;
-//	u32         lastCommandTime;
-//} NpuParam;
 
 /*
 **  ---------------------------
@@ -164,17 +155,6 @@ static void npuLogByte(int b);
 **  -----------------
 */
 
-//typedef enum
-//{
-//	StHipInit,
-//	StHipIdle,
-//	StHipUpline,
-//	StHipDownline,
-//} HipState;
-
-//static int initCount = ReportInitCount;
-//static NpuParam *npu;
-//static HipState hipState = StHipInit;
 
 #if DEBUG
 static FILE *npuLog = nullptr;

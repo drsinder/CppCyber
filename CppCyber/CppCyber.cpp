@@ -97,22 +97,18 @@ static void CPUThread1X(LPVOID p);
 */
 MSystem *BigIron;
 
-/*
-** The rest of these were harder and left for now.
-*/
+u16 mux6676TelnetPort;
+u16 mux6676TelnetConns;
+
+// leave these below global
 
 char persistDir[256];
 char printDir[256];	
 char printApp[256];	
 
 u32 traceMaskx = 0;
-//u32 traceSequenceNo;
 
 volatile bool opActive = false;
-
-u16 mux6676TelnetPort;
-u16 mux6676TelnetConns;
-
 
 #if CcCycleTime
 double cycleTime;

@@ -143,6 +143,8 @@ public:
 
 	/////
 
+	Tcb *npuTp;
+
 	u8 echoBuffer[1000];
 	u8 *echoPtr;
 	int echoLen;

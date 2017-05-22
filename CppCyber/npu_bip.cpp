@@ -69,23 +69,6 @@
 **  Private Variables
 **  -----------------
 */
-//static NpuBuffer *bufPool = nullptr;
-//static int bufCount = 0;
-//
-//static NpuBuffer *bipUplineBuffer = nullptr;
-//static NpuQueue *bipUplineQueue;
-//
-//static NpuBuffer *bipDownlineBuffer = nullptr;
-//
-//typedef enum
-//{
-//	BipIdle,
-//	BipDownSvm,
-//	BipDownDataLow,
-//	BipDownDataHigh,
-//} BipState;
-//
-//static BipState bipState = BipIdle;
 
 /*
 **--------------------------------------------------------------------------
