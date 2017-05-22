@@ -52,10 +52,144 @@ public:
 	u16 deadstartPanel[MaxDeadStart];
 	u8 deadstartCount;
 
+
+	Tcb *npuTcbs;
+	int npuTcbCount;
+
+	/*
+	**  -----------------
+	**  Private Variables (npu_svm)
+	**  -----------------
+	*/
+
+	u8 linkRegulation[14] =
+	{
+		AddrHost,           // DN
+		AddrNpu,            // SN
+		0,                  // CN
+		4,                  // BT=CMD
+		PfcREG,             // PFC
+		SfcLL,              // SFC
+		0x0F,               // NS=1, CS=1, Regulation level=3
+		0,0,0,0,            // not used
+		0,0,0              // not used
+	};
+
+	u8 requestSupervision[21] =
+	{
+		AddrHost,           // DN
+		AddrNpu,            // SN
+		0,                  // CN
+		4,                  // BT=CMD
+		PfcSUP,             // PFC
+		SfcIN,              // SFC
+		0,                  // PS
+		0,                  // PL
+		0,                  // RI
+		0,0,0,              // not used
+		3,                  // CCP version
+		1,                  // ...
+		0,                  // CCP level
+		0,                  // ...
+		0,                  // CCP cycle or variant
+		0,                  // ...
+		0,                  // not used
+		0,0                 // NCF version in NDL file (ignored)
+	};
+
+	u8 responseNpuStatus[6] =
+	{
+		AddrHost,           // DN
+		AddrNpu,            // SN
+		0,                  // CN
+		4,                  // BT=CMD
+		PfcNPS,             // PFC
+		SfcNP | SfcResp,    // SFC
+	};
+
+	u8 responseTerminateConnection[7] =
+	{
+		AddrHost,           // DN
+		AddrNpu,            // SN
+		0,                  // CN
+		4,                  // BT=CMD
+		PfcTCN,             // PFC
+		SfcTA | SfcResp,    // SFC
+		0,                  // CN
+	};
+
+	u8 requestTerminateConnection[7] =
+	{
+		AddrHost,           // DN
+		AddrNpu,            // SN
+		0,                  // CN
+		4,                  // BT=CMD
+		PfcTCN,             // PFC
+		SfcTA,              // SFC
+		0,                  // CN
+	};
+
+
+	typedef enum
+	{
+		StIdle,
+		StWaitSupervision,
+		StReady,
+	} SvmState;
+
+	SvmState svmState = StIdle;
+
+	u8 oldRegLevel = 0;
+
+	/////
+
+	u8 echoBuffer[1000];
+	u8 *echoPtr;
+	int echoLen;
+
+	///
+
+	NpuBuffer *bufPool = nullptr;
+	int bufCount = 0;
+
+	NpuBuffer *bipUplineBuffer = nullptr;
+	NpuQueue *bipUplineQueue;
+
+	NpuBuffer *bipDownlineBuffer = nullptr;
+
+	typedef enum
+	{
+		BipIdle,
+		BipDownSvm,
+		BipDownDataLow,
+		BipDownDataHigh,
+	} BipState;
+
+	BipState bipState = BipIdle;
+
+	///
+#define ReportInitCount         4
+
+	int initCount = ReportInitCount;
+	NpuParam *npu;
+
+	HipState hipState = StHipInit;
+
+	////
+
+	u16 npuNetTcpConns = 0;
+	NpuConnType connTypes[MaxConnTypes];
+	int numConnTypes = 0;
+
+	int pollIndex = 0;
+
+	///
+
 	//u16 mux6676TelnetPort;
 	//u16 mux6676TelnetConns;
-	//u16 npuNetTelnetPort;
-	//u16 npuNetTcpConns;
+
+	///
+
 	u32 cycles = 0;
 
 	int cpuCnt = 0;		// count of active cpus

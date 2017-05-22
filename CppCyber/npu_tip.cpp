@@ -31,7 +31,7 @@
 **  -------------
 */
 #include "stdafx.h"
-#include "npu.h"
+//#include "npu.h"
 
 /*
 **  -----------------
@@ -185,8 +185,8 @@ static void npuTipSetupDefaultTc7();
 **  Public Variables
 **  ----------------
 */
-Tcb *npuTcbs;
-int npuTcbCount;
+//Tcb *npuTcbs;
+//int npuTcbCount;
 
 /*
 **  -----------------
@@ -241,7 +241,7 @@ static u8 intrRsp[4] =
 	BtHTICMR,           // BT/BSN/PRIO
 };
 
-TipParams work;
+//TipParams work;
 TipParams defaultTc2;
 TipParams defaultTc3;
 TipParams defaultTc7;
@@ -264,14 +264,16 @@ TipParams defaultTc7;
 **------------------------------------------------------------------------*/
 void npuTipInit(u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	/*
 	**  Allocate TCBs.
 	*/
-	if (mfrId == 0)
+	//if (mfrId == 0)
 	{
-		npuTcbCount = npuNetTcpConns;
-		npuTcbs = static_cast<Tcb*>(calloc(npuTcbCount, sizeof(Tcb)));
-		if (npuTcbs == nullptr)
+		mfr->npuTcbCount = mfr->npuNetTcpConns;
+		mfr->npuTcbs = static_cast<Tcb*>(calloc(mfr->npuTcbCount, sizeof(Tcb)));
+		if (mfr->npuTcbs == nullptr)
 		{
 			fprintf(stderr, "Failed to allocate NPU TCBs\n");
 			exit(1);
@@ -287,8 +289,8 @@ void npuTipInit(u8 mfrId)
 		/*
 		**  Initialise TCBs.
 		*/
-		Tcb *tp = npuTcbs;
-		for (int i = 0; i < npuNetTcpConns; i++, tp++)
+		Tcb *tp = mfr->npuTcbs;
+		for (int i = 0; i < mfr->npuNetTcpConns; i++, tp++)
 		{
 			tp->portNumber = i + 1;
 			tp->params = defaultTc3;
@@ -312,15 +314,17 @@ void npuTipInit(u8 mfrId)
 **------------------------------------------------------------------------*/
 void npuTipReset(u8 mfrId)
 {
-	if (mfrId == 0)
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	//if (mfrId == 0)
 	{
 
-		Tcb *tp = npuTcbs;
+		Tcb *tp = mfr->npuTcbs;
 
 		/*
 		**  Iterate through all TCBs.
 		*/
-		for (int i = 0; i < npuNetTcpConns; i++, tp++)
+		for (int i = 0; i < mfr->npuNetTcpConns; i++, tp++)
 		{
 			memset(tp, 0, sizeof(Tcb));
 			tp->portNumber = i + 1;
@@ -347,6 +351,8 @@ void npuTipReset(u8 mfrId)
 **------------------------------------------------------------------------*/
 void npuTipProcessBuffer(NpuBuffer *bp, int priority, u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	// ReSharper disable once CppEntityNeverUsed
 	static int count = 0;
 	u8 *block = bp->data;
@@ -356,14 +362,14 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority, u8 mfrId)
 	**  Determine associated terminal control block.
 	*/
 	u8 cn = block[BlkOffCN];
-	if (cn == 0 || cn > npuTcbCount)
+	if (cn == 0 || cn > mfr->npuTcbCount)
 	{
 		npuLogMessage("Unexpected TIP connection number %u in message %02X/%02X in state %d", cn, block[BlkOffPfc], block[BlkOffSfc]);
 		return;
 	}
 	else
 	{
-		tp = npuTcbs + cn - 1;
+		tp = mfr->npuTcbs + cn - 1;
 	}
 
 	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
@@ -481,7 +487,7 @@ void npuTipProcessBuffer(NpuBuffer *bp, int priority, u8 mfrId)
 	/*
 	**  Release downline buffer.
 	*/
-	npuBipBufRelease(bp);
+	npuBipBufRelease(bp, mfrId);
 }
 
 /*--------------------------------------------------------------------------
@@ -552,6 +558,8 @@ void npuTipSetupTerminalClass(Tcb *tp, u8 tc)
 **------------------------------------------------------------------------*/
 bool npuTipParseFnFv(u8 *mp, int len, Tcb *tp)
 {
+	//MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	TipParams *pp = &tp->params;
 
 	while (len > 0)
@@ -977,7 +985,7 @@ void npuTipDiscardOutputQ(Tcb *tp, u8 mfrId)
 			npuBipRequestUplineCanned(blockAck, sizeof(blockAck), mfrId);
 		}
 
-		npuBipBufRelease(bp);
+		npuBipBufRelease(bp,mfrId);
 	}
 }
 

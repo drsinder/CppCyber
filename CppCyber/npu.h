@@ -391,6 +391,37 @@ typedef struct tcb
     } Tcb;
 
 /*
+**  Registered NPU connection types.
+*/
+typedef struct npuConnType
+{
+	u16                 tcpPort;
+	int                 numConns;
+	u8                  connType;
+	u8					mfrId;
+	Tcb                 *startTcb;
+} NpuConnType;
+
+typedef struct npuParam
+{
+	PpWord      regCouplerStatus;
+	PpWord      regNpuStatus;
+	PpWord      regOrder;
+	NpuBuffer   *buffer;
+	u8          *npuData;
+	u32         lastCommandTime;
+} NpuParam;
+
+typedef enum
+{
+	StHipInit,
+	StHipIdle,
+	StHipUpline,
+	StHipDownline,
+} HipState;
+
+
+/*
 **  -----------------------
 **  NPU Function Prototypes
 **  -----------------------
@@ -406,10 +437,10 @@ void npuLogMessage(char *format, ...);
 /*
 **  npu_bip.c
 */
-void npuBipInit();
-void npuBipReset();
-NpuBuffer *npuBipBufGet();
-void npuBipBufRelease(NpuBuffer *bp);
+void npuBipInit(u8 mfrId);
+void npuBipReset(u8 mfrId);
+NpuBuffer *npuBipBufGet(u8 mfrId);
+void npuBipBufRelease(NpuBuffer *bp, u8 mfrId);
 void npuBipQueueAppend(NpuBuffer *bp, NpuQueue *queue);
 void npuBipQueuePrepend(NpuBuffer *bp, NpuQueue *queue);
 NpuBuffer *npuBipQueueExtract(NpuQueue *queue);
@@ -427,14 +458,14 @@ void npuBipNotifyUplineSent(u8 mfrId);
 /*
 **  npu_svm.c
 */
-void npuSvmInit();
-void npuSvmReset();
+void npuSvmInit(u8 mfrId);
+void npuSvmReset(u8 mfrId);
 void npuSvmNotifyHostRegulation(u8 regLevel, u8 mfrId);
 void npuSvmProcessBuffer(NpuBuffer *bp, u8 mfrId);
 bool npuSvmConnectTerminal(Tcb *tp, u8 mfrId);
 void npuSvmDiscRequestTerminal(Tcb *tp, u8 mfrId);
 void npuSvmDiscReplyTerminal(Tcb *tp, u8 mfrId);
-bool npuSvmIsReady();
+bool npuSvmIsReady(u8 mfrId);
 
 /*
 **  npu_tip.c
@@ -458,7 +489,7 @@ void npuNetInit(bool startup, u8 mfrID);
 void npuNetReset(u8 mfrId);
 void npuNetConnected(Tcb *tp);
 void npuNetDisconnected(Tcb *tp);
-void npuNetSend(Tcb *tp, u8 *data, int len);
+void npuNetSend(Tcb *tp, u8 *data, int len, u8 mfrId);
 void npuNetQueueAck(Tcb *tp, u8 blockSeqNo, u8 mfrId);
 void npuNetCheckStatus(u8 mfrId);
 
@@ -474,8 +505,77 @@ void npuAsyncFlushUplineTransparent(Tcb *tp, u8 mfrId);
 **  Global NPU variables
 **  --------------------
 */
-extern Tcb *npuTcbs;
-extern int npuTcbCount;
+//extern Tcb *npuTcbs;
+//extern int npuTcbCount;
+
+/*
+**  -----------------
+**  Private Constants (npu_svm)
+**  -----------------
+*/
+
+/*
+**  Primary Service Message function codes.
+*/
+#define PfcREG          0x1     // logical link regulation 
+#define PfcICN          0x2     // initiate connection     
+#define PfcTCN          0x3     // terminate connection    
+#define PfcCHC          0x4     // change terminal characteristics
+#define PfcNPU          0xA     // initialize npu          
+#define PfcSUP          0xE     // initiate supervision    
+#define PfcCNF          0xF     // configure terminal      
+#define PfcENB          0x10    // enable command(s)       
+#define PfcDIB          0x11    // disable command(s)      
+#define PfcNPS          0x12    // npu status request      
+#define PfcLLS          0x13    // ll status request       
+#define PfcLIS          0x14    // line status request     
+#define PfcTES          0x15    // term status request     
+#define PfcTRS          0x16    // trunk status request    
+#define PfcCPS          0x17    // coupler status request  
+#define PfcVCS          0x18    // svc status request       
+#define PfcSTU          0x19    // unsolicated statuses    
+#define PfcSTI          0x1A    // statistics              
+#define PfcMSG          0x1B    // message(s)             
+#define PfcLOG          0x1C    // error log entry         
+#define PfcALM          0x1D    // operator alarm          
+#define PfcNPI          0x1E    // reload npu               
+#define PfcCDI          0x1F    // count(s)                
+#define PfcOLD          0x20    // on-line diagnostics     
+
+/*
+**  Secondary Service Message function codes.
+*/
+#define SfcNP           0x0     // npu                     
+#define SfcLL           0x1     // logical link            
+#define SfcLI           0x2     // line                    
+#define SfcTE           0x3     // terminal                
+#define SfcTR           0x4     // trunk                   
+#define SfcCP           0x5     // coupler                 
+#define SfcVC           0x6     // switched virtual circuit
+#define SfcOP           0x7     // operator                
+#define SfcTA           0x8     // terminate connection    
+#define SfcAP           0x9     // outbound a-a connection 
+#define SfcIN           0xA     // initiate supervision    
+#define SfcDO           0xB     // dump option             
+#define SfcPB           0xC     // program block           
+#define SfcDT           0xD     // data                    
+#define SfcTM           0xE     // terminate diagnostics   
+#define SfcLD           0xE     // load                    
+#define SfcGO           0xF     // go                      
+#define SfcER           0x10    // error(s)                
+#define SfcEX           0x11    // a to a connection       
+#define SfcNQ           0x12    // sfc for *pbperform* sti 
+#define SfcNE           0x13    // nip block protocol error
+#define SfcPE           0x14    // pip block protocol error
+#define SfcRC           0x11    // reconfigure terminal    
+
+/*
+**  Regulation level change bit masks.
+*/
+#define RegLvlBuffers       0x03
+#define RegLvlCsAvailable   0x04
+#define RegLvlNsAvailable   0x08
+
 
 #endif /* NPU_H */
 /*---------------------------  End Of File  ------------------------------*/

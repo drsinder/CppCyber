@@ -32,7 +32,7 @@
 **  -------------
 */
 #include "stdafx.h"
-#include "npu.h"
+//#include "npu.h"
 // ReSharper disable once CppUnusedIncludeDirective
 #include <sys/types.h>
 // ReSharper disable once CppUnusedIncludeDirective
@@ -69,17 +69,17 @@
 **  -----------------------------------------
 */
 
-/*
-**  Registered NPU connection types.
-*/
-typedef struct npuConnType
-{
-	u16                 tcpPort;
-	int                 numConns;
-	u8                  connType;
-	u8					mfrId;
-	Tcb                 *startTcb;
-} NpuConnType;
+///*
+//**  Registered NPU connection types.
+//*/
+//typedef struct npuConnType
+//{
+//	u16                 tcpPort;
+//	int                 numConns;
+//	u8                  connType;
+//	u8					mfrId;
+//	Tcb                 *startTcb;
+//} NpuConnType;
 
 /*
 **  ---------------------------
@@ -95,7 +95,7 @@ static void *npuNetThread(void *param);
 static void *npuNetThread1(void *param);
 #endif
 static void npuNetProcessNewConnection(int acceptFd, NpuConnType *ct, u8 mfrId);
-static void npuNetQueueOutput(Tcb *tp, u8 *data, int len);
+static void npuNetQueueOutput(Tcb *tp, u8 *data, int len, u8 mfrId);
 static void npuNetTryOutput(Tcb *tp, u8 mfrId);
 
 /*
@@ -103,7 +103,7 @@ static void npuNetTryOutput(Tcb *tp, u8 mfrId);
 **  Public Variables
 **  ----------------
 */
-u16 npuNetTcpConns = 0;
+//u16 npuNetTcpConns = 0;
 
 /*
 **  -----------------
@@ -111,17 +111,17 @@ u16 npuNetTcpConns = 0;
 **  -----------------
 */
 
-static char connectingMsg[] = "\r\nConnecting to host - please wait ...\r\n";
-static char connectedMsg[] = "\r\nConnected\r\n\n";
-static char abortMsg[] = "\r\nConnection aborted\r\n";
-static char networkDownMsg[] = "Network going down - connection aborted\r\n";
-static char notReadyMsg[] = "\r\nHost not ready to accept connections - please try again later.\r\n";
-static char noPortsAvailMsg[] = "\r\nNo free ports available - please try again later.\r\n";
+static const char connectingMsg[] = "\r\nConnecting to host - please wait ...\r\n";
+static const char connectedMsg[] = "\r\nConnected\r\n\n";
+static const char abortMsg[] = "\r\nConnection aborted\r\n";
+static const char networkDownMsg[] = "Network going down - connection aborted\r\n";
+static const char notReadyMsg[] = "\r\nHost not ready to accept connections - please try again later.\r\n";
+static const char noPortsAvailMsg[] = "\r\nNo free ports available - please try again later.\r\n";
 
-static NpuConnType connTypes[MaxConnTypes];
-static int numConnTypes = 0;
-
-static int pollIndex = 0;
+//static NpuConnType connTypes[MaxConnTypes];
+//static int numConnTypes = 0;
+//
+//static int pollIndex = 0;
 
 /*
 **--------------------------------------------------------------------------
@@ -146,10 +146,11 @@ static int pollIndex = 0;
 **------------------------------------------------------------------------*/
 int npuNetRegister(int tcpPort, int numConns, int connType, u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 	/*
 	** Check for too many registrations.
 	*/
-	if (numConnTypes >= MaxConnTypes)
+	if (mfr->numConnTypes >= MaxConnTypes)
 	{
 		return(NpuNetRegOvfl);
 	}
@@ -157,9 +158,9 @@ int npuNetRegister(int tcpPort, int numConns, int connType, u8 mfrId)
 	/*
 	**  Check for duplicate TCP ports.
 	*/
-	for (int i = 0; i < numConnTypes; i++)
+	for (int i = 0; i <mfr->numConnTypes; i++)
 	{
-		if (connTypes[i].tcpPort == tcpPort)
+		if (mfr->connTypes[i].tcpPort == tcpPort)
 		{
 			return(NpuNetRegDupl);
 		}
@@ -168,12 +169,12 @@ int npuNetRegister(int tcpPort, int numConns, int connType, u8 mfrId)
 	/*
 	**  Register this port.
 	*/
-	connTypes[numConnTypes].tcpPort = tcpPort;
-	connTypes[numConnTypes].numConns = numConns;
-	connTypes[numConnTypes].connType = connType;
-	connTypes[numConnTypes].mfrId = mfrId;
-	numConnTypes += 1;
-	npuNetTcpConns += numConns;
+	mfr->connTypes[mfr->numConnTypes].tcpPort = tcpPort;
+	mfr->connTypes[mfr->numConnTypes].numConns = numConns;
+	mfr->connTypes[mfr->numConnTypes].connType = connType;
+	mfr->connTypes[mfr->numConnTypes].mfrId = mfrId;
+	mfr->numConnTypes += 1;
+	mfr->npuNetTcpConns += numConns;
 
 	return(NpuNetRegOk);
 }
@@ -191,15 +192,16 @@ int npuNetRegister(int tcpPort, int numConns, int connType, u8 mfrId)
 void npuNetInit(bool startup, u8 mfrId)
 {
 	int i;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	if (mfrId == 0)
+	//if (mfrId == 0)
 	{
 
 		/*
 		**  Initialise network part of TCBs.
 		*/
-		Tcb *tp = npuTcbs;
-		for (i = 0; i < npuNetTcpConns; i++, tp++)
+		Tcb *tp = mfr->npuTcbs;
+		for (i = 0; i < mfr->npuNetTcpConns; i++, tp++)
 		{
 			tp->state = StTermIdle;
 			tp->connFd = 0;
@@ -208,24 +210,24 @@ void npuNetInit(bool startup, u8 mfrId)
 		/*
 		** Initialise connection type specific TCB values.
 		*/
-		tp = npuTcbs;
-		for (i = 0; i < numConnTypes; i++)
+		tp = mfr->npuTcbs;
+		for (i = 0; i < mfr->numConnTypes; i++)
 		{
-			connTypes[i].startTcb = tp;
-			int numConns = connTypes[i].numConns;
-			u8 connType = connTypes[i].connType;
+			mfr->connTypes[i].startTcb = tp;
+			int numConns = mfr->connTypes[i].numConns;
+			u8 connType = mfr->connTypes[i].connType;
 
 			for (int j = 0; j < numConns; j++, tp++)
 			{
 				tp->connType = connType;
-				tp->mfrId = connTypes[i].mfrId;
+				tp->mfrId = mfr->connTypes[i].mfrId;
 			}
 		}
 
 		/*
 		**  Setup for input data processing.
 		*/
-		pollIndex = npuNetTcpConns;
+		mfr->pollIndex = mfr->npuNetTcpConns;
 
 	}
 	/*
@@ -258,12 +260,14 @@ void npuNetInit(bool startup, u8 mfrId)
 **------------------------------------------------------------------------*/
 void npuNetReset(u8 mfrId)
 {
-	Tcb *tp = npuTcbs;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	Tcb *tp = mfr->npuTcbs;
 
 	/*
 	**  Iterate through all TCBs.
 	*/
-	for (int i = 0; i < npuNetTcpConns; i++, tp++)
+	for (int i = 0; i < mfr->npuNetTcpConns; i++, tp++)
 	{
 		if (tp->state != StTermIdle)
 		{
@@ -338,7 +342,7 @@ void npuNetDisconnected(Tcb *tp)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuNetSend(Tcb *tp, u8 *data, int len)
+void npuNetSend(Tcb *tp, u8 *data, int len, u8 mfrId)
 {
 	u8 *p;
 	int count;
@@ -360,8 +364,8 @@ void npuNetSend(Tcb *tp, u8 *data, int len)
 				**  Double FF to escape the Telnet IAC code making it a real FF.
 				*/
 				count = static_cast<int>(p - data);
-				npuNetQueueOutput(tp, data, count);
-				npuNetQueueOutput(tp, reinterpret_cast<u8 *>("\xFF"), 1);
+				npuNetQueueOutput(tp, data, count, mfrId);
+				npuNetQueueOutput(tp, reinterpret_cast<u8 *>("\xFF"), 1, mfrId);
 				data = p;
 				break;
 
@@ -370,8 +374,8 @@ void npuNetSend(Tcb *tp, u8 *data, int len)
 				**  Append zero to CR otherwise real zeroes will be stripped by Telnet.
 				*/
 				count = static_cast<int>(p - data);
-				npuNetQueueOutput(tp, data, count);
-				npuNetQueueOutput(tp, reinterpret_cast<u8 *>("\x00"), 1);
+				npuNetQueueOutput(tp, data, count, mfrId);
+				npuNetQueueOutput(tp, reinterpret_cast<u8 *>("\x00"), 1, mfrId);
 				data = p;
 				break;
 			}
@@ -379,7 +383,7 @@ void npuNetSend(Tcb *tp, u8 *data, int len)
 
 		if ((count = static_cast<int>(p - data)) > 0)
 		{
-			npuNetQueueOutput(tp, data, count);
+			npuNetQueueOutput(tp, data, count, mfrId);
 		}
 		break;
 
@@ -388,7 +392,7 @@ void npuNetSend(Tcb *tp, u8 *data, int len)
 		/*
 		**  Standard (non-Telnet) TCP connection.
 		*/
-		npuNetQueueOutput(tp, data, len);
+		npuNetQueueOutput(tp, data, len, mfrId);
 		break;
 	}
 }
@@ -413,7 +417,7 @@ void npuNetQueueAck(Tcb *tp, u8 blockSeqNo, u8 mfrId)
 	NpuBuffer *bp = npuBipQueueGetLast(&tp->outputQ);
 	if (bp == nullptr || bp->blockSeqNo != 0)
 	{
-		bp = npuBipBufGet();
+		bp = npuBipBufGet(mfrId);
 		npuBipQueueAppend(bp, &tp->outputQ);
 	}
 
@@ -450,9 +454,9 @@ void npuNetCheckStatus(u8 mfrId)
 	timeout.tv_sec = 0;
 	timeout.tv_usec = 0;
 
-	while (pollIndex < npuNetTcpConns)
+	while (mfr->pollIndex < mfr->npuNetTcpConns)
 	{
-		tp = npuTcbs + pollIndex++;
+		tp = mfr->npuTcbs + mfr->pollIndex++;
 
 		if (tp->state == StTermIdle)
 		{
@@ -529,7 +533,7 @@ void npuNetCheckStatus(u8 mfrId)
 		}
 	}
 
-	pollIndex = 0;
+	mfr->pollIndex = 0;
 }
 
 /*
@@ -604,6 +608,7 @@ static void *npuNetThread(void *param)
 #endif
 {
 	u8 mfrId = reinterpret_cast<u8>(param);
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 	static fd_set selectFds;
 	static fd_set acceptFds;
@@ -625,10 +630,10 @@ static void *npuNetThread(void *param)
 	/*
 	**  Create a listening socket for every configured connection type.
 	*/
-	for (i = 0; i < numConnTypes; i++)
+	for (i = 0; i < mfr->numConnTypes; i++)
 	{
-		if (mfrId == 1)
-			continue;
+		//if (mfrId == 1)
+		//	continue;
 		/*
 		**  Create TCP socket and bind to specified port.
 		*/
@@ -661,7 +666,7 @@ static void *npuNetThread(void *param)
 		memset(&server, 0, sizeof(server));
 		server.sin_family = AF_INET;
 		server.sin_addr.s_addr = inet_addr("0.0.0.0");
-		server.sin_port = htons(connTypes[i].tcpPort);
+		server.sin_port = htons(mfr->connTypes[i].tcpPort);
 
 		if (bind(listenFd[i], reinterpret_cast<struct sockaddr *>(&server), sizeof(server)) < 0)
 		{
@@ -721,10 +726,10 @@ static void *npuNetThread(void *param)
 		/*
 		**  Find the listening socket(s) with pending connections and accept them.
 		*/
-		for (i = 0; i < numConnTypes; i++)
+		for (i = 0; i < mfr->numConnTypes; i++)
 		{
-			if (mfrId != connTypes[i].mfrId)
-				continue;
+			//if (mfrId != mfr->connTypes[i].mfrId)
+			//	continue;
 			if (FD_ISSET(listenFd[i], &acceptFds))
 			{
 				// ReSharper disable once CppJoinDeclarationAndAssignment
@@ -736,7 +741,7 @@ static void *npuNetThread(void *param)
 					continue;
 				}
 
-				npuNetProcessNewConnection(static_cast<int>(acceptFd), connTypes + i, mfrId);
+				npuNetProcessNewConnection(static_cast<int>(acceptFd), mfr->connTypes + i, mfrId);
 			}
 		}
 	}
@@ -753,6 +758,7 @@ static void *npuNetThread1(void *param)
 #endif
 {
 	u8 mfrId = reinterpret_cast<u8>(param);
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 	static fd_set selectFds;
 	static fd_set acceptFds;
@@ -776,10 +782,10 @@ static void *npuNetThread1(void *param)
 	/*
 	**  Create a listening socket for every configured connection type.
 	*/
-	for (i = 0; i < numConnTypes; i++)
+	for (i = 0; i < mfr->numConnTypes; i++)
 	{
-		if (mfrId == 0)
-			continue;
+		//if (mfrId == 0)
+		//	continue;
 
 		/*
 		**  Create TCP socket and bind to specified port.
@@ -813,7 +819,7 @@ static void *npuNetThread1(void *param)
 		memset(&server, 0, sizeof(server));
 		server.sin_family = AF_INET;
 		server.sin_addr.s_addr = inet_addr("0.0.0.0");
-		server.sin_port = htons(connTypes[i].tcpPort);
+		server.sin_port = htons(mfr->connTypes[i].tcpPort);
 
 		if (bind(listenFd[i], reinterpret_cast<struct sockaddr *>(&server), sizeof(server)) < 0)
 		{
@@ -854,8 +860,8 @@ static void *npuNetThread1(void *param)
 
 	for (;;)
 	{
-		if (mfrId != connTypes[i].mfrId)
-			continue;
+		//if (mfrId != mfr->connTypes[i].mfrId)
+		//	continue;
 		/*
 		**  Wait for a connection on all sockets for the configured connection types.
 		*/
@@ -875,7 +881,7 @@ static void *npuNetThread1(void *param)
 		/*
 		**  Find the listening socket(s) with pending connections and accept them.
 		*/
-		for (i = 0; i < numConnTypes; i++)
+		for (i = 0; i < mfr->numConnTypes; i++)
 		{
 			if (FD_ISSET(listenFd[i], &acceptFds))
 			{
@@ -889,7 +895,7 @@ static void *npuNetThread1(void *param)
 					continue;
 				}
 
-				npuNetProcessNewConnection(static_cast<int>(acceptFd), connTypes + i, mfrId);
+				npuNetProcessNewConnection(static_cast<int>(acceptFd), mfr->connTypes + i, mfrId);
 			}
 		}
 	}
@@ -911,6 +917,8 @@ static void *npuNetThread1(void *param)
 **------------------------------------------------------------------------*/
 static void npuNetProcessNewConnection(int acceptFd, NpuConnType *ct, u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	u8 i;
 	int optEnable = 1;
 #if defined(_WIN32)
@@ -935,7 +943,7 @@ static void npuNetProcessNewConnection(int acceptFd, NpuConnType *ct, u8 mfrId)
 	/*
 	**  Check if the host is ready to accept connections.
 	*/
-	if (!npuSvmIsReady())
+	if (!npuSvmIsReady(mfrId))
 	{
 		/*
 		**  Tell the user.
@@ -1042,7 +1050,7 @@ static void npuNetProcessNewConnection(int acceptFd, NpuConnType *ct, u8 mfrId)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void npuNetQueueOutput(Tcb *tp, u8 *data, int len)
+static void npuNetQueueOutput(Tcb *tp, u8 *data, int len, u8 mfrId)
 {
 	/*
 	**  Try to use the last pending buffer unless it carries a sequence number
@@ -1051,7 +1059,7 @@ static void npuNetQueueOutput(Tcb *tp, u8 *data, int len)
 	NpuBuffer *bp = npuBipQueueGetLast(&tp->outputQ);
 	if (bp == nullptr || bp->blockSeqNo != 0)
 	{
-		bp = npuBipBufGet();
+		bp = npuBipBufGet(mfrId);
 		npuBipQueueAppend(bp, &tp->outputQ);
 	}
 
@@ -1077,7 +1085,7 @@ static void npuNetQueueOutput(Tcb *tp, u8 *data, int len)
 		len -= byteCount;
 		if (len > 0)
 		{
-			bp = npuBipBufGet();
+			bp = npuBipBufGet(mfrId);
 			npuBipQueueAppend(bp, &tp->outputQ);
 		}
 	}
@@ -1135,7 +1143,7 @@ static void npuNetTryOutput(Tcb *tp, u8 mfrId)
 				npuTipNotifySent(tp, bp->blockSeqNo, mfrId);
 			}
 
-			npuBipBufRelease(bp);
+			npuBipBufRelease(bp, mfrId);
 			continue;
 		}
 

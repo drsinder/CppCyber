@@ -327,7 +327,6 @@ extern MSystem *BigIron;
 
 extern u16 mux6676TelnetPort;
 extern u16 mux6676TelnetConns;
-extern u16 npuNetTcpConns;
 
 
 // leave these below global

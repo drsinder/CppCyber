@@ -46,6 +46,7 @@
 
 #include "const.h"
 #include "types.h"
+#include "npu.h"
 #include "MCpu.h"
 #include "Mpp.h"
 #include "MMainFrame.h"

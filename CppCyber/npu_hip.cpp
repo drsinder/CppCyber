@@ -32,7 +32,7 @@
 */
 #include "stdafx.h"
 #define DEBUG 0
-#include "npu.h"
+//#include "npu.h"
 
 /*
 **  -----------------
@@ -105,7 +105,7 @@
 **  Misc constants.
 */
 #define CyclesOneSecond         100000
-#define ReportInitCount         4
+//#define ReportInitCount         4
 
 #if DEBUG
 #define HexColumn(x) (4 * (x) + 1 + 4)
@@ -124,15 +124,15 @@
 **  Private Typedef and Structure Definitions
 **  -----------------------------------------
 */
-typedef struct npuParam
-{
-	PpWord      regCouplerStatus;
-	PpWord      regNpuStatus;
-	PpWord      regOrder;
-	NpuBuffer   *buffer;
-	u8          *npuData;
-	u32         lastCommandTime;
-} NpuParam;
+//typedef struct npuParam
+//{
+//	PpWord      regCouplerStatus;
+//	PpWord      regNpuStatus;
+//	PpWord      regOrder;
+//	NpuBuffer   *buffer;
+//	u8          *npuData;
+//	u32         lastCommandTime;
+//} NpuParam;
 
 /*
 **  ---------------------------
@@ -145,7 +145,7 @@ static void npuHipIo(u8 mfrId);
 static void npuHipActivate(u8 mfrId);
 static void npuHipDisconnect(u8 mfrId);
 static void npuHipWriteNpuStatus(PpWord status, u8 mfrId);
-static PpWord npuHipReadNpuStatus();
+static PpWord npuHipReadNpuStatus(u8 mfrId);
 static char *npuHipFunc2String(PpWord funcCode);
 #if DEBUG
 static void npuLogFlush();
@@ -163,18 +163,18 @@ static void npuLogByte(int b);
 **  Private Variables
 **  -----------------
 */
-static int initCount = ReportInitCount;
-static NpuParam *npu;
 
-typedef enum
-{
-	StHipInit,
-	StHipIdle,
-	StHipUpline,
-	StHipDownline,
-} HipState;
+//typedef enum
+//{
+//	StHipInit,
+//	StHipIdle,
+//	StHipUpline,
+//	StHipDownline,
+//} HipState;
 
-static HipState hipState = StHipInit;
+//static int initCount = ReportInitCount;
+//static NpuParam *npu;
+//static HipState hipState = StHipInit;
 
 #if DEBUG
 static FILE *npuLog = nullptr;
@@ -204,8 +204,8 @@ static int npuLogCol = 0;
 void npuInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 {
 
-	if (mfrID == 1)
-		return;	// do not init two instances for now!  DRS??!!
+	//if (mfrID == 1)
+	//	return;	// do not init two instances for now!  DRS??!!
 
 	MMainFrame *mfr = BigIron->chasis[mfrID];
 
@@ -233,24 +233,24 @@ void npuInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 	/*
 	**  Allocate and initialise NPU parameters.
 	*/
-	npu = static_cast<NpuParam*>(calloc(1, sizeof(NpuParam)));
-	if (npu == nullptr)
+	mfr->npu = static_cast<NpuParam*>(calloc(1, sizeof(NpuParam)));
+	if (mfr->npu == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate npu context block\n");
 		exit(1);
 	}
 
-	dp->controllerContext = npu;
-	npu->regCouplerStatus = 0;
-	hipState = StHipInit;
+	dp->controllerContext = mfr->npu;
+	mfr->npu->regCouplerStatus = 0;
+	mfr->hipState = StHipInit;
 
 	/*
 	**  Initialise BIP, SVC and TIP.
 	*/
-	if (mfrID == 0)
+	//if (mfrID == 0)
 	{
-		npuBipInit();
-		npuSvmInit();
+		npuBipInit(mfrID);
+		npuSvmInit(mfrID);
 	}
 	npuTipInit(mfrID);
 
@@ -271,7 +271,9 @@ void npuInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 **------------------------------------------------------------------------*/
 bool npuHipUplineBlock(NpuBuffer *bp, u8 mfrId)
 {
-	if (hipState != StHipIdle)
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	if (mfr->hipState != StHipIdle)
 	{
 		return(false);
 	}
@@ -285,8 +287,8 @@ bool npuHipUplineBlock(NpuBuffer *bp, u8 mfrId)
 		npuHipWriteNpuStatus(StNpuInputAvailGt256, mfrId);
 	}
 
-	npu->buffer = bp;
-	hipState = StHipUpline;
+	mfr->npu->buffer = bp;
+	mfr->hipState = StHipUpline;
 	return(true);
 }
 
@@ -301,7 +303,9 @@ bool npuHipUplineBlock(NpuBuffer *bp, u8 mfrId)
 **------------------------------------------------------------------------*/
 bool npuHipDownlineBlock(NpuBuffer *bp, u8 mfrId)
 {
-	if (hipState != StHipIdle)
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	if (mfr->hipState != StHipIdle)
 	{
 		return(false);
 	}
@@ -313,8 +317,8 @@ bool npuHipDownlineBlock(NpuBuffer *bp, u8 mfrId)
 	}
 
 	npuHipWriteNpuStatus(StNpuReadyOutput, mfrId);
-	npu->buffer = bp;
-	hipState = StHipDownline;
+	mfr->npu->buffer = bp;
+	mfr->hipState = StHipDownline;
 	return(true);
 }
 
@@ -360,20 +364,22 @@ void npuLogMessage(char *format, ...)
 **------------------------------------------------------------------------*/
 static void npuReset(u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	/*
 	**  Reset all subsystems - order matters!
 	*/
 	npuNetReset(mfrId);
 	npuTipReset(mfrId);
-	npuSvmReset();
-	npuBipReset();
+	npuSvmReset(mfrId);
+	npuBipReset(mfrId);
 
 	/*
 	**  Reset HIP state.
 	*/
-	memset(npu, 0, sizeof(NpuParam));
-	initCount = ReportInitCount;
-	hipState = StHipInit;
+	memset(mfr->npu, 0, sizeof(NpuParam));
+	mfr->initCount = ReportInitCount;
+	mfr->hipState = StHipInit;
 }
 
 /*--------------------------------------------------------------------------
@@ -414,20 +420,20 @@ static FcStatus npuHipFunc(PpWord funcCode, u8 mfrId)
 		return(FcDeclined);
 
 	case FcNpuInCouplerStatus:
-		switch (hipState)
+		switch (mfr->hipState)
 		{
 		case StHipInit:
-			if (initCount > 0)
+			if (mfr->initCount > 0)
 			{
 				/*
 				**  Tell PIP a few times that the NPU has initialized.
 				*/
-				initCount -= 1;
+				mfr->initCount -= 1;
 				npuHipWriteNpuStatus(StNpuInitCompleted, mfrId);
 			}
 			else
 			{
-				hipState = StHipIdle;
+				mfr->hipState = StHipIdle;
 				npuHipWriteNpuStatus(StNpuIdle, mfrId);
 			}
 
@@ -442,13 +448,13 @@ static FcStatus npuHipFunc(PpWord funcCode, u8 mfrId)
 			/*
 			**  If no upline data pending.
 			*/
-			if (hipState == StHipIdle)
+			if (mfr->hipState == StHipIdle)
 			{
 				/*
 				**  Announce idle state to PIP at intervals of less then one second,
 				**  otherwise PIP will assume that the NPU is dead.
 				*/
-				if (labs(mfr->activeChannel->mfr->cycles - npu->lastCommandTime) > CyclesOneSecond)
+				if (labs(mfr->activeChannel->mfr->cycles - mfr->npu->lastCommandTime) > CyclesOneSecond)
 				{
 					npuHipWriteNpuStatus(StNpuIdle, mfrId);
 				}
@@ -462,38 +468,38 @@ static FcStatus npuHipFunc(PpWord funcCode, u8 mfrId)
 		break;
 
 	case FcNpuInData:
-		bp = npu->buffer;
+		bp = mfr->npu->buffer;
 		if (bp == nullptr)
 		{
 			/*
 			**  Unexpected input request by host.
 			*/
-			hipState = StHipIdle;
-			npu->npuData = nullptr;
+			mfr->hipState = StHipIdle;
+			mfr->npu->npuData = nullptr;
 			mfr->activeDevice->recordLength = 0;
 			mfr->activeDevice->fcode = 0;
 			return(FcDeclined);
 		}
 
-		npu->npuData = bp->data;
+		mfr->npu->npuData = bp->data;
 		mfr->activeDevice->recordLength = bp->numBytes;
 		break;
 
 	case FcNpuOutData:
-		bp = npu->buffer;
+		bp = mfr->npu->buffer;
 		if (bp == nullptr)
 		{
 			/*
 			**  Unexpected output request by host.
 			*/
-			hipState = StHipIdle;
-			npu->npuData = nullptr;
+			mfr->hipState = StHipIdle;
+			mfr->npu->npuData = nullptr;
 			mfr->activeDevice->recordLength = 0;
 			mfr->activeDevice->fcode = 0;
 			return(FcDeclined);
 		}
 
-		npu->npuData = bp->data;
+		mfr->npu->npuData = bp->data;
 		mfr->activeDevice->recordLength = 0;
 		break;
 
@@ -502,7 +508,7 @@ static FcStatus npuHipFunc(PpWord funcCode, u8 mfrId)
 		break;
 
 	case FcNpuOutNpuOrder:
-		hipState = StHipIdle;
+		mfr->hipState = StHipIdle;
 		npuHipWriteNpuStatus(StNpuIdle, mfrId);
 		break;
 
@@ -539,11 +545,12 @@ static FcStatus npuHipFunc(PpWord funcCode, u8 mfrId)
 **------------------------------------------------------------------------*/
 static void npuHipIo(u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	// ReSharper disable once CppJoinDeclarationAndAssignment
 	PpWord orderType;
 	// ReSharper disable once CppJoinDeclarationAndAssignment
 	u8 orderValue;
-	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 	switch (mfr->activeDevice->fcode)
 	{
@@ -551,7 +558,7 @@ static void npuHipIo(u8 mfrId)
 		break;
 
 	case FcNpuInNpuStatus:
-		mfr->activeChannel->data = npuHipReadNpuStatus();
+		mfr->activeChannel->data = npuHipReadNpuStatus(mfrId);
 		mfr->activeChannel->full = true;
 #if DEBUG
 		fprintf(npuLog, " %03X", activeChannel->data);
@@ -559,7 +566,7 @@ static void npuHipIo(u8 mfrId)
 		break;
 
 	case FcNpuInCouplerStatus:
-		mfr->activeChannel->data = npu->regCouplerStatus;
+		mfr->activeChannel->data = mfr->npu->regCouplerStatus;
 		mfr->activeChannel->full = true;
 #if DEBUG
 		if (npu->regCouplerStatus != 0)
@@ -576,7 +583,7 @@ static void npuHipIo(u8 mfrId)
 		break;
 
 	case FcNpuInNpuOrder:
-		mfr->activeChannel->data = npu->regOrder;
+		mfr->activeChannel->data = mfr->npu->regOrder;
 		mfr->activeChannel->full = true;
 #if DEBUG
 		fprintf(npuLog, " %03X", activeChannel->data);
@@ -591,7 +598,7 @@ static void npuHipIo(u8 mfrId)
 
 		if (mfr->activeDevice->recordLength > 0)
 		{
-			mfr->activeChannel->data = *npu->npuData++;
+			mfr->activeChannel->data = *mfr->npu->npuData++;
 			mfr->activeChannel->full = true;
 
 			mfr->activeDevice->recordLength -= 1;
@@ -603,7 +610,7 @@ static void npuHipIo(u8 mfrId)
 				mfr->activeChannel->data |= 04000;
 				mfr->activeChannel->discAfterInput = true;
 				mfr->activeDevice->fcode = 0;
-				hipState = StHipIdle;
+				mfr->hipState = StHipIdle;
 				npuBipNotifyUplineSent(mfrId);
 			}
 #if DEBUG
@@ -622,16 +629,16 @@ static void npuHipIo(u8 mfrId)
 			mfr->activeChannel->full = false;
 			if (mfr->activeDevice->recordLength < MaxBuffer)
 			{
-				*npu->npuData++ = mfr->activeChannel->data & Mask8;
+				*mfr->npu->npuData++ = mfr->activeChannel->data & Mask8;
 				mfr->activeDevice->recordLength += 1;
 				if ((mfr->activeChannel->data & 04000) != 0)
 				{
 					/*
 					**  Top bit set - process message.
 					*/
-					npu->buffer->numBytes = mfr->activeDevice->recordLength;
+					mfr->npu->buffer->numBytes = mfr->activeDevice->recordLength;
 					mfr->activeDevice->fcode = 0;
-					hipState = StHipIdle;
+					mfr->hipState = StHipIdle;
 					npuBipNotifyDownlineReceived(mfrId);
 				}
 				else if (mfr->activeDevice->recordLength >= MaxBuffer)
@@ -640,7 +647,7 @@ static void npuHipIo(u8 mfrId)
 					**  We run out of buffer space before the end of the message.
 					*/
 					mfr->activeDevice->fcode = 0;
-					hipState = StHipIdle;
+					mfr->hipState = StHipIdle;
 					npuBipAbortDownlineReceived(mfrId);
 				}
 			}
@@ -667,7 +674,7 @@ static void npuHipIo(u8 mfrId)
 			fprintf(npuLog, " Order word %03X - function %02X : %s",
 				activeChannel->data, activeChannel->data >> 8, orderCode[(activeChannel->data >> 8) & 7]);
 #endif
-			npu->regOrder = mfr->activeChannel->data;
+			mfr->npu->regOrder = mfr->activeChannel->data;
 			// ReSharper disable once CppJoinDeclarationAndAssignment
 			orderType = mfr->activeChannel->data & OrdMaskType;
 			// ReSharper disable once CppJoinDeclarationAndAssignment
@@ -779,9 +786,9 @@ static void npuHipWriteNpuStatus(PpWord status, u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	npu->lastCommandTime = mfr->cycles;	//DRS??!!
-	npu->regNpuStatus = status;
-	npu->regCouplerStatus |= StCplrStatusLoaded;
+	mfr->npu->lastCommandTime = mfr->cycles;	//DRS??!!
+	mfr->npu->regNpuStatus = status;
+	mfr->npu->regCouplerStatus |= StCplrStatusLoaded;
 }
 
 /*--------------------------------------------------------------------------
@@ -792,12 +799,14 @@ static void npuHipWriteNpuStatus(PpWord status, u8 mfrId)
 **  Returns:        NPU status register value.
 **
 **------------------------------------------------------------------------*/
-static PpWord npuHipReadNpuStatus()
+static PpWord npuHipReadNpuStatus(u8 mfrId)
 {
-	PpWord value = npu->regNpuStatus;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
-	npu->regCouplerStatus &= ~StCplrStatusLoaded;
-	npu->regNpuStatus = StNpuIgnore;
+	PpWord value = mfr->npu->regNpuStatus;
+
+	mfr->npu->regCouplerStatus &= ~StCplrStatusLoaded;
+	mfr->npu->regNpuStatus = StNpuIgnore;
 	return(value);
 }
 

@@ -805,9 +805,9 @@ static void waitTerminationMessage()
 {
 	fflush(stdout);
 #if defined(_WIN32)
-	Sleep(3000);
+	Sleep(5000);
 #else
-	sleep(3);
+	sleep(5);
 #endif
 }
 

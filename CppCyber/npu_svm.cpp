@@ -31,75 +31,75 @@
 **  -------------
 */
 #include "stdafx.h"
-#include "npu.h"
+//#include "npu.h"
 
-/*
-**  -----------------
-**  Private Constants
-**  -----------------
-*/
-
-/*
-**  Primary Service Message function codes.
-*/
-#define PfcREG          0x1     // logical link regulation 
-#define PfcICN          0x2     // initiate connection     
-#define PfcTCN          0x3     // terminate connection    
-#define PfcCHC          0x4     // change terminal characteristics
-#define PfcNPU          0xA     // initialize npu          
-#define PfcSUP          0xE     // initiate supervision    
-#define PfcCNF          0xF     // configure terminal      
-#define PfcENB          0x10    // enable command(s)       
-#define PfcDIB          0x11    // disable command(s)      
-#define PfcNPS          0x12    // npu status request      
-#define PfcLLS          0x13    // ll status request       
-#define PfcLIS          0x14    // line status request     
-#define PfcTES          0x15    // term status request     
-#define PfcTRS          0x16    // trunk status request    
-#define PfcCPS          0x17    // coupler status request  
-#define PfcVCS          0x18    // svc status request       
-#define PfcSTU          0x19    // unsolicated statuses    
-#define PfcSTI          0x1A    // statistics              
-#define PfcMSG          0x1B    // message(s)             
-#define PfcLOG          0x1C    // error log entry         
-#define PfcALM          0x1D    // operator alarm          
-#define PfcNPI          0x1E    // reload npu               
-#define PfcCDI          0x1F    // count(s)                
-#define PfcOLD          0x20    // on-line diagnostics     
-
-/*
-**  Secondary Service Message function codes.
-*/
-#define SfcNP           0x0     // npu                     
-#define SfcLL           0x1     // logical link            
-#define SfcLI           0x2     // line                    
-#define SfcTE           0x3     // terminal                
-#define SfcTR           0x4     // trunk                   
-#define SfcCP           0x5     // coupler                 
-#define SfcVC           0x6     // switched virtual circuit
-#define SfcOP           0x7     // operator                
-#define SfcTA           0x8     // terminate connection    
-#define SfcAP           0x9     // outbound a-a connection 
-#define SfcIN           0xA     // initiate supervision    
-#define SfcDO           0xB     // dump option             
-#define SfcPB           0xC     // program block           
-#define SfcDT           0xD     // data                    
-#define SfcTM           0xE     // terminate diagnostics   
-#define SfcLD           0xE     // load                    
-#define SfcGO           0xF     // go                      
-#define SfcER           0x10    // error(s)                
-#define SfcEX           0x11    // a to a connection       
-#define SfcNQ           0x12    // sfc for *pbperform* sti 
-#define SfcNE           0x13    // nip block protocol error
-#define SfcPE           0x14    // pip block protocol error
-#define SfcRC           0x11    // reconfigure terminal    
-
-/*
-**  Regulation level change bit masks.
-*/
-#define RegLvlBuffers       0x03
-#define RegLvlCsAvailable   0x04
-#define RegLvlNsAvailable   0x08
+///*
+//**  -----------------
+//**  Private Constants
+//**  -----------------
+//*/
+//
+///*
+//**  Primary Service Message function codes.
+//*/
+//#define PfcREG          0x1     // logical link regulation 
+//#define PfcICN          0x2     // initiate connection     
+//#define PfcTCN          0x3     // terminate connection    
+//#define PfcCHC          0x4     // change terminal characteristics
+//#define PfcNPU          0xA     // initialize npu          
+//#define PfcSUP          0xE     // initiate supervision    
+//#define PfcCNF          0xF     // configure terminal      
+//#define PfcENB          0x10    // enable command(s)       
+//#define PfcDIB          0x11    // disable command(s)      
+//#define PfcNPS          0x12    // npu status request      
+//#define PfcLLS          0x13    // ll status request       
+//#define PfcLIS          0x14    // line status request     
+//#define PfcTES          0x15    // term status request     
+//#define PfcTRS          0x16    // trunk status request    
+//#define PfcCPS          0x17    // coupler status request  
+//#define PfcVCS          0x18    // svc status request       
+//#define PfcSTU          0x19    // unsolicated statuses    
+//#define PfcSTI          0x1A    // statistics              
+//#define PfcMSG          0x1B    // message(s)             
+//#define PfcLOG          0x1C    // error log entry         
+//#define PfcALM          0x1D    // operator alarm          
+//#define PfcNPI          0x1E    // reload npu               
+//#define PfcCDI          0x1F    // count(s)                
+//#define PfcOLD          0x20    // on-line diagnostics     
+//
+///*
+//**  Secondary Service Message function codes.
+//*/
+//#define SfcNP           0x0     // npu                     
+//#define SfcLL           0x1     // logical link            
+//#define SfcLI           0x2     // line                    
+//#define SfcTE           0x3     // terminal                
+//#define SfcTR           0x4     // trunk                   
+//#define SfcCP           0x5     // coupler                 
+//#define SfcVC           0x6     // switched virtual circuit
+//#define SfcOP           0x7     // operator                
+//#define SfcTA           0x8     // terminate connection    
+//#define SfcAP           0x9     // outbound a-a connection 
+//#define SfcIN           0xA     // initiate supervision    
+//#define SfcDO           0xB     // dump option             
+//#define SfcPB           0xC     // program block           
+//#define SfcDT           0xD     // data                    
+//#define SfcTM           0xE     // terminate diagnostics   
+//#define SfcLD           0xE     // load                    
+//#define SfcGO           0xF     // go                      
+//#define SfcER           0x10    // error(s)                
+//#define SfcEX           0x11    // a to a connection       
+//#define SfcNQ           0x12    // sfc for *pbperform* sti 
+//#define SfcNE           0x13    // nip block protocol error
+//#define SfcPE           0x14    // pip block protocol error
+//#define SfcRC           0x11    // reconfigure terminal    
+//
+///*
+//**  Regulation level change bit masks.
+//*/
+//#define RegLvlBuffers       0x03
+//#define RegLvlCsAvailable   0x04
+//#define RegLvlNsAvailable   0x08
 
 /*
 **  -----------------------
@@ -133,83 +133,83 @@ static bool npuSvmRequestTerminalConnection(Tcb *tp, u8 mfrId);
 **  Private Variables
 **  -----------------
 */
-static u8 linkRegulation[] =
-{
-	AddrHost,           // DN
-	AddrNpu,            // SN
-	0,                  // CN
-	4,                  // BT=CMD
-	PfcREG,             // PFC
-	SfcLL,              // SFC
-	0x0F,               // NS=1, CS=1, Regulation level=3
-	0,0,0,0,            // not used
-	0,0,0,              // not used
-};
+//static u8 linkRegulation[] =
+//{
+//	AddrHost,           // DN
+//	AddrNpu,            // SN
+//	0,                  // CN
+//	4,                  // BT=CMD
+//	PfcREG,             // PFC
+//	SfcLL,              // SFC
+//	0x0F,               // NS=1, CS=1, Regulation level=3
+//	0,0,0,0,            // not used
+//	0,0,0,              // not used
+//};
 
-static u8 requestSupervision[] =
-{
-	AddrHost,           // DN
-	AddrNpu,            // SN
-	0,                  // CN
-	4,                  // BT=CMD
-	PfcSUP,             // PFC
-	SfcIN,              // SFC
-	0,                  // PS
-	0,                  // PL
-	0,                  // RI
-	0,0,0,              // not used
-	3,                  // CCP version
-	1,                  // ...
-	0,                  // CCP level
-	0,                  // ...
-	0,                  // CCP cycle or variant
-	0,                  // ...
-	0,                  // not used
-	0,0                 // NCF version in NDL file (ignored)
-};
+//static u8 requestSupervision[] =
+//{
+//	AddrHost,           // DN
+//	AddrNpu,            // SN
+//	0,                  // CN
+//	4,                  // BT=CMD
+//	PfcSUP,             // PFC
+//	SfcIN,              // SFC
+//	0,                  // PS
+//	0,                  // PL
+//	0,                  // RI
+//	0,0,0,              // not used
+//	3,                  // CCP version
+//	1,                  // ...
+//	0,                  // CCP level
+//	0,                  // ...
+//	0,                  // CCP cycle or variant
+//	0,                  // ...
+//	0,                  // not used
+//	0,0                 // NCF version in NDL file (ignored)
+//};
+//
+//static u8 responseNpuStatus[] =
+//{
+//	AddrHost,           // DN
+//	AddrNpu,            // SN
+//	0,                  // CN
+//	4,                  // BT=CMD
+//	PfcNPS,             // PFC
+//	SfcNP | SfcResp,    // SFC
+//};
+//
+//static u8 responseTerminateConnection[] =
+//{
+//	AddrHost,           // DN
+//	AddrNpu,            // SN
+//	0,                  // CN
+//	4,                  // BT=CMD
+//	PfcTCN,             // PFC
+//	SfcTA | SfcResp,    // SFC
+//	0,                  // CN
+//};
+//
+//static u8 requestTerminateConnection[] =
+//{
+//	AddrHost,           // DN
+//	AddrNpu,            // SN
+//	0,                  // CN
+//	4,                  // BT=CMD
+//	PfcTCN,             // PFC
+//	SfcTA,              // SFC
+//	0,                  // CN
+//};
 
-static u8 responseNpuStatus[] =
-{
-	AddrHost,           // DN
-	AddrNpu,            // SN
-	0,                  // CN
-	4,                  // BT=CMD
-	PfcNPS,             // PFC
-	SfcNP | SfcResp,    // SFC
-};
+//typedef enum
+//{
+//	StIdle,
+//	StWaitSupervision,
+//	StReady,
+//} SvmState;
 
-static u8 responseTerminateConnection[] =
-{
-	AddrHost,           // DN
-	AddrNpu,            // SN
-	0,                  // CN
-	4,                  // BT=CMD
-	PfcTCN,             // PFC
-	SfcTA | SfcResp,    // SFC
-	0,                  // CN
-};
-
-static u8 requestTerminateConnection[] =
-{
-	AddrHost,           // DN
-	AddrNpu,            // SN
-	0,                  // CN
-	4,                  // BT=CMD
-	PfcTCN,             // PFC
-	SfcTA,              // SFC
-	0,                  // CN
-};
-
-typedef enum
-{
-	StIdle,
-	StWaitSupervision,
-	StReady,
-} SvmState;
-
-static SvmState svmState = StIdle;
-
-static u8 oldRegLevel = 0;
+//static SvmState svmState = StIdle;
+//
+//static u8 oldRegLevel = 0;
 
 /*
 **--------------------------------------------------------------------------
@@ -227,12 +227,14 @@ static u8 oldRegLevel = 0;
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuSvmInit()
+void npuSvmInit(u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	/*
 	**  Set initial state.
 	*/
-	svmState = StIdle;
+	mfr->svmState = mfr->StIdle;
 }
 
 /*--------------------------------------------------------------------------
@@ -243,13 +245,15 @@ void npuSvmInit()
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuSvmReset()
+void npuSvmReset(u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	/*
 	**  Set initial state.
 	*/
-	svmState = StIdle;
-	oldRegLevel = 0;
+	mfr->svmState = mfr->StIdle;
+	mfr->oldRegLevel = 0;
 }
 
 /*--------------------------------------------------------------------------
@@ -263,17 +267,18 @@ void npuSvmReset()
 **------------------------------------------------------------------------*/
 void npuSvmNotifyHostRegulation(u8 regLevel, u8 mfrId)
 {
-	if (svmState == StIdle || regLevel != oldRegLevel)
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+	if (mfr->svmState == mfr->StIdle || regLevel != mfr->oldRegLevel)
 	{
-		oldRegLevel = regLevel;
-		linkRegulation[BlkOffP3] = regLevel;
-		npuBipRequestUplineCanned(linkRegulation, sizeof(linkRegulation), mfrId);
+		mfr->oldRegLevel = regLevel;
+		mfr->linkRegulation[BlkOffP3] = regLevel;
+		npuBipRequestUplineCanned(mfr->linkRegulation, sizeof(mfr->linkRegulation), mfrId);
 	}
 
-	if (svmState == StIdle && (regLevel & RegLvlCsAvailable) != 0)
+	if (mfr->svmState == mfr->StIdle && (regLevel & RegLvlCsAvailable) != 0)
 	{
-		npuBipRequestUplineCanned(requestSupervision, sizeof(requestSupervision), mfrId);
-		svmState = StWaitSupervision;
+		npuBipRequestUplineCanned(mfr->requestSupervision, sizeof(mfr->requestSupervision), mfrId);
+		mfr->svmState = mfr->StWaitSupervision;
 	}
 }
 
@@ -308,6 +313,8 @@ bool npuSvmConnectTerminal(Tcb *tp, u8 mfrId)
 **------------------------------------------------------------------------*/
 void npuSvmProcessBuffer(NpuBuffer *bp, u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	u8 *block = bp->data;
 	Tcb *tp;
 
@@ -331,12 +338,12 @@ void npuSvmProcessBuffer(NpuBuffer *bp, u8 mfrId)
 		/*
 		**  Service message must be at least DN/SN/0/BSN/PFC/SFC.
 		*/
-		npuLogMessage("Short SVM message in state %d", svmState);
+		npuLogMessage("Short SVM message in state %d", mfr->svmState);
 
 		/*
 		**  Release downline buffer and return.
 		*/
-		npuBipBufRelease(bp);
+		npuBipBufRelease(bp, mfrId);
 		return;
 	}
 
@@ -354,7 +361,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp, u8 mfrId)
 		/*
 		**  Release downline buffer and return.
 		*/
-		npuBipBufRelease(bp);
+		npuBipBufRelease(bp, mfrId);
 		return;
 	}
 
@@ -373,22 +380,22 @@ void npuSvmProcessBuffer(NpuBuffer *bp, u8 mfrId)
 			**  Message too short.
 			*/
 			npuLogMessage("SVM message %02X/%02X is too short and has no required P3", block[BlkOffPfc], block[BlkOffSfc]);
-			npuBipBufRelease(bp);
+			npuBipBufRelease(bp, mfrId);
 			return;
 		}
 
 		cn = block[BlkOffP3];
-		if (cn == 0 || cn > npuTcbCount)
+		if (cn == 0 || cn > mfr->npuTcbCount)
 		{
 			/*
 			**  Port number out of range.
 			*/
 			npuLogMessage("Unexpected port number %u in SVM message %02X/%02X", cn, block[BlkOffPfc], block[BlkOffSfc]);
-			npuBipBufRelease(bp);
+			npuBipBufRelease(bp, mfrId);
 			return;
 		}
 
-		tp = npuTcbs + cn - 1;
+		tp = mfr->npuTcbs + cn - 1;
 		break;
 	}
 
@@ -401,9 +408,9 @@ void npuSvmProcessBuffer(NpuBuffer *bp, u8 mfrId)
 	case PfcSUP:
 		if (block[BlkOffSfc] == (SfcIN | SfcResp))
 		{
-			if (svmState != StWaitSupervision)
+			if (mfr->svmState != mfr->StWaitSupervision)
 			{
-				npuLogMessage("Unexpected Supervision Reply in state %d", svmState);
+				npuLogMessage("Unexpected Supervision Reply in state %d", mfr->svmState);
 				break;
 			}
 
@@ -411,11 +418,11 @@ void npuSvmProcessBuffer(NpuBuffer *bp, u8 mfrId)
 			**  Host (CS) has agreed to supervise us, we are now ready to handle network
 			**  connection attempts.
 			*/
-			svmState = StReady;
+			mfr->svmState = mfr->StReady;
 		}
 		else
 		{
-			npuLogMessage("Unexpected SVM message %02X/%02X in state %d", block[BlkOffPfc], block[BlkOffSfc], svmState);
+			npuLogMessage("Unexpected SVM message %02X/%02X in state %d", block[BlkOffPfc], block[BlkOffSfc], mfr->svmState);
 		}
 
 		break;
@@ -423,11 +430,11 @@ void npuSvmProcessBuffer(NpuBuffer *bp, u8 mfrId)
 	case PfcNPS:
 		if (block[BlkOffSfc] == SfcNP)
 		{
-			npuBipRequestUplineCanned(responseNpuStatus, sizeof(responseNpuStatus), mfrId);
+			npuBipRequestUplineCanned(mfr->responseNpuStatus, sizeof(mfr->responseNpuStatus), mfrId);
 		}
 		else
 		{
-			npuLogMessage("Unexpected SVM message %02X/%02X in state %d", block[BlkOffPfc], block[BlkOffSfc], svmState);
+			npuLogMessage("Unexpected SVM message %02X/%02X in state %d", block[BlkOffPfc], block[BlkOffSfc], mfr->svmState);
 		}
 
 		break;
@@ -540,7 +547,7 @@ void npuSvmProcessBuffer(NpuBuffer *bp, u8 mfrId)
 	/*
 	**  Release downline buffer.
 	*/
-	npuBipBufRelease(bp);
+	npuBipBufRelease(bp, mfrId);
 }
 
 /*--------------------------------------------------------------------------
@@ -554,6 +561,8 @@ void npuSvmProcessBuffer(NpuBuffer *bp, u8 mfrId)
 **------------------------------------------------------------------------*/
 void npuSvmDiscRequestTerminal(Tcb *tp, u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	if (tp->state == StTermHostConnected)
 	{
 		/*
@@ -566,8 +575,8 @@ void npuSvmDiscRequestTerminal(Tcb *tp, u8 mfrId)
 		/*
 		**  Send the TCN/TA/R message.
 		*/
-		requestTerminateConnection[BlkOffP3] = tp->portNumber;
-		npuBipRequestUplineCanned(requestTerminateConnection, sizeof(requestTerminateConnection), mfrId);
+		mfr->requestTerminateConnection[BlkOffP3] = tp->portNumber;
+		npuBipRequestUplineCanned(mfr->requestTerminateConnection, sizeof(mfr->requestTerminateConnection), mfrId);
 	}
 	else
 	{
@@ -589,8 +598,10 @@ void npuSvmDiscRequestTerminal(Tcb *tp, u8 mfrId)
 **------------------------------------------------------------------------*/
 void npuSvmDiscReplyTerminal(Tcb *tp, u8 mfrId)
 {
-	responseTerminateConnection[BlkOffP3] = tp->portNumber;
-	npuBipRequestUplineCanned(responseTerminateConnection, sizeof(responseTerminateConnection), mfrId);
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	mfr->responseTerminateConnection[BlkOffP3] = tp->portNumber;
+	npuBipRequestUplineCanned(mfr->responseTerminateConnection, sizeof(mfr->responseTerminateConnection), mfrId);
 }
 
 /*--------------------------------------------------------------------------
@@ -602,9 +613,11 @@ void npuSvmDiscReplyTerminal(Tcb *tp, u8 mfrId)
 **                  otherwise.
 **
 **------------------------------------------------------------------------*/
-bool npuSvmIsReady()
+bool npuSvmIsReady(u8 mfrId)
 {
-	return(svmState == StReady);
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	return(mfr->svmState == mfr->StReady);
 }
 
 /*
@@ -626,7 +639,7 @@ bool npuSvmIsReady()
 **------------------------------------------------------------------------*/
 static bool npuSvmRequestTerminalConfig(Tcb *tp, u8 mfrId)
 {
-	NpuBuffer *bp = npuBipBufGet();
+	NpuBuffer *bp = npuBipBufGet(mfrId);
 	if (bp == nullptr)
 	{
 		return(false);
@@ -746,7 +759,7 @@ static bool npuSvmProcessTerminalConfig(Tcb *tp, NpuBuffer *bp)
 **------------------------------------------------------------------------*/
 static bool npuSvmRequestTerminalConnection(Tcb *tp, u8 mfrId)
 {
-	NpuBuffer *bp = npuBipBufGet();
+	NpuBuffer *bp = npuBipBufGet(mfrId);
 	if (bp == nullptr)
 	{
 		return(false);

@@ -31,7 +31,7 @@
 **  -------------
 */
 #include "stdafx.h"
-#include "npu.h"
+//#include "npu.h"
 
 /*
 **  -----------------
@@ -57,8 +57,8 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
-static void npuAsyncDoFeBefore(u8 fe);
-static void npuAsyncDoFeAfter(u8 fe);
+static void npuAsyncDoFeBefore(u8 fe, u8 mfrId);
+static void npuAsyncDoFeAfter(u8 fe, u8 mfrId);
 static void npuAsyncProcessUplineTransparent(Tcb *tp, u8 mfrId);
 static void npuAsyncProcessUplineAscii(Tcb *tp, u8 mfrId);
 static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId);
@@ -89,9 +89,9 @@ static u8 netBEL[] = { ChrBEL };
 static u8 netLF[] = { ChrLF };
 static u8 netCR[] = { ChrCR };
 static u8 netCRLF[] = { ChrCR, ChrLF };
-static u8 echoBuffer[1000];
-static u8 *echoPtr;
-static int echoLen;
+//static u8 echoBuffer[1000];
+//static u8 *echoPtr;
+//static int echoLen;
 
 /*
 **--------------------------------------------------------------------------
@@ -114,6 +114,8 @@ static int echoLen;
 **------------------------------------------------------------------------*/
 void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	u8 *blk = bp->data + BlkOffData;
 	int len = bp->numBytes - BlkOffData;
 	u8 fe;
@@ -121,13 +123,13 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId)
 	/*
 	**  Locate TCB dealing with this connection.
 	*/
-	if (cn == 0 || cn > npuTcbCount)
+	if (cn == 0 || cn > mfr->npuTcbCount)
 	{
 		npuLogMessage("ASYNC: unexpected CN %d - message ignored", cn);
 		return;
 	}
 
-	npuTp = npuTcbs + cn - 1;
+	npuTp = mfr->npuTcbs + cn - 1;
 
 	/*
 	**  Extract Data Block Clarifier settings.
@@ -139,7 +141,7 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId)
 
 	if ((dbc & DbcTransparent) != 0)
 	{
-		npuNetSend(npuTp, blk, len);
+		npuNetSend(npuTp, blk, len, mfrId);
 		npuNetQueueAck(npuTp, static_cast<u8>(bp->data[BlkOffBTBSN] & (BlkMaskBSN << BlkShiftBSN)), mfrId);
 		return;
 	}
@@ -165,7 +167,7 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId)
 		/*
 		**  Process leading format effector.
 		*/
-		npuAsyncDoFeBefore(fe);
+		npuAsyncDoFeBefore(fe, mfrId);
 
 		if (len == 0)
 		{
@@ -185,7 +187,7 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId)
 			**  No US byte in the rest of the buffer, so send the entire
 			**  rest to the terminal.
 			*/
-			npuNetSend(npuTp, blk, len);
+			npuNetSend(npuTp, blk, len, mfrId);
 			break;
 		}
 
@@ -193,14 +195,14 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId)
 		**  Send the line.
 		*/
 		int textlen = static_cast<int>(ptrUS - blk);
-		npuNetSend(npuTp, blk, textlen);
+		npuNetSend(npuTp, blk, textlen, mfrId);
 
 		/*
 		**  Process trailing format effector.
 		*/
 		if ((dbc & DbcNoCursorPos) == 0)
 		{
-			npuAsyncDoFeAfter(fe);
+			npuAsyncDoFeAfter(fe, mfrId);
 		}
 
 		/*
@@ -224,7 +226,9 @@ void npuAsyncProcessDownlineData(u8 cn, NpuBuffer *bp, bool last, u8 mfrId)
 **------------------------------------------------------------------------*/
 void npuAsyncProcessUplineData(Tcb *tp, u8 mfrId)
 {
-	echoPtr = echoBuffer;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	mfr->echoPtr = mfr->echoBuffer;
 
 	if (tp->params.fvXInput)
 	{
@@ -248,10 +252,10 @@ void npuAsyncProcessUplineData(Tcb *tp, u8 mfrId)
 	*/
 	if (!tp->dbcNoEchoplex)
 	{
-		echoLen = static_cast<int>(echoPtr - echoBuffer);
-		if (echoLen)
+		mfr->echoLen = static_cast<int>(mfr->echoPtr - mfr->echoBuffer);
+		if (mfr->echoLen)
 		{
-			npuNetSend(tp, echoBuffer, echoLen);
+			npuNetSend(tp, mfr->echoBuffer, mfr->echoLen, mfrId);
 		}
 	}
 }
@@ -301,7 +305,7 @@ void npuAsyncFlushUplineTransparent(Tcb *tp, u8 mfrId)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void npuAsyncDoFeBefore(u8 fe)
+static void npuAsyncDoFeBefore(u8 fe, u8 mfrId)
 {
 	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (fe)
@@ -309,38 +313,38 @@ static void npuAsyncDoFeBefore(u8 fe)
 	case ' ':
 		if (npuTp->lastOpWasInput)
 		{
-			npuNetSend(npuTp, fcBol, sizeof(fcBol) - 1);
+			npuNetSend(npuTp, fcBol, sizeof(fcBol) - 1, mfrId);
 		}
 		else
 		{
-			npuNetSend(npuTp, fcSingleSpace, sizeof(fcSingleSpace) - 1);
+			npuNetSend(npuTp, fcSingleSpace, sizeof(fcSingleSpace) - 1, mfrId);
 		}
 		break;
 
 	case '0':
 		if (npuTp->lastOpWasInput)
 		{
-			npuNetSend(npuTp, fcSingleSpace, sizeof(fcSingleSpace) - 1);
+			npuNetSend(npuTp, fcSingleSpace, sizeof(fcSingleSpace) - 1, mfrId);
 		}
 		else
 		{
-			npuNetSend(npuTp, fcDoubleSpace, sizeof(fcDoubleSpace) - 1);
+			npuNetSend(npuTp, fcDoubleSpace, sizeof(fcDoubleSpace) - 1, mfrId);
 		}
 		break;
 
 	case '-':
 		if (npuTp->lastOpWasInput)
 		{
-			npuNetSend(npuTp, fcDoubleSpace, sizeof(fcDoubleSpace) - 1);
+			npuNetSend(npuTp, fcDoubleSpace, sizeof(fcDoubleSpace) - 1, mfrId);
 		}
 		else
 		{
-			npuNetSend(npuTp, fcTripleSpace, sizeof(fcTripleSpace) - 1);
+			npuNetSend(npuTp, fcTripleSpace, sizeof(fcTripleSpace) - 1, mfrId);
 		}
 		break;
 
 	case '+':
-		npuNetSend(npuTp, fcBol, sizeof(fcBol) - 1);
+		npuNetSend(npuTp, fcBol, sizeof(fcBol) - 1, mfrId);
 		break;
 
 	case '*':
@@ -349,14 +353,14 @@ static void npuAsyncDoFeBefore(u8 fe)
 			/*
 			**  Cursor Home (using ANSI/VT100 control sequences) for VT100.
 			*/
-			npuNetSend(npuTp, fcTofAnsi, sizeof(fcTofAnsi) - 1);
+			npuNetSend(npuTp, fcTofAnsi, sizeof(fcTofAnsi) - 1, mfrId);
 		}
 		else
 		{
 			/*
 			**  Formfeed for any other terminal.
 			*/
-			npuNetSend(npuTp, fcTof, sizeof(fcTof) - 1);
+			npuNetSend(npuTp, fcTof, sizeof(fcTof) - 1, mfrId);
 		}
 
 		break;
@@ -367,14 +371,14 @@ static void npuAsyncDoFeBefore(u8 fe)
 			/*
 			**  Cursor Home and Clear (using ANSI/VT100 control sequences) for VT100.
 			*/
-			npuNetSend(npuTp, fcClearHomeAnsi, sizeof(fcClearHomeAnsi) - 1);
+			npuNetSend(npuTp, fcClearHomeAnsi, sizeof(fcClearHomeAnsi) - 1, mfrId);
 		}
 		else
 		{
 			/*
 			**  Formfeed for any other terminal.
 			*/
-			npuNetSend(npuTp, fcTof, sizeof(fcTof) - 1);
+			npuNetSend(npuTp, fcTof, sizeof(fcTof) - 1, mfrId);
 		}
 
 		break;
@@ -398,17 +402,17 @@ static void npuAsyncDoFeBefore(u8 fe)
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-static void npuAsyncDoFeAfter(u8 fe)
+static void npuAsyncDoFeAfter(u8 fe, u8 mfrId)
 {
 	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	switch (fe)
 	{
 	case '.':
-		npuNetSend(npuTp, fcSingleSpace, sizeof(fcSingleSpace) - 1);
+		npuNetSend(npuTp, fcSingleSpace, sizeof(fcSingleSpace) - 1, mfrId);
 		break;
 
 	case '/':
-		npuNetSend(npuTp, fcBol, sizeof(fcBol) - 1);
+		npuNetSend(npuTp, fcBol, sizeof(fcBol) - 1, mfrId);
 		break;
 	}
 }
@@ -443,7 +447,7 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp, u8 mfrId)
 
 		if (tp->params.fvEchoplex)
 		{
-			*echoPtr++ = ch;
+			*mfr->echoPtr++ = ch;
 		}
 
 		if (tp->params.fvXCharFlag && ch == tp->params.fvXChar)
@@ -515,6 +519,8 @@ static void npuAsyncProcessUplineTransparent(Tcb *tp, u8 mfrId)
 **------------------------------------------------------------------------*/
 static void npuAsyncProcessUplineAscii(Tcb *tp, u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	u8 *dp = tp->inputData;
 	int len = tp->inputCount;
 
@@ -585,15 +591,15 @@ static void npuAsyncProcessUplineAscii(Tcb *tp, u8 mfrId)
 				**  DBC prevented echoplex for this line.
 				*/
 				tp->dbcNoEchoplex = false;
-				echoPtr = echoBuffer;
+				mfr->echoPtr = mfr->echoBuffer;
 			}
 			else
 			{
-				echoLen = static_cast<int>(echoPtr - echoBuffer);
-				if (echoLen)
+				mfr->echoLen = static_cast<int>(mfr->echoPtr - mfr->echoBuffer);
+				if (mfr->echoLen)
 				{
-					npuNetSend(tp, echoBuffer, echoLen);
-					echoPtr = echoBuffer;
+					npuNetSend(tp, mfr->echoBuffer, mfr->echoLen, mfrId);
+					mfr->echoPtr = mfr->echoBuffer;
 				}
 			}
 
@@ -615,16 +621,16 @@ static void npuAsyncProcessUplineAscii(Tcb *tp, u8 mfrId)
 						break;
 
 					case 1:
-						*echoPtr++ = ChrCR;
+						*mfr->echoPtr++ = ChrCR;
 						break;
 
 					case 2:
-						*echoPtr++ = ChrLF;
+						*mfr->echoPtr++ = ChrLF;
 						break;
 
 					case 3:
-						*echoPtr++ = ChrCR;
-						*echoPtr++ = ChrLF;
+						*mfr->echoPtr++ = ChrCR;
+						*mfr->echoPtr++ = ChrLF;
 						break;
 					}
 				}
@@ -635,7 +641,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp, u8 mfrId)
 
 		if (tp->params.fvEchoplex)
 		{
-			*echoPtr++ = ch;
+			*mfr->echoPtr++ = ch;
 		}
 
 		/*
@@ -667,6 +673,7 @@ static void npuAsyncProcessUplineAscii(Tcb *tp, u8 mfrId)
 static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId)
 {
 	int i;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 	u8 *dp = tp->inputData;
 	int len = tp->inputCount;
@@ -735,31 +742,31 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId)
 			**  and indicate it to user via "*DEL*". Use the echobuffer
 			**  to build and send the sequence.
 			*/
-			echoPtr = echoBuffer;
+			mfr->echoPtr = mfr->echoBuffer;
 			int cnt = static_cast<int>(tp->inBufPtr - tp->inBufStart);
 			for (i = cnt; i > 0; i--)
 			{
-				*echoPtr++ = ChrBS;
+				*mfr->echoPtr++ = ChrBS;
 			}
 
 			for (i = cnt; i > 0; i--)
 			{
-				*echoPtr++ = ' ';
+				*mfr->echoPtr++ = ' ';
 			}
 
 			for (i = cnt; i > 0; i--)
 			{
-				*echoPtr++ = ChrBS;
+				*mfr->echoPtr++ = ChrBS;
 			}
 
-			*echoPtr++ = '*';
-			*echoPtr++ = 'D';
-			*echoPtr++ = 'E';
-			*echoPtr++ = 'L';
-			*echoPtr++ = '*';
-			*echoPtr++ = '\r';
-			*echoPtr++ = '\n';
-			npuNetSend(tp, echoBuffer, static_cast<int>(echoPtr - echoBuffer));
+			*mfr->echoPtr++ = '*';
+			*mfr->echoPtr++ = 'D';
+			*mfr->echoPtr++ = 'E';
+			*mfr->echoPtr++ = 'L';
+			*mfr->echoPtr++ = '*';
+			*mfr->echoPtr++ = '\r';
+			*mfr->echoPtr++ = '\n';
+			npuNetSend(tp, mfr->echoBuffer, static_cast<int>(mfr->echoPtr - mfr->echoBuffer), mfrId);
 
 			/*
 			**  Send the line, but signal the cancel character.
@@ -771,7 +778,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId)
 			**  Reset input and echoplex buffers.
 			*/
 			npuTipInputReset(tp);
-			echoPtr = echoBuffer;
+			mfr->echoPtr = mfr->echoBuffer;
 			continue;
 		}
 
@@ -795,7 +802,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId)
 
 		if (tp->params.fvEchoplex)
 		{
-			*echoPtr++ = ch;
+			*mfr->echoPtr++ = ch;
 		}
 
 		if (ch == tp->params.fvEOL)
@@ -815,15 +822,15 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId)
 				**  DBC prevented echoplex for this line.
 				*/
 				tp->dbcNoEchoplex = false;
-				echoPtr = echoBuffer;
+				mfr->echoPtr = mfr->echoBuffer;
 			}
 			else
 			{
-				echoLen = static_cast<int>(echoPtr - echoBuffer);
-				if (echoLen)
+				mfr->echoLen = static_cast<int>(mfr->echoPtr - mfr->echoBuffer);
+				if (mfr->echoLen)
 				{
-					npuNetSend(tp, echoBuffer, echoLen);
-					echoPtr = echoBuffer;
+					npuNetSend(tp, mfr->echoBuffer, mfr->echoLen, mfrId);
+					mfr->echoPtr = mfr->echoBuffer;
 				}
 			}
 
@@ -845,15 +852,15 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId)
 						break;
 
 					case 1:
-						npuNetSend(tp, netCR, sizeof(netCR));
+						npuNetSend(tp, netCR, sizeof(netCR), mfrId);
 						break;
 
 					case 2:
-						npuNetSend(tp, netLF, sizeof(netLF));
+						npuNetSend(tp, netLF, sizeof(netLF), mfrId);
 						break;
 
 					case 3:
-						npuNetSend(tp, netCRLF, sizeof(netCRLF));
+						npuNetSend(tp, netCRLF, sizeof(netCRLF), mfrId);
 						break;
 					}
 				}
@@ -891,6 +898,7 @@ static void npuAsyncProcessUplineSpecial(Tcb *tp, u8 mfrId)
 static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId)
 {
 	int i;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
 
 	u8 *dp = tp->inputData;
 	int len = tp->inputCount;
@@ -947,31 +955,31 @@ static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId)
 			**  and indicate it to user via "*DEL*". Use the echobuffer
 			**  to build and send the sequence.
 			*/
-			echoPtr = echoBuffer;
+			mfr->echoPtr = mfr->echoBuffer;
 			int cnt = static_cast<int>(tp->inBufPtr - tp->inBufStart);
 			for (i = cnt; i > 0; i--)
 			{
-				*echoPtr++ = ChrBS;
+				*mfr->echoPtr++ = ChrBS;
 			}
 
 			for (i = cnt; i > 0; i--)
 			{
-				*echoPtr++ = ' ';
+				*mfr->echoPtr++ = ' ';
 			}
 
 			for (i = cnt; i > 0; i--)
 			{
-				*echoPtr++ = ChrBS;
+				*mfr->echoPtr++ = ChrBS;
 			}
 
-			*echoPtr++ = '*';
-			*echoPtr++ = 'D';
-			*echoPtr++ = 'E';
-			*echoPtr++ = 'L';
-			*echoPtr++ = '*';
-			*echoPtr++ = '\r';
-			*echoPtr++ = '\n';
-			npuNetSend(tp, echoBuffer, static_cast<int>(echoPtr - echoBuffer));
+			*mfr->echoPtr++ = '*';
+			*mfr->echoPtr++ = 'D';
+			*mfr->echoPtr++ = 'E';
+			*mfr->echoPtr++ = 'L';
+			*mfr->echoPtr++ = '*';
+			*mfr->echoPtr++ = '\r';
+			*mfr->echoPtr++ = '\n';
+			npuNetSend(tp, mfr->echoBuffer, static_cast<int>(mfr->echoPtr - mfr->echoBuffer), mfrId);
 
 			/*
 			**  Send the line, but signal the cancel character.
@@ -983,7 +991,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId)
 			**  Reset input and echoplex buffers.
 			*/
 			npuTipInputReset(tp);
-			echoPtr = echoBuffer;
+			mfr->echoPtr = mfr->echoBuffer;
 			continue;
 		}
 
@@ -1007,7 +1015,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId)
 
 		if (tp->params.fvEchoplex)
 		{
-			*echoPtr++ = ch;
+			*mfr->echoPtr++ = ch;
 		}
 
 		if (ch == tp->params.fvEOL)
@@ -1028,15 +1036,15 @@ static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId)
 				**  DBC prevented echoplex for this line.
 				*/
 				tp->dbcNoEchoplex = false;
-				echoPtr = echoBuffer;
+				mfr->echoPtr = mfr->echoBuffer;
 			}
 			else
 			{
-				echoLen = static_cast<int>(echoPtr - echoBuffer);
-				if (echoLen)
+				mfr->echoLen = static_cast<int>(mfr->echoPtr - mfr->echoBuffer);
+				if (mfr->echoLen)
 				{
-					npuNetSend(tp, echoBuffer, echoLen);
-					echoPtr = echoBuffer;
+					npuNetSend(tp, mfr->echoBuffer, mfr->echoLen, mfrId);
+					mfr->echoPtr = mfr->echoBuffer;
 				}
 			}
 
@@ -1058,15 +1066,15 @@ static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId)
 						break;
 
 					case 1:
-						npuNetSend(tp, netCR, sizeof(netCR));
+						npuNetSend(tp, netCR, sizeof(netCR), mfrId);
 						break;
 
 					case 2:
-						npuNetSend(tp, netLF, sizeof(netLF));
+						npuNetSend(tp, netLF, sizeof(netLF), mfrId);
 						break;
 
 					case 3:
-						npuNetSend(tp, netCRLF, sizeof(netCRLF));
+						npuNetSend(tp, netCRLF, sizeof(netCRLF), mfrId);
 						break;
 					}
 				}
@@ -1083,15 +1091,15 @@ static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId)
 			if (tp->inBufPtr > tp->inBufStart)
 			{
 				tp->inBufPtr -= 1;
-				*echoPtr++ = ' ';
-				*echoPtr++ = tp->params.fvBS;
+				*mfr->echoPtr++ = ' ';
+				*mfr->echoPtr++ = tp->params.fvBS;
 			}
 			else
 			{
 				/*
 				**  Beep when trying to go past the start of line.
 				*/
-				npuNetSend(tp, netBEL, 1);
+				npuNetSend(tp, netBEL, 1, mfrId);
 			}
 
 			continue;

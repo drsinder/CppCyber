@@ -31,7 +31,7 @@
 **  -------------
 */
 #include "stdafx.h"
-#include "npu.h"
+//#include "npu.h"
 
 /*
 **  -----------------
@@ -69,23 +69,23 @@
 **  Private Variables
 **  -----------------
 */
-static NpuBuffer *bufPool = nullptr;
-static int bufCount = 0;
-
-static NpuBuffer *bipUplineBuffer = nullptr;
-static NpuQueue *bipUplineQueue;
-
-static NpuBuffer *bipDownlineBuffer = nullptr;
-
-typedef enum
-{
-	BipIdle,
-	BipDownSvm,
-	BipDownDataLow,
-	BipDownDataHigh,
-} BipState;
-
-static BipState bipState = BipIdle;
+//static NpuBuffer *bufPool = nullptr;
+//static int bufCount = 0;
+//
+//static NpuBuffer *bipUplineBuffer = nullptr;
+//static NpuQueue *bipUplineQueue;
+//
+//static NpuBuffer *bipDownlineBuffer = nullptr;
+//
+//typedef enum
+//{
+//	BipIdle,
+//	BipDownSvm,
+//	BipDownDataLow,
+//	BipDownDataHigh,
+//} BipState;
+//
+//static BipState bipState = BipIdle;
 
 /*
 **--------------------------------------------------------------------------
@@ -103,14 +103,16 @@ static BipState bipState = BipIdle;
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuBipInit()
+void npuBipInit(u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	/*
 	**  Allocate data buffer pool.
 	*/
-	bufCount = NumBuffs;
-	bufPool = static_cast<NpuBuffer*>(calloc(NumBuffs, sizeof(NpuBuffer)));
-	if (bufPool == nullptr)
+	mfr->bufCount = NumBuffs;
+	mfr->bufPool = static_cast<NpuBuffer*>(calloc(NumBuffs, sizeof(NpuBuffer)));
+	if (mfr->bufPool == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate NPU data buffer pool\n");
 		exit(1);
@@ -119,7 +121,7 @@ void npuBipInit()
 	/*
 	**  Link buffers into pool and link in data.
 	*/
-	NpuBuffer *bp = bufPool;
+	NpuBuffer *bp = mfr->bufPool;
 	for (int count = NumBuffs - 1; count > 0; count--)
 	{
 		/*
@@ -135,8 +137,8 @@ void npuBipInit()
 	/*
 	**  Allocate upline buffer queue.
 	*/
-	bipUplineQueue = static_cast<NpuQueue*>(calloc(1, sizeof(NpuQueue)));
-	if (bipUplineQueue == nullptr)
+	mfr->bipUplineQueue = static_cast<NpuQueue*>(calloc(1, sizeof(NpuQueue)));
+	if (mfr->bipUplineQueue == nullptr)
 	{
 		fprintf(stderr, "Failed to allocate NPU buffer queue\n");
 		exit(1);
@@ -151,27 +153,29 @@ void npuBipInit()
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuBipReset()
+void npuBipReset(u8 mfrId)
 {
-	if (bipUplineBuffer != nullptr)
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	if (mfr->bipUplineBuffer != nullptr)
 	{
-		npuBipBufRelease(bipUplineBuffer);
+		npuBipBufRelease(mfr->bipUplineBuffer, mfrId);
 	}
 
-	while ((bipUplineBuffer = npuBipQueueExtract(bipUplineQueue)) != nullptr)
+	while ((mfr->bipUplineBuffer = npuBipQueueExtract(mfr->bipUplineQueue)) != nullptr)
 	{
-		npuBipBufRelease(bipUplineBuffer);
+		npuBipBufRelease(mfr->bipUplineBuffer, mfrId);
 	}
 
-	bipUplineBuffer = nullptr;
+	mfr->bipUplineBuffer = nullptr;
 
-	if (bipDownlineBuffer != nullptr)
+	if (mfr->bipDownlineBuffer != nullptr)
 	{
-		npuBipBufRelease(bipDownlineBuffer);
-		bipDownlineBuffer = nullptr;
+		npuBipBufRelease(mfr->bipDownlineBuffer, mfrId);
+		mfr->bipDownlineBuffer = nullptr;
 	}
 
-	bipState = BipIdle;
+	mfr->bipState = mfr->BipIdle;
 }
 
 /*--------------------------------------------------------------------------
@@ -182,9 +186,11 @@ void npuBipReset()
 **  Returns:        Current buffer count.
 **
 **------------------------------------------------------------------------*/
-int npuBipBufCount()
+int npuBipBufCount(u8 mfrId)
 {
-	return (bufCount);
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	return (mfr->bufCount);
 }
 
 /*--------------------------------------------------------------------------
@@ -196,19 +202,21 @@ int npuBipBufCount()
 **                  is empty.
 **
 **------------------------------------------------------------------------*/
-NpuBuffer *npuBipBufGet()
+NpuBuffer *npuBipBufGet(u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	/*
 	**  Allocate buffer from pool.
 	*/
-	NpuBuffer *bp = bufPool;
+	NpuBuffer *bp = mfr->bufPool;
 	if (bp != nullptr)
 	{
 		/*
 		**  Unlink allocated buffer.
 		*/
-		bufPool = bp->next;
-		bufCount -= 1;
+		mfr->bufPool = bp->next;
+		mfr->bufCount -= 1;
 
 		/*
 		**  Initialise buffer.
@@ -237,16 +245,18 @@ NpuBuffer *npuBipBufGet()
 **  Returns:        Nothing.
 **
 **------------------------------------------------------------------------*/
-void npuBipBufRelease(NpuBuffer *bp)
+void npuBipBufRelease(NpuBuffer *bp, u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	if (bp != nullptr)
 	{
 		/*
 		**  Link buffer back into the pool.
 		*/
-		bp->next = bufPool;
-		bufPool = bp;
-		bufCount += 1;
+		bp->next = mfr->bufPool;
+		mfr->bufPool = bp;
+		mfr->bufCount += 1;
 	}
 }
 
@@ -367,15 +377,17 @@ bool npuBipQueueNotEmpty(NpuQueue *queue)
 **------------------------------------------------------------------------*/
 void npuBipNotifyServiceMessage(u8 mfrId)
 {
-	bipDownlineBuffer = npuBipBufGet();
-	if (npuHipDownlineBlock(bipDownlineBuffer, mfrId))
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	mfr->bipDownlineBuffer = npuBipBufGet(mfrId);
+	if (npuHipDownlineBlock(mfr->bipDownlineBuffer, mfrId))
 	{
-		bipState = BipDownSvm;
+		mfr->bipState = mfr->BipDownSvm;
 	}
 	else
 	{
-		npuBipBufRelease(bipDownlineBuffer);
-		bipDownlineBuffer = nullptr;
+		npuBipBufRelease(mfr->bipDownlineBuffer, mfrId);
+		mfr->bipDownlineBuffer = nullptr;
 	}
 }
 
@@ -390,15 +402,17 @@ void npuBipNotifyServiceMessage(u8 mfrId)
 **------------------------------------------------------------------------*/
 void npuBipNotifyData(int priority, u8 mfrId)
 {
-	bipDownlineBuffer = npuBipBufGet();
-	if (npuHipDownlineBlock(bipDownlineBuffer, mfrId))
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	mfr->bipDownlineBuffer = npuBipBufGet(mfrId);
+	if (npuHipDownlineBlock(mfr->bipDownlineBuffer, mfrId))
 	{
-		bipState = static_cast<BipState>(BipDownDataLow + priority);
+		mfr->bipState = static_cast<MMainFrame::BipState>(mfr->BipDownDataLow + priority);
 	}
 	else
 	{
-		npuBipBufRelease(bipDownlineBuffer);
-		bipDownlineBuffer = nullptr;
+		npuBipBufRelease(mfr->bipDownlineBuffer, mfrId);
+		mfr->bipDownlineBuffer = nullptr;
 	}
 }
 
@@ -412,12 +426,14 @@ void npuBipNotifyData(int priority, u8 mfrId)
 **------------------------------------------------------------------------*/
 void npuBipRetryInput(u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	/*
 	**  Check if any more upline buffer is pending and send if necessary.
 	*/
-	if (bipUplineBuffer != nullptr)
+	if (mfr->bipUplineBuffer != nullptr)
 	{
-		npuHipUplineBlock(bipUplineBuffer, mfrId);
+		npuHipUplineBlock(mfr->bipUplineBuffer, mfrId);
 	}
 }
 
@@ -431,41 +447,43 @@ void npuBipRetryInput(u8 mfrId)
 **------------------------------------------------------------------------*/
 void npuBipNotifyDownlineReceived(u8 mfrId)
 {
-	NpuBuffer *bp = bipDownlineBuffer;
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	NpuBuffer *bp = mfr->bipDownlineBuffer;
 
 	/*
 	**  BIP loses ownership of the downline buffer.
 	*/
-	bipDownlineBuffer = nullptr;
+	mfr->bipDownlineBuffer = nullptr;
 
 	/*
 	**  Hand over the buffer to SVM or TIP.
 	*/
 	// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
 	// ReSharper disable once CppIncompleteSwitchStatement
-	switch (bipState)
+	switch (mfr->bipState)
 	{
-	case BipDownSvm:
+	case MMainFrame::BipState::BipDownSvm:
 		npuSvmProcessBuffer(bp, mfrId);
 		break;
 
-	case BipDownDataLow:
+	case MMainFrame::BipState::BipDownDataLow:
 		npuTipProcessBuffer(bp, 0, mfrId);
 		break;
 
-	case BipDownDataHigh:
+	case MMainFrame::BipState::BipDownDataHigh:
 		npuTipProcessBuffer(bp, 1, mfrId);
 		break;
 	}
 
-	bipState = BipIdle;
+	mfr->bipState = mfr->BipIdle;
 
 	/*
 	**  Check if any more upline buffer is pending and send if necessary.
 	*/
-	if (bipUplineBuffer != nullptr)
+	if (mfr->bipUplineBuffer != nullptr)
 	{
-		npuHipUplineBlock(bipUplineBuffer, mfrId);
+		npuHipUplineBlock(mfr->bipUplineBuffer, mfrId);
 	}
 }
 
@@ -479,19 +497,21 @@ void npuBipNotifyDownlineReceived(u8 mfrId)
 **------------------------------------------------------------------------*/
 void npuBipAbortDownlineReceived(u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	/*
 	**  Free buffer and reset state.
 	*/
-	npuBipBufRelease(bipDownlineBuffer);
-	bipDownlineBuffer = nullptr;
-	bipState = BipIdle;
+	npuBipBufRelease(mfr->bipDownlineBuffer, mfrId);
+	mfr->bipDownlineBuffer = nullptr;
+	mfr->bipState = mfr->BipIdle;
 
 	/*
 	**  Check if any more upline buffer is pending and send if necessary.
 	*/
-	if (bipUplineBuffer != nullptr)
+	if (mfr->bipUplineBuffer != nullptr)
 	{
-		npuHipUplineBlock(bipUplineBuffer, mfrId);
+		npuHipUplineBlock(mfr->bipUplineBuffer, mfrId);
 	}
 }
 
@@ -506,23 +526,25 @@ void npuBipAbortDownlineReceived(u8 mfrId)
 **------------------------------------------------------------------------*/
 void npuBipRequestUplineTransfer(NpuBuffer *bp, u8 mfrId)
 {
-	if (bipUplineBuffer != nullptr)
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	if (mfr->bipUplineBuffer != nullptr)
 	{
 		/*
 		**  Upline buffer pending, so queue this one for later.
 		*/
-		npuBipQueueAppend(bp, bipUplineQueue);
+		npuBipQueueAppend(bp, mfr->bipUplineQueue);
 		return;
 	}
 
 	/*
 	**  Send this block now.
 	*/
-	bipUplineBuffer = bp;
+	mfr->bipUplineBuffer = bp;
 
-	if (bipState == BipIdle)
+	if (mfr->bipState == mfr->BipIdle)
 	{
-		npuHipUplineBlock(bipUplineBuffer, mfrId);
+		npuHipUplineBlock(mfr->bipUplineBuffer, mfrId);
 	}
 }
 
@@ -538,7 +560,9 @@ void npuBipRequestUplineTransfer(NpuBuffer *bp, u8 mfrId)
 **------------------------------------------------------------------------*/
 void npuBipRequestUplineCanned(u8 *msg, int msgSize, u8 mfrId)
 {
-	NpuBuffer *bp = npuBipBufGet();
+	//MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	NpuBuffer *bp = npuBipBufGet(mfrId);
 	if (bp == nullptr)
 	{
 		return;
@@ -559,18 +583,20 @@ void npuBipRequestUplineCanned(u8 *msg, int msgSize, u8 mfrId)
 **------------------------------------------------------------------------*/
 void npuBipNotifyUplineSent(u8 mfrId)
 {
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
 	/*
 	**  Transfer finished, so release the buffer.
 	*/
-	npuBipBufRelease(bipUplineBuffer);
+	npuBipBufRelease(mfr->bipUplineBuffer, mfrId);
 
 	/*
 	**  Check if any more upline queued and send if necessary.
 	*/
-	bipUplineBuffer = npuBipQueueExtract(bipUplineQueue);
-	if (bipUplineBuffer != nullptr)
+	mfr->bipUplineBuffer = npuBipQueueExtract(mfr->bipUplineQueue);
+	if (mfr->bipUplineBuffer != nullptr)
 	{
-		npuHipUplineBlock(bipUplineBuffer, mfrId);
+		npuHipUplineBlock(mfr->bipUplineBuffer, mfrId);
 	}
 }
 

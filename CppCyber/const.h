@@ -42,13 +42,6 @@
 **	pointers which kills the idea here where function
 **	pointers in channels and devices abound.
 **
-**	IMPORTANT:
-**	Also Note that use of MaxMainFrames = 2 requires
-**	an extra parameter for each line in the cyber.ini
-**	equipment section to assign equipment to mainframes
-**	0 or 1.  This comes as the last required parameter,
-**	after channel.
-**
 **	You can change MaxCpus to 1 or 2 as appropriate.
 **	You can change MaxMainFrames to 1 or 2 as appropriate.
 **-----------------------------------------------------------

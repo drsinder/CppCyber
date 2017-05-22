@@ -132,8 +132,8 @@ static void *mux6676Thread(void *param);
 **------------------------------------------------------------------------*/
 void mux6676Init(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 {
-	if (mfrID == 1)
-		return;	// do not init two instances!  DRS??!!
+	//if (mfrID == 1)
+	//	return;	// do not init two instances!  DRS??!!
 
 
 	(void)unitNo;
