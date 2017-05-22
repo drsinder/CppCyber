@@ -31,7 +31,6 @@
 **  -------------
 */
 #include "stdafx.h"
-//#include "npu.h"
 
 /*
 **  -----------------
@@ -176,6 +175,7 @@
 **  Private Function Prototypes
 **  ---------------------------
 */
+
 static void npuTipSetupDefaultTc2();
 static void npuTipSetupDefaultTc3();
 static void npuTipSetupDefaultTc7();
@@ -189,6 +189,7 @@ static void npuTipSetupDefaultTc7();
 /*
 **  -----------------
 **  Private Variables
+**  These may be safely shared
 **  -----------------
 */
 static u8 ackInitBt[] =

@@ -32,7 +32,6 @@
 */
 #include "stdafx.h"
 #define DEBUG 0
-//#include "npu.h"
 
 /*
 **  -----------------

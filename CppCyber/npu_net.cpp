@@ -32,7 +32,6 @@
 **  -------------
 */
 #include "stdafx.h"
-//#include "npu.h"
 // ReSharper disable once CppUnusedIncludeDirective
 #include <sys/types.h>
 // ReSharper disable once CppUnusedIncludeDirective
@@ -69,18 +68,6 @@
 **  -----------------------------------------
 */
 
-///*
-//**  Registered NPU connection types.
-//*/
-//typedef struct npuConnType
-//{
-//	u16                 tcpPort;
-//	int                 numConns;
-//	u8                  connType;
-//	u8					mfrId;
-//	Tcb                 *startTcb;
-//} NpuConnType;
-
 /*
 **  ---------------------------
 **  Private Function Prototypes
@@ -103,11 +90,11 @@ static void npuNetTryOutput(Tcb *tp, u8 mfrId);
 **  Public Variables
 **  ----------------
 */
-//u16 npuNetTcpConns = 0;
 
 /*
 **  -----------------
 **  Private Variables
+**  These may be safely shared
 **  -----------------
 */
 

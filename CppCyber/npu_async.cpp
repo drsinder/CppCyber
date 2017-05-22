@@ -31,7 +31,6 @@
 **  -------------
 */
 #include "stdafx.h"
-//#include "npu.h"
 
 /*
 **  -----------------
@@ -73,6 +72,7 @@ static void npuAsyncProcessUplineNormal(Tcb *tp, u8 mfrId);
 /*
 **  -----------------
 **  Private Variables
+**  These may be safely shared
 **  -----------------
 */
 
