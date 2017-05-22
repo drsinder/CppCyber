@@ -221,8 +221,8 @@ MT679,0,0,13,Deadstart/CYBIS_15DS.tap
 MT679,0,1,13
 MT679,0,2,13
 MT679,0,3,13
-; TPM,0,0,15
-; NPU,7,0,05
+TPM,0,1,15
+NPU,7,0,05
 ;  
 
 [deadstart.cybis]
