@@ -75,7 +75,7 @@ static void CreateCPUThread1(MCpu *c);
 static void CPUThread1(LPVOID p);
 #endif
 
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 static void CreateCPUThreadX(MCpu *c);
 static void CPUThreadX(LPVOID p);
 static void CreateCPUThread1X(MCpu *c);
@@ -236,8 +236,8 @@ int main(int argc, char **argv)
 	**  Shut down emulation.
 	*/
 	windowTerminate();
-#if MaxMainFrames == 2
-	if (BigIron->initMainFrames == 2)
+#if MaxMainFrames > 1
+	if (BigIron->initMainFrames > 1)
 		windowTerminate1();
 #endif
 	BigIron->Terminate();
@@ -248,27 +248,28 @@ int main(int argc, char **argv)
 void CreateThreads()
 {
 	deadStart(0);
-	CreateCPUThread((BigIron->chasis[0]->Acpu[0]));
+	CreateCPUThread(BigIron->chasis[0]->Acpu[0]);
 #if MaxCpus == 2
 	if ( BigIron->initCpus > 1)
 	{
-		CreateCPUThread1((BigIron->chasis[0]->Acpu[1]));
+		CreateCPUThread1(BigIron->chasis[0]->Acpu[1]);
 	}
 #endif
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 	if (BigIron->initMainFrames > 1)
 	{
 		deadStart(1);
-		CreateCPUThreadX((BigIron->chasis[1]->Acpu[0]));
+		CreateCPUThreadX(BigIron->chasis[1]->Acpu[0]);
 #if MaxCpus == 2
 		if (BigIron->initCpus > 1)
 		{
-			CreateCPUThread1X((BigIron->chasis[1]->Acpu[1]));
+			CreateCPUThread1X(BigIron->chasis[1]->Acpu[1]);
 		}
 #endif
 	}
 #endif
 }
+
 
 /*
 **  Create Thread for CPU 0 MainFrame 0
@@ -358,7 +359,7 @@ void CreateCPUThread1(MCpu *cpu)
 #endif
 }
 #endif
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 /*
 **  Create Thread for CPU 0 MainFrame 1
 */
@@ -489,26 +490,26 @@ void CPUThread(LPVOID pCpu)
 		/*
 		**  Execute PP, CPU and RTC.
 		*/
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 		if (BigIron->initMainFrames > 1)
 		{
 			RESERVE1(&BigIron->SysPpMutex);
 		}
 #endif
-#if MaxMainFrames == 2 || MaxCpus == 2
+#if MaxMainFrames > 1 || MaxCpus == 2
 		if (BigIron->initCpus > 1 || BigIron->initMainFrames > 1)
 		{
 			RESERVE1(&ncpu->mfr->PpuMutex);
 		}
 #endif
 		Mpp::StepAll(ncpu->mfr->mainFrameID);
-#if MaxMainFrames == 2 || MaxCpus == 2
+#if MaxMainFrames > 1 || MaxCpus == 2
 		if (BigIron->initCpus > 1 || BigIron->initMainFrames > 1)
 		{
 			RELEASE1(&ncpu->mfr->PpuMutex);
 		}
 #endif
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 		if (BigIron->initMainFrames > 1)
 		{
 			RELEASE1(&BigIron->SysPpMutex);
@@ -524,7 +525,7 @@ void CPUThread(LPVOID pCpu)
 			if (ncpu->Step())	// Step returns true if CPU stopped - no need to step more
 				break;
 		}
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 		if (BigIron->initMainFrames > 1)
 		{
 			RESERVE1(&BigIron->SysPpMutex);
@@ -537,7 +538,7 @@ void CPUThread(LPVOID pCpu)
 #if MaxCpus == 2
 		RELEASE1(&ncpu->mfr->PpuMutex);
 #endif
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 		if (BigIron->initMainFrames > 1)
 		{
 			RELEASE1(&BigIron->SysPpMutex);
@@ -587,7 +588,7 @@ void CPUThread1(LPVOID pCpu)
 }
 #endif
 
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 /*
 **  Rules:  1) Don't let CPUs and PPUs run at same time.
 **			2) Best to tell cpu 1 when cpu 0 is about to start
@@ -633,7 +634,7 @@ void CPUThreadX(LPVOID pCpu)
 		/*
 		**  Execute PP, CPU and RTC.
 		*/
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 		if (BigIron->initMainFrames > 1)
 		{
 			RESERVE1(&BigIron->SysPpMutex);
@@ -652,7 +653,7 @@ void CPUThreadX(LPVOID pCpu)
 			RELEASE1(&ncpu->mfr->PpuMutex);
 		}
 #endif
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 		if (BigIron->initMainFrames > 1)
 		{
 			RELEASE1(&BigIron->SysPpMutex);
@@ -669,7 +670,7 @@ void CPUThreadX(LPVOID pCpu)
 			if (ncpu->Step())	// Step returns true if CPU stopped - no need to step more
 				break;
 		}
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 		if (BigIron->initMainFrames > 1)
 		{
 			RESERVE1(&BigIron->SysPpMutex);
@@ -684,7 +685,7 @@ void CPUThreadX(LPVOID pCpu)
 		{
 			RELEASE1(&ncpu->mfr->PpuMutex);
 		}
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 		if (BigIron->initMainFrames > 1)
 		{
 			RELEASE1(&BigIron->SysPpMutex);

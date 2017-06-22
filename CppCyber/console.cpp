@@ -79,7 +79,7 @@ static void consoleIo(u8 mfrId);
 static void consoleActivate(u8 mfrId);
 static void consoleDisconnect(u8 mfrId);
 
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 static FcStatus consoleFunc1(PpWord funcCode, u8 mfrId);
 static void consoleIo1(u8 mfrId);
 static void consoleActivate1(u8 mfrId);
@@ -112,7 +112,7 @@ struct tm tmbuf;
 static int autoPos;
 u8 *p;
 
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 static u8 currentFont1;
 static u16 currentOffset1;
 static bool emptyDrop1 = false;
@@ -164,7 +164,7 @@ void consoleInit(u8 mfrID, u8 eqNo, u8 unitNo, u8 channelNo, char *deviceName)
 		dp->func = consoleFunc;
 		dp->io = consoleIo;
 	}
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 	else
 	{
 		dp->activate = consoleActivate1;
@@ -264,7 +264,7 @@ static FcStatus consoleFunc(PpWord funcCode, u8 mfrId)
 
 	return(FcAccepted);
 }
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 static FcStatus consoleFunc1(PpWord funcCode, u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];
@@ -402,7 +402,7 @@ char consoleGetKey()
 	return key;
 }
 
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 /*--------------------------------------------------------------------------
 **  Purpose:        Queue keyboard input.
 **
@@ -612,7 +612,7 @@ static void consoleIo(u8 mfrId)
 
 }
 
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 static void consoleIo1(u8 mfrId)
 {
 	u8 ch;
@@ -782,7 +782,7 @@ static void consoleActivate(u8 mfrId)
 {
 	emptyDrop = true;
 }
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 static void consoleActivate1(u8 mfrId)
 {
 	emptyDrop1 = true;
@@ -804,7 +804,7 @@ static void consoleDisconnect(u8 mfrId)
 		emptyDrop = false;
 	}
 }
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 static void consoleDisconnect1(u8 mfrId)
 {
 	if (emptyDrop1)

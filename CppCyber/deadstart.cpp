@@ -59,7 +59,7 @@ static void deadIo(u8 mfrId);
 static void deadActivate(u8 mfrId);
 static void deadDisconnect(u8 mfrId);
 
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 static void deadIo1(u8 mfrId);
 #endif
 /*
@@ -100,7 +100,7 @@ void deadStart(u8 k)
 	dp->activate = deadActivate;
 	dp->disconnect = deadDisconnect;
 	dp->func = deadFunc;
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 	dp->io = k == 0 ? deadIo : deadIo1;
 #else
 	dp->io = deadIo;
@@ -214,7 +214,7 @@ static void deadIo(u8 mfrId)
 	}
 }
 
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 static void deadIo1(u8 mfrId)
 {
 	MMainFrame *mfr = BigIron->chasis[mfrId];

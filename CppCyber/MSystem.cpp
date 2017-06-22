@@ -71,11 +71,11 @@ void MSystem::CreateMainFrames()
 	u32 extBanksSize;
 
 	opActive = false;
-#if MaxMainFrames == 2 || MaxCpus == 2
+#if MaxMainFrames > 1 || MaxCpus == 2
 	INIT_MUTEX(&ECSFlagMutex, 0x0400);
 	INIT_MUTEX(&TraceMutex, 0x0400);
 #endif
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 	INIT_MUTEX(&SysPpMutex, 0x0400);
 #endif
 

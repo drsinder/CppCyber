@@ -105,7 +105,7 @@ static void windowClipboard(HWND hWnd);
 LRESULT CALLBACK windowProcedure(HWND, UINT, WPARAM, LPARAM);
 void windowDisplay(HWND hWnd);
 
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 static void windowThread1(LPVOID param);
 ATOM windowRegisterClass1(HINSTANCE hInstance1);
 BOOL windowCreate1();
@@ -146,7 +146,7 @@ static DisplayMode displayMode = ModeCenter;
 static bool displayModeNeedsErase = false;
 static BOOL shifted = false;
 
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 // for mainframe 1
 
 static u8 currentFont1;
@@ -205,7 +205,7 @@ void windowInit(u8 mfrID)
 			0,                                          // not suspended 
 			&dwThreadId);                               // returns thread ID 
 	}
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 	else
 	{
 		/*
@@ -250,7 +250,7 @@ void windowSetFont(u8 font)
 {
 	currentFont = font;
 }
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 void windowSetFont1(u8 font)
 {
 	currentFont1 = font;
@@ -269,7 +269,7 @@ void windowSetX(u16 x)
 {
 	currentX = x;
 }
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 void windowSetX1(u16 x)
 {
 	currentX1 = x;
@@ -288,7 +288,7 @@ void windowSetY(u16 y)
 {
 	currentY = 0777 - y;
 }
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 void windowSetY1(u16 y)
 {
 	currentY1 = 0777 - y;
@@ -324,7 +324,7 @@ void windowQueue(u8 ch)
 
 	currentX += currentFont;
 }
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 void windowQueue1(u8 ch)
 {
 	if (listEnd1 >= ListSize
@@ -358,7 +358,7 @@ void windowQueue1(u8 ch)
 void windowUpdate()
 {
 }
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 void windowUpdate1()
 {
 }
@@ -374,7 +374,7 @@ void windowUpdate1()
 void windowGetChar()
 {
 }
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 void windowGetChar1()
 {
 }
@@ -392,7 +392,7 @@ void windowTerminate()
 	SendMessage(hWnd, WM_DESTROY, 0, 0);
 	Sleep(100);
 }
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 void windowTerminate1()
 {
 	SendMessage(hWnd1, WM_DESTROY, 0, 0);
@@ -445,7 +445,7 @@ static void windowThread(LPVOID param)
 		DispatchMessage(&msg);
 	}
 }
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 static void windowThread1(LPVOID param)
 {
 	//u8 mfrID = (u8)param;
@@ -506,7 +506,7 @@ ATOM windowRegisterClass(HINSTANCE hInstance)
 
 	return RegisterClassEx(&wcex);
 }
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 ATOM windowRegisterClass1(HINSTANCE hInstance1)
 {
 	WNDCLASSEX wcex;
@@ -585,7 +585,7 @@ static BOOL windowCreate()
 
 	return TRUE;
 }
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 static BOOL windowCreate1()
 {
 #if CcLargeWin32Screen == 1
@@ -671,7 +671,7 @@ static void windowClipboard(HWND hWnd)
 
 	CloseClipboard();
 }
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 static void windowClipboard1(HWND hWnd)
 {
 	if (!IsClipboardFormatAvailable(CF_TEXT)
@@ -977,7 +977,7 @@ static LRESULT CALLBACK windowProcedure(HWND hWnd, UINT message, WPARAM wParam, 
 
 	return 0;
 }
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 static LRESULT CALLBACK windowProcedure1(HWND hWnd1, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	// ReSharper disable once CppJoinDeclarationAndAssignment
@@ -1500,7 +1500,7 @@ void windowDisplay(HWND hWnd)
 
 	EndPaint(hWnd, &ps);
 }
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 void windowDisplay1(HWND hWnd)
 {
 	// ReSharper disable once CppEntityNeverUsed

@@ -35,6 +35,11 @@ public:
 
 	~MMainFrame();
 
+	typedef void (MMainFrame::*MMainFrameMbrFn)();
+
+	void CPUThread(LPVOID pCpu);
+	void CPUThread1(LPVOID pCpu);
+
 	void Init(u8 id, long memory);
 
 	CpWord *cpMem;
@@ -43,6 +48,8 @@ public:
 	char ppKeyIn;
 	u32 traceMask = 0;
 	u32 traceSequenceNo = 0;
+
+	u32 ecsFlagRegister;
 
 	PpSlot *activePpu;
 	ChSlot *activeChannel;
@@ -202,7 +209,7 @@ public:
 	ChSlot *channel;
 	u8 channelCount;
 
-#if MaxMainFrames == 2 || MaxCpus == 2
+#if MaxMainFrames > 1 || MaxCpus == 2
 	CRITICAL_SECTION PpuMutex;
 	CRITICAL_SECTION DummyMutex;
 	CRITICAL_SECTION XJMutex;
@@ -220,7 +227,6 @@ public:
 	class MCpu *Acpu[MaxCpus];
 
 };
-
 
 /*---------------------------  End Of File  ------------------------------*/
 

@@ -35,7 +35,7 @@
 */
 
 
-#if MaxCpus == 2 || MaxMainFrames  == 2
+#if MaxCpus == 2 || MaxMainFrames  > 1
 #define RESERVE(x) if (BigIron->initCpus > 1 || BigIron->initMainFrames > 1)	\
 					{															\
 					EnterCriticalSection(x);									\

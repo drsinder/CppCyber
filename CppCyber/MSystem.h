@@ -42,19 +42,19 @@ public:
 	void InitEquipment(u8 mfrId);
 	static u32 ConvertEndian(u32 value);
 
+	bool emulationActive;
+	bool bigEndian;
+
 	u16 mux6676TelnetPortx;
 	u16 mux6676TelnetConnsx;
-
-	bool bigEndian;
-	bool emulationActive;
 
 	long clockIncrement;
 	long setMHz;
 
-#if MaxMainFrames == 2
+#if MaxMainFrames > 1
 	CRITICAL_SECTION SysPpMutex;
 #endif
-#if MaxMainFrames == 2 || MaxCpus == 2
+#if MaxMainFrames > 1 || MaxCpus == 2
 	CRITICAL_SECTION ECSFlagMutex;
 	CRITICAL_SECTION TraceMutex;
 #endif
@@ -74,7 +74,7 @@ public:
 	CpWord *extMem;
 	u32 extMaxMemory;
 
-	u32 ecsFlagRegister;
+	//u32 ecsFlagRegister;
 
 	FILE *ecsHandle;
 
