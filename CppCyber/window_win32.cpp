@@ -113,6 +113,24 @@ LRESULT CALLBACK windowProcedure1(HWND, UINT, WPARAM, LPARAM);
 void windowDisplay1(HWND hWnd);
 #endif
 
+#if MaxMainFrames > 2
+static void windowThread2(LPVOID param);
+ATOM windowRegisterClass2(HINSTANCE hInstance2);
+BOOL windowCreate2();
+LRESULT CALLBACK windowProcedure2(HWND, UINT, WPARAM, LPARAM);
+void windowDisplay2(HWND hWnd);
+#endif
+
+#if MaxMainFrames > 3
+static void windowThread3(LPVOID param);
+ATOM windowRegisterClass3(HINSTANCE hInstance3);
+BOOL windowCreate3();
+LRESULT CALLBACK windowProcedure3(HWND, UINT, WPARAM, LPARAM);
+void windowDisplay3(HWND hWnd);
+#endif
+
+
+
 
 /*
 **  ----------------
@@ -168,6 +186,50 @@ static bool displayModeNeedsErase1 = false;
 static BOOL shifted1 = false;
 #endif
 
+#if MaxMainFrames > 2
+// for mainframe 2
+
+static u8 currentFont2;
+static i16 currentX2 = -1;
+static i16 currentY2 = -1;
+static DispList display2[ListSize];
+static u32 listEnd2;
+static HWND hWnd2;
+static HFONT hSmallFont2 = nullptr;
+static HFONT hMediumFont2 = nullptr;
+static HFONT hLargeFont2 = nullptr;
+static HPEN hPen2 = nullptr;
+static HINSTANCE hInstance2 = nullptr;
+static char *lpClipToKeyboard2 = nullptr;
+static char *lpClipToKeyboardPtr2 = nullptr;
+static u8 clipToKeyboardDelay2 = 0;
+static DisplayMode displayMode2 = ModeCenter;
+static bool displayModeNeedsErase2 = false;
+static BOOL shifted2 = false;
+#endif
+
+#if MaxMainFrames > 3
+// for mainframe 3
+
+static u8 currentFont3;
+static i16 currentX3 = -1;
+static i16 currentY3 = -1;
+static DispList display3[ListSize];
+static u32 listEnd3;
+static HWND hWnd3;
+static HFONT hSmallFont3 = nullptr;
+static HFONT hMediumFont3 = nullptr;
+static HFONT hLargeFont3 = nullptr;
+static HPEN hPen3 = nullptr;
+static HINSTANCE hInstance3 = nullptr;
+static char *lpClipToKeyboard3 = nullptr;
+static char *lpClipToKeyboardPtr3 = nullptr;
+static u8 clipToKeyboardDelay3 = 0;
+static DisplayMode displayMode3 = ModeCenter;
+static bool displayModeNeedsErase3 = false;
+static BOOL shifted3 = false;
+#endif
+
 /*--------------------------------------------------------------------------
 **  Purpose:        Create WIN32 thread which will deal with all windows
 **                  functions.
@@ -206,7 +268,7 @@ void windowInit(u8 mfrID)
 			&dwThreadId);                               // returns thread ID 
 	}
 #if MaxMainFrames > 1
-	else
+	if (mfrID == 1)
 	{
 		/*
 		**  Create display list pool.
@@ -228,6 +290,55 @@ void windowInit(u8 mfrID)
 
 	}
 #endif
+
+#if MaxMainFrames > 2
+	if (mfrID == 2)
+	{
+		/*
+		**  Create display list pool.
+		*/
+		listEnd2 = 0;
+
+		/*
+		**  Get our instance
+		*/
+		hInstance2 = GetModuleHandle(nullptr);
+
+		hThread = CreateThread(
+			nullptr,                                       // no security attribute 
+			0,                                          // default stack size 
+			reinterpret_cast<LPTHREAD_START_ROUTINE>(windowThread2),
+			reinterpret_cast<LPVOID>(mfrID),                              // thread parameter 
+			0,                                          // not suspended 
+			&dwThreadId);                               // returns thread ID 
+
+	}
+#endif
+
+#if MaxMainFrames > 3
+	if (mfrID == 3)
+	{
+		/*
+		**  Create display list pool.
+		*/
+		listEnd3 = 0;
+
+		/*
+		**  Get our instance
+		*/
+		hInstance3 = GetModuleHandle(nullptr);
+
+		hThread = CreateThread(
+			nullptr,                                       // no security attribute 
+			0,                                          // default stack size 
+			reinterpret_cast<LPTHREAD_START_ROUTINE>(windowThread3),
+			reinterpret_cast<LPVOID>(mfrID),                              // thread parameter 
+			0,                                          // not suspended 
+			&dwThreadId);                               // returns thread ID 
+
+	}
+#endif
+
 	// ReSharper disable once CppDeclaratorMightNotBeInitialized
 	if (hThread == nullptr)
 	{
@@ -256,6 +367,18 @@ void windowSetFont1(u8 font)
 	currentFont1 = font;
 }
 #endif
+#if MaxMainFrames > 2
+void windowSetFont2(u8 font)
+{
+	currentFont2 = font;
+}
+#endif
+#if MaxMainFrames > 3
+void windowSetFont3(u8 font)
+{
+	currentFont3 = font;
+}
+#endif
 /*--------------------------------------------------------------------------
 **  Purpose:        Set X coordinate.
 **
@@ -275,6 +398,18 @@ void windowSetX1(u16 x)
 	currentX1 = x;
 }
 #endif
+#if MaxMainFrames > 2
+void windowSetX2(u16 x)
+{
+	currentX2 = x;
+}
+#endif
+#if MaxMainFrames > 3
+void windowSetX3(u16 x)
+{
+	currentX3 = x;
+}
+#endif
 /*--------------------------------------------------------------------------
 **  Purpose:        Set Y coordinate.
 **
@@ -292,6 +427,18 @@ void windowSetY(u16 y)
 void windowSetY1(u16 y)
 {
 	currentY1 = 0777 - y;
+}
+#endif
+#if MaxMainFrames > 2
+void windowSetY2(u16 y)
+{
+	currentY2 = 0777 - y;
+}
+#endif
+#if MaxMainFrames > 3
+void windowSetY3(u16 y)
+{
+	currentY3 = 0777 - y;
 }
 #endif
 /*--------------------------------------------------------------------------
@@ -346,6 +493,50 @@ void windowQueue1(u8 ch)
 	currentX1 += currentFont1;
 }
 #endif
+#if MaxMainFrames > 2
+void windowQueue2(u8 ch)
+{
+	if (listEnd2 >= ListSize
+		|| currentX2 == -1
+		|| currentY2 == -1)
+	{
+		return;
+	}
+
+	if (ch != 0)
+	{
+		DispList *elem = display2 + listEnd2++;
+		elem->ch = ch;
+		elem->fontSize = currentFont2;
+		elem->xPos = currentX2;
+		elem->yPos = currentY2;
+	}
+
+	currentX2 += currentFont2;
+}
+#endif
+#if MaxMainFrames > 3
+void windowQueue3(u8 ch)
+{
+	if (listEnd3 >= ListSize
+		|| currentX3 == -1
+		|| currentY3 == -1)
+	{
+		return;
+	}
+
+	if (ch != 0)
+	{
+		DispList *elem = display3 + listEnd3++;
+		elem->ch = ch;
+		elem->fontSize = currentFont3;
+		elem->xPos = currentX3;
+		elem->yPos = currentY3;
+	}
+
+	currentX3 += currentFont3;
+}
+#endif
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Update window.
@@ -363,6 +554,16 @@ void windowUpdate1()
 {
 }
 #endif
+#if MaxMainFrames > 2
+void windowUpdate2()
+{
+}
+#endif
+#if MaxMainFrames > 3
+void windowUpdate3()
+{
+}
+#endif
 /*--------------------------------------------------------------------------
 **  Purpose:        Poll the keyboard (dummy for X11)
 **
@@ -376,6 +577,16 @@ void windowGetChar()
 }
 #if MaxMainFrames > 1
 void windowGetChar1()
+{
+}
+#endif
+#if MaxMainFrames > 2
+void windowGetChar2()
+{
+}
+#endif
+#if MaxMainFrames > 3
+void windowGetChar3()
 {
 }
 #endif
@@ -396,6 +607,20 @@ void windowTerminate()
 void windowTerminate1()
 {
 	SendMessage(hWnd1, WM_DESTROY, 0, 0);
+	Sleep(100);
+}
+#endif
+#if MaxMainFrames > 2
+void windowTerminate2()
+{
+	SendMessage(hWnd2, WM_DESTROY, 0, 0);
+	Sleep(100);
+}
+#endif
+#if MaxMainFrames > 3
+void windowTerminate3()
+{
+	SendMessage(hWnd3, WM_DESTROY, 0, 0);
 	Sleep(100);
 }
 #endif
@@ -477,6 +702,70 @@ static void windowThread1(LPVOID param)
 	}
 }
 #endif
+#if MaxMainFrames > 2
+static void windowThread2(LPVOID param)
+{
+	//u8 mfrID = (u8)param;
+	MSG msg;
+
+	/*
+	**  Register the window class.
+	*/
+	windowRegisterClass2(hInstance2);
+
+	/*
+	**  Create the window.
+	*/
+
+	if (!windowCreate2())
+	{
+		MessageBox(nullptr, "window creation failed", "Error", MB_OK);
+		return;
+	}
+
+
+	/*
+	**  Main message loop.
+	*/
+	while (GetMessage(&msg, nullptr, 0, 0) > 0)
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+}
+#endif
+#if MaxMainFrames > 3
+static void windowThread3(LPVOID param)
+{
+	//u8 mfrID = (u8)param;
+	MSG msg;
+
+	/*
+	**  Register the window class.
+	*/
+	windowRegisterClass3(hInstance3);
+
+	/*
+	**  Create the window.
+	*/
+
+	if (!windowCreate3())
+	{
+		MessageBox(nullptr, "window creation failed", "Error", MB_OK);
+		return;
+	}
+
+
+	/*
+	**  Main message loop.
+	*/
+	while (GetMessage(&msg, nullptr, 0, 0) > 0)
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+}
+#endif
 
 /*--------------------------------------------------------------------------
 **  Purpose:        Register the window class.
@@ -524,6 +813,50 @@ ATOM windowRegisterClass1(HINSTANCE hInstance1)
 	wcex.lpszMenuName = MAKEINTRESOURCE(IDC_CONSOLE);
 	wcex.lpszClassName = "CONSOLE1";
 	wcex.hIconSm = LoadIcon(hInstance1, reinterpret_cast<LPCTSTR>(IDI_SMALL));
+
+	return RegisterClassEx(&wcex);
+}
+#endif
+#if MaxMainFrames > 2
+ATOM windowRegisterClass2(HINSTANCE hInstance1)
+{
+	WNDCLASSEX wcex;
+
+	wcex.cbSize = sizeof(WNDCLASSEX);
+
+	wcex.style = CS_HREDRAW | CS_VREDRAW | CS_NOCLOSE | CS_BYTEALIGNCLIENT;
+	wcex.lpfnWndProc = static_cast<WNDPROC>(windowProcedure2);
+	wcex.cbClsExtra = 0;
+	wcex.cbWndExtra = 0;
+	wcex.hInstance = hInstance2;
+	wcex.hIcon = LoadIcon(hInstance2, reinterpret_cast<LPCTSTR>(IDI_CONSOLE));
+	wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
+	wcex.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
+	wcex.lpszMenuName = MAKEINTRESOURCE(IDC_CONSOLE);
+	wcex.lpszClassName = "CONSOLE2";
+	wcex.hIconSm = LoadIcon(hInstance2, reinterpret_cast<LPCTSTR>(IDI_SMALL));
+
+	return RegisterClassEx(&wcex);
+}
+#endif
+#if MaxMainFrames > 3
+ATOM windowRegisterClass3(HINSTANCE hInstance1)
+{
+	WNDCLASSEX wcex;
+
+	wcex.cbSize = sizeof(WNDCLASSEX);
+
+	wcex.style = CS_HREDRAW | CS_VREDRAW | CS_NOCLOSE | CS_BYTEALIGNCLIENT;
+	wcex.lpfnWndProc = static_cast<WNDPROC>(windowProcedure3);
+	wcex.cbClsExtra = 0;
+	wcex.cbWndExtra = 0;
+	wcex.hInstance = hInstance3;
+	wcex.hIcon = LoadIcon(hInstance3, reinterpret_cast<LPCTSTR>(IDI_CONSOLE));
+	wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
+	wcex.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
+	wcex.lpszMenuName = MAKEINTRESOURCE(IDC_CONSOLE);
+	wcex.lpszClassName = "CONSOLE3";
+	wcex.hIconSm = LoadIcon(hInstance3, reinterpret_cast<LPCTSTR>(IDI_SMALL));
 
 	return RegisterClassEx(&wcex);
 }
@@ -607,7 +940,7 @@ static BOOL windowCreate1()
 		nullptr);                  // window-creation data
 #else
 	hWnd1 = CreateWindow(
-		"CONSOLE",              // Registered class name
+		"CONSOLE1",              // Registered class name
 		"Mainframe 1 - "
 		DtCyberVersion " - "
 		DtCyberCopyright " - "
@@ -632,6 +965,108 @@ static BOOL windowCreate1()
 	UpdateWindow(hWnd1);
 
 	SetTimer(hWnd1, TIMER_ID, TIMER_RATE, nullptr);
+
+	return TRUE;
+}
+#endif
+#if MaxMainFrames > 2
+static BOOL windowCreate2()
+{
+#if CcLargeWin32Screen == 1
+	hWnd2 = CreateWindow(
+		"CONSOLE2",              // Registered class name
+		"Mainframe 2 - "
+		DtCyberVersion " - "
+		DtCyberCopyright " - "
+		DtCyberLicense,         // window name
+		WS_OVERLAPPEDWINDOW,    // window style
+								//1800,
+		CW_USEDEFAULT,          // horizontal position of window
+		0,                      // vertical position of window
+		1280,                   // window width
+		1024,                   // window height
+		nullptr,                   // handle to parent or owner window
+		nullptr,                   // menu handle or child identifier
+		nullptr,                      // handle to application instance
+		nullptr);                  // window-creation data
+#else
+	hWnd2 = CreateWindow(
+		"CONSOLE2",              // Registered class name
+		"Mainframe 2 - "
+		DtCyberVersion " - "
+		DtCyberCopyright " - "
+		DtCyberLicense,         // window name
+		WS_OVERLAPPEDWINDOW,    // window style
+		CW_USEDEFAULT,          // horizontal position of window
+		CW_USEDEFAULT,          // vertical position of window
+		1080,                   // window width
+		600,                    // window height
+		nullptr,                   // handle to parent or owner window
+		nullptr,                   // menu handle or child identifier
+		nullptr,                      // handle to application instance
+		nullptr);                  // window-creation data
+#endif
+
+	if (!hWnd2)
+	{
+		return FALSE;
+	}
+
+	ShowWindow(hWnd2, SW_SHOW);
+	UpdateWindow(hWnd2);
+
+	SetTimer(hWnd2, TIMER_ID, TIMER_RATE, nullptr);
+
+	return TRUE;
+}
+#endif
+#if MaxMainFrames > 3
+static BOOL windowCreate3()
+{
+#if CcLargeWin32Screen == 1
+	hWnd3 = CreateWindow(
+		"CONSOLE3",              // Registered class name
+		"Mainframe 3 - "
+		DtCyberVersion " - "
+		DtCyberCopyright " - "
+		DtCyberLicense,         // window name
+		WS_OVERLAPPEDWINDOW,    // window style
+								//1800,
+		CW_USEDEFAULT,          // horizontal position of window
+		0,                      // vertical position of window
+		1280,                   // window width
+		1024,                   // window height
+		nullptr,                   // handle to parent or owner window
+		nullptr,                   // menu handle or child identifier
+		nullptr,                      // handle to application instance
+		nullptr);                  // window-creation data
+#else
+	hWnd3 = CreateWindow(
+		"CONSOLE",              // Registered class name
+		"Mainframe 3 - "
+		DtCyberVersion " - "
+		DtCyberCopyright " - "
+		DtCyberLicense,         // window name
+		WS_OVERLAPPEDWINDOW,    // window style
+		CW_USEDEFAULT,          // horizontal position of window
+		CW_USEDEFAULT,          // vertical position of window
+		1080,                   // window width
+		600,                    // window height
+		nullptr,                   // handle to parent or owner window
+		nullptr,                   // menu handle or child identifier
+		nullptr,                      // handle to application instance
+		nullptr);                  // window-creation data
+#endif
+
+	if (!hWnd3)
+	{
+		return FALSE;
+	}
+
+	ShowWindow(hWnd3, SW_SHOW);
+	UpdateWindow(hWnd3);
+
+	SetTimer(hWnd3, TIMER_ID, TIMER_RATE, nullptr);
 
 	return TRUE;
 }
@@ -694,6 +1129,62 @@ static void windowClipboard1(HWND hWnd)
 		strcpy(lpClipToKeyboard1, lpClipMemory);
 		GlobalUnlock(hClipMemory);
 		lpClipToKeyboardPtr = lpClipToKeyboard1;
+	}
+
+	CloseClipboard();
+}
+#endif
+#if MaxMainFrames > 2
+static void windowClipboard2(HWND hWnd)
+{
+	if (!IsClipboardFormatAvailable(CF_TEXT)
+		|| !OpenClipboard(hWnd))
+	{
+		return;
+	}
+
+	HANDLE hClipMemory = GetClipboardData(CF_TEXT);
+	if (hClipMemory == nullptr)
+	{
+		CloseClipboard();
+		return;
+	}
+
+	lpClipToKeyboard2 = static_cast<char*>(malloc(GlobalSize(hClipMemory)));
+	if (lpClipToKeyboard2 != nullptr)
+	{
+		char *lpClipMemory = static_cast<char*>(GlobalLock(hClipMemory));
+		strcpy(lpClipToKeyboard2, lpClipMemory);
+		GlobalUnlock(hClipMemory);
+		lpClipToKeyboardPtr = lpClipToKeyboard2;
+	}
+
+	CloseClipboard();
+}
+#endif
+#if MaxMainFrames > 3
+static void windowClipboard3(HWND hWnd)
+{
+	if (!IsClipboardFormatAvailable(CF_TEXT)
+		|| !OpenClipboard(hWnd))
+	{
+		return;
+	}
+
+	HANDLE hClipMemory = GetClipboardData(CF_TEXT);
+	if (hClipMemory == nullptr)
+	{
+		CloseClipboard();
+		return;
+	}
+
+	lpClipToKeyboard3 = static_cast<char*>(malloc(GlobalSize(hClipMemory)));
+	if (lpClipToKeyboard3 != nullptr)
+	{
+		char *lpClipMemory = static_cast<char*>(GlobalLock(hClipMemory));
+		strcpy(lpClipToKeyboard3, lpClipMemory);
+		GlobalUnlock(hClipMemory);
+		lpClipToKeyboardPtr = lpClipToKeyboard3;
 	}
 
 	CloseClipboard();
@@ -1251,6 +1742,557 @@ static LRESULT CALLBACK windowProcedure1(HWND hWnd1, UINT message, WPARAM wParam
 	return 0;
 }
 #endif
+
+#if MaxMainFrames > 2
+static LRESULT CALLBACK windowProcedure2(HWND hWnd2, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	int wmId;
+	LOGFONT lfTmp;
+	RECT rt;
+	MMainFrame *mfr = BigIron->chasis[2];
+	// ReSharper disable once CppEntityNeverUsed
+	int wmEvent = HIWORD(wParam);
+
+	switch (message)
+	{
+		/*
+		**  Process the application menu.
+		*/
+	case WM_COMMAND:
+		// ReSharper disable once CppJoinDeclarationAndAssignment
+		wmId = LOWORD(wParam);
+		// ReSharper disable once CppEntityNeverUsed
+
+		switch (wmId)
+		{
+		case IDM_EXIT:
+			DestroyWindow(hWnd2);
+			break;
+
+		default:
+			return DefWindowProc(hWnd2, message, wParam, lParam);
+		}
+		break;
+
+	case WM_ERASEBKGND:
+		return(1);
+
+	case WM_CREATE:
+		hPen2 = CreatePen(PS_SOLID, 1, RGB(0, 255, 0));
+		if (!hPen2)
+		{
+			MessageBox(GetFocus(),
+				"Unable to get green pen",
+				"CreatePen Error",
+				MB_OK);
+		}
+
+		memset(&lfTmp, 0, sizeof(lfTmp));
+		lfTmp.lfPitchAndFamily = FIXED_PITCH;
+		strcpy(lfTmp.lfFaceName, FontName);
+		lfTmp.lfWeight = FW_THIN;
+		lfTmp.lfOutPrecision = OUT_TT_PRECIS;
+		lfTmp.lfHeight = FontSmallHeight;
+		hSmallFont2 = CreateFontIndirect(&lfTmp);
+		if (!hSmallFont2)
+		{
+			MessageBox(GetFocus(),
+				"Unable to get font in 15 point",
+				"CreateFont Error",
+				MB_OK);
+		}
+
+		memset(&lfTmp, 0, sizeof(lfTmp));
+		lfTmp.lfPitchAndFamily = FIXED_PITCH;
+		strcpy(lfTmp.lfFaceName, FontName);
+		lfTmp.lfWeight = FW_THIN;
+		lfTmp.lfOutPrecision = OUT_TT_PRECIS;
+		lfTmp.lfHeight = FontMediumHeight;
+		hMediumFont2 = CreateFontIndirect(&lfTmp);
+		if (!hMediumFont2)
+		{
+			MessageBox(GetFocus(),
+				"Unable to get font in 20 point",
+				"CreateFont Error",
+				MB_OK);
+		}
+
+		memset(&lfTmp, 0, sizeof(lfTmp));
+		lfTmp.lfPitchAndFamily = FIXED_PITCH;
+		strcpy(lfTmp.lfFaceName, FontName);
+		lfTmp.lfWeight = FW_THIN;
+		lfTmp.lfOutPrecision = OUT_TT_PRECIS;
+		lfTmp.lfHeight = FontLargeHeight;
+		hLargeFont2 = CreateFontIndirect(&lfTmp);
+		if (!hLargeFont2)
+		{
+			MessageBox(GetFocus(),
+				"Unable to get font in 30 point",
+				"CreateFont Error",
+				MB_OK);
+		}
+
+		return DefWindowProc(hWnd2, message, wParam, lParam);
+
+	case WM_DESTROY:
+		if (hSmallFont2)
+		{
+			DeleteObject(hSmallFont2);
+		}
+		if (hMediumFont2)
+		{
+			DeleteObject(hMediumFont2);
+		}
+		if (hLargeFont2)
+		{
+			DeleteObject(hLargeFont2);
+		}
+		if (hPen2)
+		{
+			DeleteObject(hPen2);
+		}
+		PostQuitMessage(0);
+		break;
+
+	case WM_TIMER:
+		if (lpClipToKeyboard != nullptr)
+		{
+			if (clipToKeyboardDelay2 == 0)
+			{
+				BigIron->chasis[2]->ppKeyIn = *lpClipToKeyboardPtr++;
+				if (BigIron->chasis[2]->ppKeyIn == 0)
+				{
+					free(lpClipToKeyboard);
+					lpClipToKeyboard = nullptr;
+					lpClipToKeyboardPtr = nullptr;
+				}
+				else if (BigIron->chasis[2]->ppKeyIn == '\r')
+				{
+					clipToKeyboardDelay = 10;
+				}
+				else if (BigIron->chasis[2]->ppKeyIn == '\n')
+				{
+					BigIron->chasis[2]->ppKeyIn = 0;
+				}
+			}
+			else
+			{
+				clipToKeyboardDelay2 -= 1;
+			}
+		}
+
+		GetClientRect(hWnd2, &rt);
+		InvalidateRect(hWnd2, &rt, TRUE);
+		break;
+
+		/*
+		**  Paint the main window.
+		*/
+	case WM_PAINT:
+		windowDisplay2(hWnd2);
+		break;
+
+		/*
+		**  Handle input characters.
+		*/
+#if CcDebug == 1
+	case WM_KEYDOWN:
+		if (GetKeyState(VK_CONTROL) & 0x8000)
+		{
+			switch (wParam)
+			{
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+				dumpRunningPpu((u8)(wParam - '0'));
+				break;
+
+			case 'C':
+			case 'c':
+				dumpRunningCpu(1);
+				break;
+			}
+		}
+
+		break;
+#endif
+
+	case WM_SYSCHAR:
+		// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
+		switch (wParam)
+		{
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			mfr->traceMask ^= (1 << (static_cast<u32>(wParam) - '0' + (shifted ? 10 : 0)));
+			break;
+
+		case 'C':
+			mfr->traceMask ^= TraceCpu1;
+			//traceMask ^= TraceExchange;
+			break;
+
+		case 'c':
+			mfr->traceMask ^= TraceCpu;
+			//traceMask ^= TraceExchange;
+			break;
+
+		case 'E':
+		case 'e':
+			mfr->traceMask ^= TraceExchange;
+			break;
+
+		case 'X':
+		case 'x':
+			if (mfr->traceMask == 0)
+			{
+				mfr->traceMask = static_cast<u32>(~0L);
+			}
+			else
+			{
+				mfr->traceMask = 0;
+			}
+			break;
+
+		case 'D':
+		case 'd':
+			mfr->traceMask ^= TraceCpu | TraceCpu1 | TraceExchange | 2;
+			break;
+
+		case 'L':
+		case 'l':
+		case '[':
+			displayMode = ModeLeft;
+			displayModeNeedsErase = true;
+			break;
+
+		case 'R':
+		case 'r':
+		case ']':
+			displayMode = ModeRight;
+			displayModeNeedsErase = true;
+			break;
+
+		case 'M':
+		case 'm':
+		case '\\':
+			displayMode = ModeCenter;
+			break;
+
+		case 'P':
+		case 'p':
+			windowClipboard(hWnd2);
+			break;
+
+		case 's':
+		case 'S':
+			shifted = !shifted;
+		}
+		break;
+
+	case WM_CHAR:
+		BigIron->chasis[2]->ppKeyIn = static_cast<char>(wParam);
+		break;
+
+
+	default:
+		return DefWindowProc(hWnd2, message, wParam, lParam);
+	}
+
+	return 0;
+}
+#endif
+
+////
+#if MaxMainFrames > 3
+static LRESULT CALLBACK windowProcedure3(HWND hWnd3, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	int wmId;
+	LOGFONT lfTmp;
+	RECT rt;
+	MMainFrame *mfr = BigIron->chasis[3];
+	// ReSharper disable once CppEntityNeverUsed
+	int wmEvent = HIWORD(wParam);
+
+	switch (message)
+	{
+		/*
+		**  Process the application menu.
+		*/
+	case WM_COMMAND:
+		// ReSharper disable once CppJoinDeclarationAndAssignment
+		wmId = LOWORD(wParam);
+		// ReSharper disable once CppEntityNeverUsed
+
+		switch (wmId)
+		{
+		case IDM_EXIT:
+			DestroyWindow(hWnd3);
+			break;
+
+		default:
+			return DefWindowProc(hWnd3, message, wParam, lParam);
+		}
+		break;
+
+	case WM_ERASEBKGND:
+		return(1);
+
+	case WM_CREATE:
+		hPen3 = CreatePen(PS_SOLID, 1, RGB(0, 255, 0));
+		if (!hPen3)
+		{
+			MessageBox(GetFocus(),
+				"Unable to get green pen",
+				"CreatePen Error",
+				MB_OK);
+		}
+
+		memset(&lfTmp, 0, sizeof(lfTmp));
+		lfTmp.lfPitchAndFamily = FIXED_PITCH;
+		strcpy(lfTmp.lfFaceName, FontName);
+		lfTmp.lfWeight = FW_THIN;
+		lfTmp.lfOutPrecision = OUT_TT_PRECIS;
+		lfTmp.lfHeight = FontSmallHeight;
+		hSmallFont3 = CreateFontIndirect(&lfTmp);
+		if (!hSmallFont3)
+		{
+			MessageBox(GetFocus(),
+				"Unable to get font in 15 point",
+				"CreateFont Error",
+				MB_OK);
+		}
+
+		memset(&lfTmp, 0, sizeof(lfTmp));
+		lfTmp.lfPitchAndFamily = FIXED_PITCH;
+		strcpy(lfTmp.lfFaceName, FontName);
+		lfTmp.lfWeight = FW_THIN;
+		lfTmp.lfOutPrecision = OUT_TT_PRECIS;
+		lfTmp.lfHeight = FontMediumHeight;
+		hMediumFont3 = CreateFontIndirect(&lfTmp);
+		if (!hMediumFont3)
+		{
+			MessageBox(GetFocus(),
+				"Unable to get font in 20 point",
+				"CreateFont Error",
+				MB_OK);
+		}
+
+		memset(&lfTmp, 0, sizeof(lfTmp));
+		lfTmp.lfPitchAndFamily = FIXED_PITCH;
+		strcpy(lfTmp.lfFaceName, FontName);
+		lfTmp.lfWeight = FW_THIN;
+		lfTmp.lfOutPrecision = OUT_TT_PRECIS;
+		lfTmp.lfHeight = FontLargeHeight;
+		hLargeFont3 = CreateFontIndirect(&lfTmp);
+		if (!hLargeFont3)
+		{
+			MessageBox(GetFocus(),
+				"Unable to get font in 30 point",
+				"CreateFont Error",
+				MB_OK);
+		}
+
+		return DefWindowProc(hWnd3, message, wParam, lParam);
+
+	case WM_DESTROY:
+		if (hSmallFont3)
+		{
+			DeleteObject(hSmallFont3);
+		}
+		if (hMediumFont3)
+		{
+			DeleteObject(hMediumFont3);
+		}
+		if (hLargeFont3)
+		{
+			DeleteObject(hLargeFont3);
+		}
+		if (hPen3)
+		{
+			DeleteObject(hPen3);
+		}
+		PostQuitMessage(0);
+		break;
+
+	case WM_TIMER:
+		if (lpClipToKeyboard != nullptr)
+		{
+			if (clipToKeyboardDelay3 == 0)
+			{
+				BigIron->chasis[3]->ppKeyIn = *lpClipToKeyboardPtr++;
+				if (BigIron->chasis[3]->ppKeyIn == 0)
+				{
+					free(lpClipToKeyboard);
+					lpClipToKeyboard = nullptr;
+					lpClipToKeyboardPtr = nullptr;
+				}
+				else if (BigIron->chasis[3]->ppKeyIn == '\r')
+				{
+					clipToKeyboardDelay = 10;
+				}
+				else if (BigIron->chasis[3]->ppKeyIn == '\n')
+				{
+					BigIron->chasis[3]->ppKeyIn = 0;
+				}
+			}
+			else
+			{
+				clipToKeyboardDelay1 -= 1;
+			}
+		}
+
+		GetClientRect(hWnd3, &rt);
+		InvalidateRect(hWnd3, &rt, TRUE);
+		break;
+
+		/*
+		**  Paint the main window.
+		*/
+	case WM_PAINT:
+		windowDisplay3(hWnd3);
+		break;
+
+		/*
+		**  Handle input characters.
+		*/
+#if CcDebug == 1
+	case WM_KEYDOWN:
+		if (GetKeyState(VK_CONTROL) & 0x8000)
+		{
+			switch (wParam)
+			{
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+				dumpRunningPpu((u8)(wParam - '0'));
+				break;
+
+			case 'C':
+			case 'c':
+				dumpRunningCpu(1);
+				break;
+			}
+		}
+
+		break;
+#endif
+
+	case WM_SYSCHAR:
+		// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
+		switch (wParam)
+		{
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			mfr->traceMask ^= (1 << (static_cast<u32>(wParam) - '0' + (shifted ? 10 : 0)));
+			break;
+
+		case 'C':
+			mfr->traceMask ^= TraceCpu1;
+			//traceMask ^= TraceExchange;
+			break;
+
+		case 'c':
+			mfr->traceMask ^= TraceCpu;
+			//traceMask ^= TraceExchange;
+			break;
+
+		case 'E':
+		case 'e':
+			mfr->traceMask ^= TraceExchange;
+			break;
+
+		case 'X':
+		case 'x':
+			if (mfr->traceMask == 0)
+			{
+				mfr->traceMask = static_cast<u32>(~0L);
+			}
+			else
+			{
+				mfr->traceMask = 0;
+			}
+			break;
+
+		case 'D':
+		case 'd':
+			mfr->traceMask ^= TraceCpu | TraceCpu1 | TraceExchange | 2;
+			break;
+
+		case 'L':
+		case 'l':
+		case '[':
+			displayMode = ModeLeft;
+			displayModeNeedsErase = true;
+			break;
+
+		case 'R':
+		case 'r':
+		case ']':
+			displayMode = ModeRight;
+			displayModeNeedsErase = true;
+			break;
+
+		case 'M':
+		case 'm':
+		case '\\':
+			displayMode = ModeCenter;
+			break;
+
+		case 'P':
+		case 'p':
+			windowClipboard(hWnd3);
+			break;
+
+		case 's':
+		case 'S':
+			shifted = !shifted;
+		}
+		break;
+
+	case WM_CHAR:
+		BigIron->chasis[3]->ppKeyIn = static_cast<char>(wParam);
+		break;
+
+
+	default:
+		return DefWindowProc(hWnd3, message, wParam, lParam);
+	}
+
+	return 0;
+}
+#endif
 /*--------------------------------------------------------------------------
 **  Purpose:        Display current list.
 **
@@ -1720,6 +2762,532 @@ void windowDisplay1(HWND hWnd)
 	**  Blit the changes to the screen dc.
 	*/
 	switch (displayMode1)
+	{
+	default:
+	case ModeCenter:
+		BitBlt(ps.hdc,
+			rect.left, rect.top,
+			rect.right - rect.left, rect.bottom - rect.top,
+			hdcMem,
+			0, 0,
+			SRCCOPY);
+		break;
+
+	case ModeLeft:
+		StretchBlt(ps.hdc,
+			rect.left + (rect.right - rect.left) / 2 - 512 * ScaleY / 10 / 2, rect.top,
+			512 * ScaleY / 10, rect.bottom - rect.top,
+			hdcMem,
+			OffLeftScreen, 0,
+			512 * ScaleX / 10 + FontLarge, rect.bottom - rect.top,
+			SRCCOPY);
+		break;
+
+	case ModeRight:
+		StretchBlt(ps.hdc,
+			rect.left + (rect.right - rect.left) / 2 - 512 * ScaleY / 10 / 2, rect.top,
+			512 * ScaleY / 10, rect.bottom - rect.top,
+			hdcMem,
+			OffRightScreen, 0,
+			512 * ScaleX / 10 + FontLarge, rect.bottom - rect.top,
+			SRCCOPY);
+		break;
+	}
+
+	/*
+	**  Done with off screen bitmap and dc.
+	*/
+	SelectObject(hdcMem, hbmOld);
+	DeleteObject(hbmMem);
+	DeleteDC(hdcMem);
+
+	EndPaint(hWnd, &ps);
+}
+#endif
+
+#if MaxMainFrames > 2
+void windowDisplay2(HWND hWnd)
+{
+	// ReSharper disable once CppEntityNeverUsed
+	static int refreshCount = 0;
+	char str[2] = " ";
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	DispList *end;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	u8 oldFont;
+
+	RECT rect;
+	PAINTSTRUCT ps;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	HBRUSH hBrush;
+
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	HDC hdcMem;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	HGDIOBJ hbmMem;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	HGDIOBJ hbmOld;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	HGDIOBJ hfntOld;
+
+	// ReSharper disable once CppEntityNeverUsed
+	HDC hdc = BeginPaint(hWnd, &ps);
+
+	GetClientRect(hWnd, &rect);
+
+	/*
+	**  Create a compatible DC.
+	*/
+
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	hdcMem = CreateCompatibleDC(ps.hdc);
+
+	/*
+	**  Create a bitmap big enough for our client rect.
+	*/
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	hbmMem = CreateCompatibleBitmap(ps.hdc,
+		rect.right - rect.left,
+		rect.bottom - rect.top);
+
+	/*
+	**  Select the bitmap into the off-screen dc.
+	*/
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	hbmOld = SelectObject(hdcMem, hbmMem);
+
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	hBrush = CreateSolidBrush(RGB(0, 0, 0));
+	FillRect(hdcMem, &rect, hBrush);
+	if (displayModeNeedsErase2)
+	{
+		displayModeNeedsErase2 = false;
+		FillRect(ps.hdc, &rect, hBrush);
+	}
+	DeleteObject(hBrush);
+
+	SetBkMode(hdcMem, TRANSPARENT);
+	SetBkColor(hdcMem, RGB(0, 0, 0));
+	SetTextColor(hdcMem, RGB(0, 255, 0));
+
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	hfntOld = SelectObject(hdcMem, hSmallFont1);
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	oldFont = FontSmall;
+
+#if CcCycleTime
+	{
+		extern double cycleTime;
+		char buf[80];
+
+		//    sprintf(buf, "Cycle time: %.3f", cycleTime);
+		sprintf(buf, "Cycle time: %10.3f    NPU Buffers: %5d", cycleTime, npuBipBufCount());
+		TextOut(hdcMem, 0, 0, buf, strlen(buf));
+	}
+#endif
+
+#if CcDebug == 1
+	{
+		MMainFrame *mfr = BigIron->chasis[2];
+
+		char buf[160];
+
+		/*
+		**  Display P registers of PPUs and CPU and current trace mask.
+		*/
+		sprintf(buf, "Refresh: %-10d  PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o   CPU0 P-reg: %06o",
+			refreshCount++,
+			mfr->ppBarrel[0]->ppu.regP,
+			mfr->ppBarrel[1]->ppu.regP,
+			mfr->ppBarrel[2]->ppu.regP,
+			mfr->ppBarrel[3]->ppu.regP,
+			mfr->ppBarrel[4]->ppu.regP,
+			mfr->ppBarrel[5]->ppu.regP,
+			mfr->ppBarrel[6]->ppu.regP,
+			mfr->ppBarrel[7]->ppu.regP,
+			mfr->ppBarrel[8]->ppu.regP,
+			mfr->ppBarrel[9]->ppu.regP,
+			mfr->Acpu[0]->cpu.regP);
+
+		sprintf(buf + strlen(buf), "   Trace0x: %c%c%c%c%c%c%c%c%c%c%c%c %c",
+			(mfr->traceMask >> 0) & 1 ? '0' : '_',
+			(mfr->traceMask >> 1) & 1 ? '1' : '_',
+			(mfr->traceMask >> 2) & 1 ? '2' : '_',
+			(mfr->traceMask >> 3) & 1 ? '3' : '_',
+			(mfr->traceMask >> 4) & 1 ? '4' : '_',
+			(mfr->traceMask >> 5) & 1 ? '5' : '_',
+			(mfr->traceMask >> 6) & 1 ? '6' : '_',
+			(mfr->traceMask >> 7) & 1 ? '7' : '_',
+			(mfr->traceMask >> 8) & 1 ? '8' : '_',
+			(mfr->traceMask >> 9) & 1 ? '9' : '_',
+			mfr->traceMask & TraceCpu ? 'C' : '_',
+			mfr->traceMask & TraceExchange ? 'E' : '_',
+			shifted ? ' ' : '<');
+
+		TextOut(hdcMem, 0, 0, buf, (int)strlen(buf));
+
+		if (BigIron->pps == 20)
+		{
+			/*
+			**  Display P registers of second barrel of PPUs.
+			*/
+			sprintf(buf, "                     PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o   CPU1 P-reg: %06o",
+				mfr->ppBarrel[10]->ppu.regP,
+				mfr->ppBarrel[11]->ppu.regP,
+				mfr->ppBarrel[12]->ppu.regP,
+				mfr->ppBarrel[13]->ppu.regP,
+				mfr->ppBarrel[14]->ppu.regP,
+				mfr->ppBarrel[15]->ppu.regP,
+				mfr->ppBarrel[16]->ppu.regP,
+				mfr->ppBarrel[17]->ppu.regP,
+				mfr->ppBarrel[18]->ppu.regP,
+				mfr->ppBarrel[19]->ppu.regP,
+				BigIron->initCpus > 1 ? mfr->Acpu[1]->cpu.regP : 0);
+
+			sprintf(buf + strlen(buf), "   Trace1x: %c%c%c%c%c%c%c%c%c%c%c%c %c",
+				(mfr->traceMask >> 10) & 1 ? '0' : '_',
+				(mfr->traceMask >> 11) & 1 ? '1' : '_',
+				(mfr->traceMask >> 12) & 1 ? '2' : '_',
+				(mfr->traceMask >> 13) & 1 ? '3' : '_',
+				(mfr->traceMask >> 14) & 1 ? '4' : '_',
+				(mfr->traceMask >> 15) & 1 ? '5' : '_',
+				(mfr->traceMask >> 16) & 1 ? '6' : '_',
+				(mfr->traceMask >> 17) & 1 ? '7' : '_',
+				(mfr->traceMask >> 18) & 1 ? '8' : '_',
+				(mfr->traceMask >> 19) & 1 ? '9' : '_',
+				mfr->traceMask & TraceCpu1 ? 'C' : '_',
+				' ',
+				shifted ? '<' : ' ');
+
+			TextOut(hdcMem, 0, 12, buf, (int)strlen(buf));
+		}
+	}
+#endif
+
+	if (opActive)
+	{
+		static char opMessage[] = "Emulation paused";
+		hfntOld = SelectObject(hdcMem, hLargeFont1);
+		oldFont = FontLarge;
+		TextOut(hdcMem, (0 * ScaleX) / 10, (256 * ScaleY) / 10, opMessage, static_cast<int>(strlen(opMessage)));
+	}
+
+	SelectObject(hdcMem, hPen2);
+
+	// ReSharper disable once CppInitializedValueIsAlwaysRewritten
+	DispList *curr = display2;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	end = display2 + listEnd2;
+	for (curr = display2; curr < end; curr++)
+	{
+		if (oldFont != curr->fontSize)
+		{
+			oldFont = curr->fontSize;
+
+			// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
+			switch (oldFont)
+			{
+			case FontSmall:
+				SelectObject(hdcMem, hSmallFont);
+				break;
+
+			case FontMedium:
+				SelectObject(hdcMem, hMediumFont);
+				break;
+
+			case FontLarge:
+				SelectObject(hdcMem, hLargeFont);
+				break;
+			}
+		}
+
+		if (curr->fontSize == FontDot)
+		{
+			SetPixel(hdcMem, (curr->xPos * ScaleX) / 10, (curr->yPos * ScaleY) / 10 + 30, RGB(0, 255, 0));
+		}
+		else
+		{
+			str[0] = curr->ch;
+			TextOut(hdcMem, (curr->xPos * ScaleX) / 10, (curr->yPos * ScaleY) / 10 + 20, str, 1);
+		}
+	}
+
+	listEnd2 = 0;
+	currentX2 = -1;
+	currentY2 = -1;
+
+	if (hfntOld)
+	{
+		SelectObject(hdcMem, hfntOld);
+	}
+
+	/*
+	**  Blit the changes to the screen dc.
+	*/
+	switch (displayMode2)
+	{
+	default:
+	case ModeCenter:
+		BitBlt(ps.hdc,
+			rect.left, rect.top,
+			rect.right - rect.left, rect.bottom - rect.top,
+			hdcMem,
+			0, 0,
+			SRCCOPY);
+		break;
+
+	case ModeLeft:
+		StretchBlt(ps.hdc,
+			rect.left + (rect.right - rect.left) / 2 - 512 * ScaleY / 10 / 2, rect.top,
+			512 * ScaleY / 10, rect.bottom - rect.top,
+			hdcMem,
+			OffLeftScreen, 0,
+			512 * ScaleX / 10 + FontLarge, rect.bottom - rect.top,
+			SRCCOPY);
+		break;
+
+	case ModeRight:
+		StretchBlt(ps.hdc,
+			rect.left + (rect.right - rect.left) / 2 - 512 * ScaleY / 10 / 2, rect.top,
+			512 * ScaleY / 10, rect.bottom - rect.top,
+			hdcMem,
+			OffRightScreen, 0,
+			512 * ScaleX / 10 + FontLarge, rect.bottom - rect.top,
+			SRCCOPY);
+		break;
+	}
+
+	/*
+	**  Done with off screen bitmap and dc.
+	*/
+	SelectObject(hdcMem, hbmOld);
+	DeleteObject(hbmMem);
+	DeleteDC(hdcMem);
+
+	EndPaint(hWnd, &ps);
+}
+#endif
+///
+#if MaxMainFrames > 3
+void windowDisplay3(HWND hWnd)
+{
+	// ReSharper disable once CppEntityNeverUsed
+	static int refreshCount = 0;
+	char str[2] = " ";
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	DispList *end;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	u8 oldFont;
+
+	RECT rect;
+	PAINTSTRUCT ps;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	HBRUSH hBrush;
+
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	HDC hdcMem;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	HGDIOBJ hbmMem;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	HGDIOBJ hbmOld;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	HGDIOBJ hfntOld;
+
+	// ReSharper disable once CppEntityNeverUsed
+	HDC hdc = BeginPaint(hWnd, &ps);
+
+	GetClientRect(hWnd, &rect);
+
+	/*
+	**  Create a compatible DC.
+	*/
+
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	hdcMem = CreateCompatibleDC(ps.hdc);
+
+	/*
+	**  Create a bitmap big enough for our client rect.
+	*/
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	hbmMem = CreateCompatibleBitmap(ps.hdc,
+		rect.right - rect.left,
+		rect.bottom - rect.top);
+
+	/*
+	**  Select the bitmap into the off-screen dc.
+	*/
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	hbmOld = SelectObject(hdcMem, hbmMem);
+
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	hBrush = CreateSolidBrush(RGB(0, 0, 0));
+	FillRect(hdcMem, &rect, hBrush);
+	if (displayModeNeedsErase3)
+	{
+		displayModeNeedsErase3 = false;
+		FillRect(ps.hdc, &rect, hBrush);
+	}
+	DeleteObject(hBrush);
+
+	SetBkMode(hdcMem, TRANSPARENT);
+	SetBkColor(hdcMem, RGB(0, 0, 0));
+	SetTextColor(hdcMem, RGB(0, 255, 0));
+
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	hfntOld = SelectObject(hdcMem, hSmallFont3);
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	oldFont = FontSmall;
+
+#if CcCycleTime
+	{
+		extern double cycleTime;
+		char buf[80];
+
+		//    sprintf(buf, "Cycle time: %.3f", cycleTime);
+		sprintf(buf, "Cycle time: %10.3f    NPU Buffers: %5d", cycleTime, npuBipBufCount());
+		TextOut(hdcMem, 0, 0, buf, strlen(buf));
+	}
+#endif
+
+#if CcDebug == 1
+	{
+		MMainFrame *mfr = BigIron->chasis[3];
+
+		char buf[160];
+
+		/*
+		**  Display P registers of PPUs and CPU and current trace mask.
+		*/
+		sprintf(buf, "Refresh: %-10d  PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o   CPU0 P-reg: %06o",
+			refreshCount++,
+			mfr->ppBarrel[0]->ppu.regP,
+			mfr->ppBarrel[1]->ppu.regP,
+			mfr->ppBarrel[2]->ppu.regP,
+			mfr->ppBarrel[3]->ppu.regP,
+			mfr->ppBarrel[4]->ppu.regP,
+			mfr->ppBarrel[5]->ppu.regP,
+			mfr->ppBarrel[6]->ppu.regP,
+			mfr->ppBarrel[7]->ppu.regP,
+			mfr->ppBarrel[8]->ppu.regP,
+			mfr->ppBarrel[9]->ppu.regP,
+			mfr->Acpu[0]->cpu.regP);
+
+		sprintf(buf + strlen(buf), "   Trace0x: %c%c%c%c%c%c%c%c%c%c%c%c %c",
+			(mfr->traceMask >> 0) & 1 ? '0' : '_',
+			(mfr->traceMask >> 1) & 1 ? '1' : '_',
+			(mfr->traceMask >> 2) & 1 ? '2' : '_',
+			(mfr->traceMask >> 3) & 1 ? '3' : '_',
+			(mfr->traceMask >> 4) & 1 ? '4' : '_',
+			(mfr->traceMask >> 5) & 1 ? '5' : '_',
+			(mfr->traceMask >> 6) & 1 ? '6' : '_',
+			(mfr->traceMask >> 7) & 1 ? '7' : '_',
+			(mfr->traceMask >> 8) & 1 ? '8' : '_',
+			(mfr->traceMask >> 9) & 1 ? '9' : '_',
+			mfr->traceMask & TraceCpu ? 'C' : '_',
+			mfr->traceMask & TraceExchange ? 'E' : '_',
+			shifted ? ' ' : '<');
+
+		TextOut(hdcMem, 0, 0, buf, (int)strlen(buf));
+
+		if (BigIron->pps == 20)
+		{
+			/*
+			**  Display P registers of second barrel of PPUs.
+			*/
+			sprintf(buf, "                     PP P-reg: %04o %04o %04o %04o %04o %04o %04o %04o %04o %04o   CPU1 P-reg: %06o",
+				mfr->ppBarrel[10]->ppu.regP,
+				mfr->ppBarrel[11]->ppu.regP,
+				mfr->ppBarrel[12]->ppu.regP,
+				mfr->ppBarrel[13]->ppu.regP,
+				mfr->ppBarrel[14]->ppu.regP,
+				mfr->ppBarrel[15]->ppu.regP,
+				mfr->ppBarrel[16]->ppu.regP,
+				mfr->ppBarrel[17]->ppu.regP,
+				mfr->ppBarrel[18]->ppu.regP,
+				mfr->ppBarrel[19]->ppu.regP,
+				BigIron->initCpus > 1 ? mfr->Acpu[1]->cpu.regP : 0);
+
+			sprintf(buf + strlen(buf), "   Trace1x: %c%c%c%c%c%c%c%c%c%c%c%c %c",
+				(mfr->traceMask >> 10) & 1 ? '0' : '_',
+				(mfr->traceMask >> 11) & 1 ? '1' : '_',
+				(mfr->traceMask >> 12) & 1 ? '2' : '_',
+				(mfr->traceMask >> 13) & 1 ? '3' : '_',
+				(mfr->traceMask >> 14) & 1 ? '4' : '_',
+				(mfr->traceMask >> 15) & 1 ? '5' : '_',
+				(mfr->traceMask >> 16) & 1 ? '6' : '_',
+				(mfr->traceMask >> 17) & 1 ? '7' : '_',
+				(mfr->traceMask >> 18) & 1 ? '8' : '_',
+				(mfr->traceMask >> 19) & 1 ? '9' : '_',
+				mfr->traceMask & TraceCpu1 ? 'C' : '_',
+				' ',
+				shifted ? '<' : ' ');
+
+			TextOut(hdcMem, 0, 12, buf, (int)strlen(buf));
+		}
+	}
+#endif
+
+	if (opActive)
+	{
+		static char opMessage[] = "Emulation paused";
+		hfntOld = SelectObject(hdcMem, hLargeFont3);
+		oldFont = FontLarge;
+		TextOut(hdcMem, (0 * ScaleX) / 10, (256 * ScaleY) / 10, opMessage, static_cast<int>(strlen(opMessage)));
+	}
+
+	SelectObject(hdcMem, hPen3);
+
+	// ReSharper disable once CppInitializedValueIsAlwaysRewritten
+	DispList *curr = display3;
+	// ReSharper disable once CppJoinDeclarationAndAssignment
+	end = display3 + listEnd3;
+	for (curr = display3; curr < end; curr++)
+	{
+		if (oldFont != curr->fontSize)
+		{
+			oldFont = curr->fontSize;
+
+			// ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
+			switch (oldFont)
+			{
+			case FontSmall:
+				SelectObject(hdcMem, hSmallFont);
+				break;
+
+			case FontMedium:
+				SelectObject(hdcMem, hMediumFont);
+				break;
+
+			case FontLarge:
+				SelectObject(hdcMem, hLargeFont);
+				break;
+			}
+		}
+
+		if (curr->fontSize == FontDot)
+		{
+			SetPixel(hdcMem, (curr->xPos * ScaleX) / 10, (curr->yPos * ScaleY) / 10 + 30, RGB(0, 255, 0));
+		}
+		else
+		{
+			str[0] = curr->ch;
+			TextOut(hdcMem, (curr->xPos * ScaleX) / 10, (curr->yPos * ScaleY) / 10 + 20, str, 1);
+		}
+	}
+
+	listEnd3 = 0;
+	currentX3 = -1;
+	currentY3 = -1;
+
+	if (hfntOld)
+	{
+		SelectObject(hdcMem, hfntOld);
+	}
+
+	/*
+	**  Blit the changes to the screen dc.
+	*/
+	switch (displayMode3)
 	{
 	default:
 	case ModeCenter:

@@ -81,6 +81,19 @@ static void CPUThreadX(LPVOID p);
 static void CreateCPUThread1X(MCpu *c);
 static void CPUThread1X(LPVOID p);
 #endif
+
+#if MaxMainFrames > 2
+static void CreateCPUThreadY(MCpu *c);
+static void CPUThreadY(LPVOID p);
+static void CreateCPUThread1Y(MCpu *c);
+static void CPUThread1Y(LPVOID p);
+#endif
+#if MaxMainFrames > 3
+static void CreateCPUThreadZ(MCpu *c);
+static void CPUThreadZ(LPVOID p);
+static void CreateCPUThread1Z(MCpu *c);
+static void CPUThread1Z(LPVOID p);
+#endif
 /*
 **  ----------------
 **  Public Variables
@@ -240,6 +253,14 @@ int main(int argc, char **argv)
 	if (BigIron->initMainFrames > 1)
 		windowTerminate1();
 #endif
+#if MaxMainFrames > 2
+	if (BigIron->initMainFrames > 2)
+		windowTerminate2();
+#endif
+#if MaxMainFrames > 3
+	if (BigIron->initMainFrames > 3)
+		windowTerminate3();
+#endif
 	BigIron->Terminate();
 
 	exit(0);
@@ -264,6 +285,35 @@ void CreateThreads()
 		if (BigIron->initCpus > 1)
 		{
 			CreateCPUThread1X(BigIron->chasis[1]->Acpu[1]);
+		}
+#endif
+	}
+#endif
+
+#if MaxMainFrames > 2
+	if (BigIron->initMainFrames > 2)
+	{
+		deadStart(2);
+		CreateCPUThreadY(BigIron->chasis[2]->Acpu[0]);
+#if MaxCpus == 2
+		if (BigIron->initCpus > 1)
+		{
+			CreateCPUThread1Y(BigIron->chasis[2]->Acpu[1]);
+		}
+#endif
+	}
+#endif
+
+
+#if MaxMainFrames > 3
+	if (BigIron->initMainFrames > 3)
+	{
+		deadStart(3);
+		CreateCPUThreadZ(BigIron->chasis[3]->Acpu[0]);
+#if MaxCpus == 2
+		if (BigIron->initCpus > 1)
+		{
+			CreateCPUThread1Z(BigIron->chasis[3]->Acpu[1]);
 		}
 #endif
 	}
@@ -448,6 +498,189 @@ void CreateCPUThread1X(MCpu *cpu)
 }
 #endif
 #endif
+
+#if MaxMainFrames > 2
+/*
+**  Create Thread for CPU 0 MainFrame 1
+*/
+void CreateCPUThreadY(MCpu *cpu)
+{
+#if defined(_WIN32)
+	DWORD dwThreadId;
+
+	/*
+	**  Create operator thread.
+	*/
+	HANDLE hThread = CreateThread(
+		nullptr,                                       // no security attribute 
+		0,                                          // default stack size 
+		reinterpret_cast<LPTHREAD_START_ROUTINE>(CPUThreadY),
+		static_cast<LPVOID>(cpu),                               // thread parameter = MCpu pointer 
+		0,                                          // not suspended 
+		&dwThreadId);                               // returns thread ID 
+
+	if (hThread == nullptr)
+	{
+		fprintf(stderr, "Failed to create CPU %d thread\n", cpu->cpu.CpuID);
+		exit(1);
+	}
+#else
+	int rc;
+	pthread_t thread;
+	pthread_attr_t attr;
+
+	/*
+	**  Create POSIX thread with default attributes.
+	*/
+	pthread_attr_init(&attr);
+	rc = pthread_create(&thread, &attr, CPU0Thread, (void*)cpu);
+	if (rc < 0)
+	{
+		fprintf(stderr, "Failed to create CPU %d thread\n", cpu->cpu.CpuID);
+		exit(1);
+	}
+#endif
+}
+#if MaxCpus == 2
+/*
+**  Create Thread for CPU 1 MainFrame 1
+*/
+void CreateCPUThread1Y(MCpu *cpu)
+{
+#if defined(_WIN32)
+	DWORD dwThreadId;
+
+	INIT_COND_VAR(&cpu->mfr->CpuRun);
+
+	/*
+	**  Create operator thread.
+	*/
+	HANDLE hThread = CreateThread(
+		nullptr,                                       // no security attribute 
+		0,                                          // default stack size 
+		reinterpret_cast<LPTHREAD_START_ROUTINE>(CPUThread1Y),
+		static_cast<LPVOID>(cpu),                               // thread parameter = MCpu pointer
+		0,                                          // not suspended 
+		&dwThreadId);                               // returns thread ID 
+
+	if (hThread == nullptr)
+	{
+		fprintf(stderr, "Failed to create CPU %d thread\n", cpu->cpu.CpuID);
+		exit(1);
+	}
+
+#else
+	int rc;
+	pthread_t thread;
+	pthread_attr_t attr;
+
+	/*
+	**  Create POSIX thread with default attributes.
+	*/
+	pthread_attr_init(&attr);
+	rc = pthread_create(&thread, &attr, CPU0Thread1, (void*)cpu);
+	if (rc < 0)
+	{
+		fprintf(stderr, "Failed to create CPU %d thread\n", cpu->cpu.CpuID);
+		exit(1);
+	}
+#endif
+}
+#endif
+#endif
+
+///
+#if MaxMainFrames > 3
+/*
+**  Create Thread for CPU 0 MainFrame 1
+*/
+void CreateCPUThreadZ(MCpu *cpu)
+{
+#if defined(_WIN32)
+	DWORD dwThreadId;
+
+	/*
+	**  Create operator thread.
+	*/
+	HANDLE hThread = CreateThread(
+		nullptr,                                       // no security attribute 
+		0,                                          // default stack size 
+		reinterpret_cast<LPTHREAD_START_ROUTINE>(CPUThreadZ),
+		static_cast<LPVOID>(cpu),                               // thread parameter = MCpu pointer 
+		0,                                          // not suspended 
+		&dwThreadId);                               // returns thread ID 
+
+	if (hThread == nullptr)
+	{
+		fprintf(stderr, "Failed to create CPU %d thread\n", cpu->cpu.CpuID);
+		exit(1);
+	}
+#else
+	int rc;
+	pthread_t thread;
+	pthread_attr_t attr;
+
+	/*
+	**  Create POSIX thread with default attributes.
+	*/
+	pthread_attr_init(&attr);
+	rc = pthread_create(&thread, &attr, CPU0Thread, (void*)cpu);
+	if (rc < 0)
+	{
+		fprintf(stderr, "Failed to create CPU %d thread\n", cpu->cpu.CpuID);
+		exit(1);
+	}
+#endif
+}
+#if MaxCpus == 2
+/*
+**  Create Thread for CPU 1 MainFrame 1
+*/
+void CreateCPUThread1Z(MCpu *cpu)
+{
+#if defined(_WIN32)
+	DWORD dwThreadId;
+
+	INIT_COND_VAR(&cpu->mfr->CpuRun);
+
+	/*
+	**  Create operator thread.
+	*/
+	HANDLE hThread = CreateThread(
+		nullptr,                                       // no security attribute 
+		0,                                          // default stack size 
+		reinterpret_cast<LPTHREAD_START_ROUTINE>(CPUThread1Z),
+		static_cast<LPVOID>(cpu),                               // thread parameter = MCpu pointer
+		0,                                          // not suspended 
+		&dwThreadId);                               // returns thread ID 
+
+	if (hThread == nullptr)
+	{
+		fprintf(stderr, "Failed to create CPU %d thread\n", cpu->cpu.CpuID);
+		exit(1);
+	}
+
+#else
+	int rc;
+	pthread_t thread;
+	pthread_attr_t attr;
+
+	/*
+	**  Create POSIX thread with default attributes.
+	*/
+	pthread_attr_init(&attr);
+	rc = pthread_create(&thread, &attr, CPU0Thread1, (void*)cpu);
+	if (rc < 0)
+	{
+		fprintf(stderr, "Failed to create CPU %d thread\n", cpu->cpu.CpuID);
+		exit(1);
+	}
+#endif
+}
+#endif
+#endif
+
+
 /*
 **  Rules:  1) Don't let CPUs and PPUs run at same time.
 **			2) Best to tell cpu 1 when cpu 0 is about to start
@@ -738,6 +971,312 @@ void CPUThread1X(LPVOID pCpu)
 }
 #endif
 #endif
+
+////
+#if MaxMainFrames > 2
+/*
+**  Rules:  1) Don't let CPUs and PPUs run at same time.
+**			2) Best to tell cpu 1 when cpu 0 is about to start
+**				steps so cpu 1 thread does not hog the ppuMutex.
+*/
+
+/*---------------------------------------------------------
+**	CPU 0 Thread
+**	Input:		Pointer to a CPU instance
+**	Returns:	Nothing
+**
+**	In addition to stepping CPU 0 this thread steps the pps
+**	channels, counts cycles, keeps time and does operator
+**	interaction..
+**--------------------------------------------------------*/
+void CPUThreadY(LPVOID pCpu)
+{
+	MCpu *ncpu = static_cast<MCpu*>(pCpu);
+	ncpu->mfr->cycles = 0;
+
+	while (BigIron->emulationActive)
+	{
+#if CcCycleTime
+		rtcStartTimer();
+#endif
+
+		/*
+		**  Count major cycles.
+		*/
+		ncpu->mfr->cycles++;
+
+		//if ((ncpu->mfr->cycles % 10000) == 0)
+		//	printf("cycles: %d\n", ncpu->mfr->cycles++);
+
+		/*
+		**  Deal with operator interface requests.
+		*/
+		if (opActive)
+		{
+			opRequest();
+		}
+
+		/*
+		**  Execute PP, CPU and RTC.
+		*/
+#if MaxMainFrames > 1
+		if (BigIron->initMainFrames > 1)
+		{
+			RESERVE1(&BigIron->SysPpMutex);
+		}
+#endif
+#if MaxCpus == 2
+		if (BigIron->initCpus > 1)
+		{
+			RESERVE1(&ncpu->mfr->PpuMutex);
+		}
+#endif
+		Mpp::StepAll(ncpu->mfr->mainFrameID);
+#if MaxCpus == 2
+		if (BigIron->initCpus > 1)
+		{
+			RELEASE1(&ncpu->mfr->PpuMutex);
+		}
+#endif
+#if MaxMainFrames > 1
+		if (BigIron->initMainFrames > 1)
+		{
+			RELEASE1(&BigIron->SysPpMutex);
+		}
+#endif
+
+		// step CPU
+#if MaxCpus == 2
+		if (BigIron->initCpus > 1)	// tell cpu 1 thread it can run now too
+			WakeConditionVariable(&ncpu->mfr->CpuRun);
+#endif
+		for (int i = 0; i < BigIron->cpuRatio; i++)
+		{
+			if (ncpu->Step())	// Step returns true if CPU stopped - no need to step more
+				break;
+		}
+#if MaxMainFrames > 1
+		if (BigIron->initMainFrames > 1)
+		{
+			RESERVE1(&BigIron->SysPpMutex);
+		}
+#endif
+		if (BigIron->initCpus > 1)
+		{
+			RESERVE1(&ncpu->mfr->PpuMutex);		// not sure if this is needed
+		}
+		channelStep(ncpu->mfr->mainFrameID);
+		if (BigIron->initCpus > 1)
+		{
+			RELEASE1(&ncpu->mfr->PpuMutex);
+		}
+#if MaxMainFrames > 1
+		if (BigIron->initMainFrames > 1)
+		{
+			RELEASE1(&BigIron->SysPpMutex);
+		}
+#endif
+		rtcTick();
+
+#if CcCycleTime
+		cycleTime = rtcStopTimer();
+#endif
+	}
+}
+
+#if MaxCpus == 2
+/*----------------------------------------------------------------
+**	CPU 1 Thread
+**	Input:		Pointer to a CPU instance
+**	Returns:	Nothing
+**
+**	This thread just waits for an opportunity to step CPU 1.
+**  Thread 0 signals when it starts so we can run then too.
+**---------------------------------------------------------------*/
+void CPUThread1Y(LPVOID pCpu)
+{
+	MCpu *ncpu = static_cast<MCpu*>(pCpu);
+
+	while (BigIron->emulationActive)
+	{
+		//if (opActive)
+		//{
+		//	opRequest();
+		//}
+		// step CPU
+		// wait for cpu 0 thread to tell us to run
+		if (BigIron->initCpus > 1)
+		{
+			RESERVE1(&ncpu->mfr->DummyMutex);
+			SleepConditionVariableCS(&ncpu->mfr->CpuRun, &ncpu->mfr->DummyMutex, 1);
+			RELEASE1(&ncpu->mfr->DummyMutex);
+		}
+		// make sure we don't step on ppu time.
+		RESERVE1(&ncpu->mfr->PpuMutex);
+		for (int i = 0; i < (BigIron->cpuRatio); i++)
+		{
+			if (ncpu->Step())	// Step returns true if CPU stopped
+				break;
+		}
+		RELEASE1(&ncpu->mfr->PpuMutex);
+	}
+}
+#endif
+#endif
+////
+#if MaxMainFrames > 3
+/*
+**  Rules:  1) Don't let CPUs and PPUs run at same time.
+**			2) Best to tell cpu 1 when cpu 0 is about to start
+**				steps so cpu 1 thread does not hog the ppuMutex.
+*/
+
+/*---------------------------------------------------------
+**	CPU 0 Thread
+**	Input:		Pointer to a CPU instance
+**	Returns:	Nothing
+**
+**	In addition to stepping CPU 0 this thread steps the pps
+**	channels, counts cycles, keeps time and does operator
+**	interaction..
+**--------------------------------------------------------*/
+void CPUThreadZ(LPVOID pCpu)
+{
+	MCpu *ncpu = static_cast<MCpu*>(pCpu);
+	ncpu->mfr->cycles = 0;
+
+	while (BigIron->emulationActive)
+	{
+#if CcCycleTime
+		rtcStartTimer();
+#endif
+
+		/*
+		**  Count major cycles.
+		*/
+		ncpu->mfr->cycles++;
+
+		//if ((ncpu->mfr->cycles % 10000) == 0)
+		//	printf("cycles: %d\n", ncpu->mfr->cycles++);
+
+		/*
+		**  Deal with operator interface requests.
+		*/
+		if (opActive)
+		{
+			opRequest();
+		}
+
+		/*
+		**  Execute PP, CPU and RTC.
+		*/
+#if MaxMainFrames > 1
+		if (BigIron->initMainFrames > 1)
+		{
+			RESERVE1(&BigIron->SysPpMutex);
+		}
+#endif
+#if MaxCpus == 2
+		if (BigIron->initCpus > 1)
+		{
+			RESERVE1(&ncpu->mfr->PpuMutex);
+		}
+#endif
+		Mpp::StepAll(ncpu->mfr->mainFrameID);
+#if MaxCpus == 2
+		if (BigIron->initCpus > 1)
+		{
+			RELEASE1(&ncpu->mfr->PpuMutex);
+		}
+#endif
+#if MaxMainFrames > 1
+		if (BigIron->initMainFrames > 1)
+		{
+			RELEASE1(&BigIron->SysPpMutex);
+		}
+#endif
+
+		// step CPU
+#if MaxCpus == 2
+		if (BigIron->initCpus > 1)	// tell cpu 1 thread it can run now too
+			WakeConditionVariable(&ncpu->mfr->CpuRun);
+#endif
+		for (int i = 0; i < BigIron->cpuRatio; i++)
+		{
+			if (ncpu->Step())	// Step returns true if CPU stopped - no need to step more
+				break;
+		}
+#if MaxMainFrames > 1
+		if (BigIron->initMainFrames > 1)
+		{
+			RESERVE1(&BigIron->SysPpMutex);
+		}
+#endif
+		if (BigIron->initCpus > 1)
+		{
+			RESERVE1(&ncpu->mfr->PpuMutex);		// not sure if this is needed
+		}
+		channelStep(ncpu->mfr->mainFrameID);
+		if (BigIron->initCpus > 1)
+		{
+			RELEASE1(&ncpu->mfr->PpuMutex);
+		}
+#if MaxMainFrames > 1
+		if (BigIron->initMainFrames > 1)
+		{
+			RELEASE1(&BigIron->SysPpMutex);
+		}
+#endif
+		rtcTick();
+
+#if CcCycleTime
+		cycleTime = rtcStopTimer();
+#endif
+	}
+}
+
+#if MaxCpus == 2
+/*----------------------------------------------------------------
+**	CPU 1 Thread
+**	Input:		Pointer to a CPU instance
+**	Returns:	Nothing
+**
+**	This thread just waits for an opportunity to step CPU 1.
+**  Thread 0 signals when it starts so we can run then too.
+**---------------------------------------------------------------*/
+void CPUThread1Z(LPVOID pCpu)
+{
+	MCpu *ncpu = static_cast<MCpu*>(pCpu);
+
+	while (BigIron->emulationActive)
+	{
+		//if (opActive)
+		//{
+		//	opRequest();
+		//}
+		// step CPU
+		// wait for cpu 0 thread to tell us to run
+		if (BigIron->initCpus > 1)
+		{
+			RESERVE1(&ncpu->mfr->DummyMutex);
+			SleepConditionVariableCS(&ncpu->mfr->CpuRun, &ncpu->mfr->DummyMutex, 1);
+			RELEASE1(&ncpu->mfr->DummyMutex);
+		}
+		// make sure we don't step on ppu time.
+		RESERVE1(&ncpu->mfr->PpuMutex);
+		for (int i = 0; i < (BigIron->cpuRatio); i++)
+		{
+			if (ncpu->Step())	// Step returns true if CPU stopped
+				break;
+		}
+		RELEASE1(&ncpu->mfr->PpuMutex);
+	}
+}
+#endif
+#endif
+
+
+
 /*
 **--------------------------------------------------------------------------
 **

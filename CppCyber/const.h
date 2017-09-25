@@ -48,7 +48,7 @@
 */
 
 #define	MaxCpus					2		// CPUs per mainframe
-#define	MaxMainFrames			2		// Mainframes
+#define	MaxMainFrames			1		// Mainframes
 
 /*=========================================================*/
 

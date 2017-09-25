@@ -62,6 +62,13 @@ static void deadDisconnect(u8 mfrId);
 #if MaxMainFrames > 1
 static void deadIo1(u8 mfrId);
 #endif
+
+#if MaxMainFrames > 2
+static void deadIo2(u8 mfrId);
+#endif
+#if MaxMainFrames > 3
+static void deadIo3(u8 mfrId);
+#endif
 /*
 **  ----------------
 **  Public Variables
@@ -75,6 +82,8 @@ static void deadIo1(u8 mfrId);
 */
 static u8 dsSequence = 0;       /* deadstart sequencer */
 static u8 dsSequence1 = 0;       /* deadstart sequencer */
+static u8 dsSequence2 = 0;       /* deadstart sequencer */
+static u8 dsSequence3 = 0;       /* deadstart sequencer */
 
 /*
 **--------------------------------------------------------------------------
@@ -101,7 +110,19 @@ void deadStart(u8 k)
 	dp->disconnect = deadDisconnect;
 	dp->func = deadFunc;
 #if MaxMainFrames > 1
-	dp->io = k == 0 ? deadIo : deadIo1;
+
+	if (k == 0)
+		dp->io = deadIo;
+	if (k == 1)
+		dp->io = deadIo1;
+#if MaxMainFrames > 2
+	if (k == 2)
+		dp->io = deadIo2;
+#endif
+#if MaxMainFrames > 3
+	if (k == 3)
+		dp->io = deadIo3;
+#endif
 #else
 	dp->io = deadIo;
 #endif
@@ -229,6 +250,49 @@ static void deadIo1(u8 mfrId)
 		else
 		{
 			mfr->activeChannel->data = mfr->deadstartPanel[dsSequence1++] & Mask12;
+			mfr->activeChannel->full = true;
+			//printf("\ndeadIo1 on mfr %d data %4o # %d", activeChannel->mfrID, activeChannel->data, dsSequence1-1);
+		}
+	}
+}
+#endif
+
+#if MaxMainFrames > 2
+static void deadIo2(u8 mfrId)
+{
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	//printf("deadIo on mfr %d\n", activeChannel->mfrID);
+	if (!mfr->activeChannel->full)
+	{
+		if (dsSequence2 == mfr->deadstartCount)
+		{
+			mfr->activeChannel->active = false;
+		}
+		else
+		{
+			mfr->activeChannel->data = mfr->deadstartPanel[dsSequence2++] & Mask12;
+			mfr->activeChannel->full = true;
+			//printf("\ndeadIo1 on mfr %d data %4o # %d", activeChannel->mfrID, activeChannel->data, dsSequence1-1);
+		}
+	}
+}
+#endif
+#if MaxMainFrames > 3
+static void deadIo3(u8 mfrId)
+{
+	MMainFrame *mfr = BigIron->chasis[mfrId];
+
+	//printf("deadIo on mfr %d\n", activeChannel->mfrID);
+	if (!mfr->activeChannel->full)
+	{
+		if (dsSequence3 == mfr->deadstartCount)
+		{
+			mfr->activeChannel->active = false;
+		}
+		else
+		{
+			mfr->activeChannel->data = mfr->deadstartPanel[dsSequence3++] & Mask12;
 			mfr->activeChannel->full = true;
 			//printf("\ndeadIo1 on mfr %d data %4o # %d", activeChannel->mfrID, activeChannel->data, dsSequence1-1);
 		}

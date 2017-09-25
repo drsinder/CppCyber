@@ -472,6 +472,8 @@ void MSystem::InitCyber(char *config)
 	{
 		autoDate = true;
 		autoDate1 = true;
+		autoDate2 = true;
+		autoDate3 = true;
 	}
 
 	if (initGetString("autodateyear", "98", autoDateYear, 39))

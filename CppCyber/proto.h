@@ -293,12 +293,32 @@ void windowGetChar();
 void windowTerminate();
 
 void windowSetFont1(u8 font);
+void windowSetFont2(u8 font);
+void windowSetFont3(u8 font);
+
 void windowSetX1(u16 x);
+void windowSetX2(u16 x);
+void windowSetX3(u16 x);
+
 void windowSetY1(u16 y);
+void windowSetY2(u16 y);
+void windowSetY3(u16 y);
+
 void windowQueue1(u8 ch);
+void windowQueue2(u8 ch);
+void windowQueue3(u8 ch);
+
 void windowUpdate1();
+void windowUpdate2();
+void windowUpdate3();
+
 void windowGetChar1();
+void windowGetChar2();
+void windowGetChar3();
+
 void windowTerminate1();
+void windowTerminate2();
+void windowTerminate3();
 
 /*
 **  operator.c
@@ -337,6 +357,8 @@ extern u32 traceMaskx;
 
 extern bool autoDate;		// enter date/time automatically - year 98
 extern bool autoDate1;		// enter date/time automatically - year 98
+extern bool autoDate2;		// enter date/time automatically - year 98
+extern bool autoDate3;		// enter date/time automatically - year 98
 extern char autoDateString[40];
 extern char autoDateYear[40];
 

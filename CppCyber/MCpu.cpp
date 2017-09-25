@@ -625,7 +625,7 @@ bool MCpu::EcsFlagRegister(u32 ecsAddress)
 {
 	u32 flagFunction = (ecsAddress >> 21) & Mask3;
 	u32 flagWord = ecsAddress & Mask18;
-#if MaxMainFrames == 2 || MaxCpus == 2
+#if MaxMainFrames > 1 || MaxCpus > 1
 	if (flagFunction != 6)
 	{
 		if (BigIron->initCpus > 1 || BigIron->initMainFrames > 1)
@@ -640,12 +640,12 @@ bool MCpu::EcsFlagRegister(u32 ecsAddress)
 		/*
 		**  Ready/Select.
 		*/
-		if ((BigIron->ecsFlagRegister & flagWord) != 0)
+		if ((BigIron->chasis[mainFrameID]->ecsFlagRegister & flagWord) != 0)
 		{
 			/*
 			**  Error exit.
 			*/
-#if MaxMainFrames == 2 || MaxCpus == 2
+#if MaxMainFrames > 1 || MaxCpus > 1
 			if (BigIron->initCpus > 1 || BigIron->initMainFrames > 1)
 			{
 				RELEASE1(&BigIron->ECSFlagMutex);
@@ -654,7 +654,7 @@ bool MCpu::EcsFlagRegister(u32 ecsAddress)
 			return(false);
 		}
 
-		BigIron->ecsFlagRegister |= flagWord;
+		BigIron->chasis[mainFrameID]->ecsFlagRegister |= flagWord;
 
 		break;
 
@@ -662,14 +662,14 @@ bool MCpu::EcsFlagRegister(u32 ecsAddress)
 		/*
 		**  Selective set.
 		*/
-		BigIron->ecsFlagRegister |= flagWord;
+		BigIron->chasis[mainFrameID]->ecsFlagRegister |= flagWord;
 		break;
 
 	case 6:
 		/*
 		**  Status.
 		*/
-		if ((BigIron->ecsFlagRegister & flagWord) != 0)
+		if ((BigIron->chasis[mainFrameID]->ecsFlagRegister & flagWord) != 0)
 		{
 			/*
 			**  Error exit.
@@ -684,13 +684,13 @@ bool MCpu::EcsFlagRegister(u32 ecsAddress)
 		/*
 		**  Selective clear,
 		*/
-		BigIron->ecsFlagRegister = (BigIron->ecsFlagRegister & ~flagWord) & Mask18;
+		BigIron->chasis[mainFrameID]->ecsFlagRegister = (BigIron->chasis[mainFrameID]->ecsFlagRegister & ~flagWord) & Mask18;
 		break;
 	default: 
 		OpIllegal("EcsFlagRegister");
 		break;
 	}
-#if MaxMainFrames == 2 || MaxCpus == 2
+#if MaxMainFrames > 1 || MaxCpus > 1
 	if (flagFunction != 6)
 	{
 		if (BigIron->initCpus > 1 || BigIron->initMainFrames > 1)
